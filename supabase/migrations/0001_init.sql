@@ -7,8 +7,8 @@ create extension if not exists "pgcrypto";
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text,
-  wood_theme text not null default 'sage'
-    check (wood_theme in ('sage', 'blush', 'powder', 'butter', 'lavender', 'birch', 'walnut', 'slate')),
+  shelf_style text not null default 'pastel'
+    check (shelf_style in ('pastel', 'modern', 'scandi', 'japandi', 'academia', 'cottage', 'midcentury', 'coastal', 'boho', 'industrial')),
   is_public boolean not null default false,
   public_slug text not null unique default encode(gen_random_bytes(6), 'hex'),
   created_at timestamptz not null default now(),
@@ -36,6 +36,7 @@ create table if not exists public.books (
   cover_url text,
   uploaded_cover text,
   cover_color text, -- colour of the generated cover when no image is used
+  display text not null default 'spine' check (display in ('spine', 'cover')), -- spine-out or face-out
   year_published integer,
   pages integer,
   genre text,
@@ -50,6 +51,19 @@ create table if not exists public.books (
 );
 create index if not exists books_user_idx on public.books (user_id);
 create index if not exists books_shelf_idx on public.books (shelf_id, position);
+
+-- ───────────────────────── decor ─────────────────────────
+-- Objects placed between books (plants, candles, a globe…). They share the
+-- shelf's position ordering with books.
+create table if not exists public.decor (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  shelf_id uuid not null references public.shelves (id) on delete cascade,
+  kind text not null check (kind in ('plant', 'succulent', 'pampas', 'candles', 'frame', 'globe', 'calendar', 'bust', 'camera', 'stack')),
+  position integer not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists decor_shelf_idx on public.decor (shelf_id, position);
 
 -- updated_at maintenance
 create or replace function public.touch_updated_at() returns trigger
@@ -71,6 +85,7 @@ create trigger profiles_touch before update on public.profiles
 alter table public.profiles enable row level security;
 alter table public.shelves enable row level security;
 alter table public.books enable row level security;
+alter table public.decor enable row level security;
 
 drop policy if exists "own profile" on public.profiles;
 create policy "own profile" on public.profiles
@@ -82,6 +97,14 @@ create policy "own shelves" on public.shelves
 
 drop policy if exists "own books" on public.books;
 create policy "own books" on public.books
+  for all using (auth.uid() = user_id)
+  with check (
+    auth.uid() = user_id
+    and exists (select 1 from public.shelves s where s.id = shelf_id and s.user_id = auth.uid())
+  );
+
+drop policy if exists "own decor" on public.decor;
+create policy "own decor" on public.decor
   for all using (auth.uid() = user_id)
   with check (
     auth.uid() = user_id
@@ -111,12 +134,15 @@ create trigger on_auth_user_created after insert on auth.users
 create or replace function public.get_public_shelf(slug text) returns json
 language sql stable security definer set search_path = public as $$
   select json_build_object(
-    'profile', json_build_object('display_name', p.display_name, 'wood_theme', p.wood_theme),
+    'profile', json_build_object('display_name', p.display_name, 'shelf_style', p.shelf_style),
     'shelves', coalesce((
       select json_agg(s order by s.position) from public.shelves s where s.user_id = p.id
     ), '[]'::json),
     'books', coalesce((
       select json_agg(b order by b.position) from public.books b where b.user_id = p.id
+    ), '[]'::json),
+    'decor', coalesce((
+      select json_agg(d order by d.position) from public.decor d where d.user_id = p.id
     ), '[]'::json)
   )
   from public.profiles p

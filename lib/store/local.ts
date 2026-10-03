@@ -1,7 +1,7 @@
-import type { AuthUser, Book, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
 import type { LibraryData, Store } from "./types";
 
-const KEY = "exlibris:local:v1";
+const KEY = "exlibris:local:v2";
 const LOCAL_USER: AuthUser = { id: "local-user", email: null };
 
 const uid = () =>
@@ -12,20 +12,25 @@ const uid = () =>
 function fresh(): LibraryData {
   const user_id = LOCAL_USER.id;
   return {
-    profile: { id: user_id, display_name: "Reader", wood_theme: "sage", is_public: false, public_slug: uid().slice(0, 12) },
+    profile: { id: user_id, display_name: "Reader", shelf_style: "pastel", is_public: false, public_slug: uid().slice(0, 12) },
     shelves: [
       { id: uid(), user_id, name: "Favourites", position: 0, is_want_to_read: false },
       { id: uid(), user_id, name: "Read", position: 1, is_want_to_read: false },
       { id: uid(), user_id, name: "Want to read", position: 2, is_want_to_read: true },
     ],
     books: [],
+    decor: [],
   };
 }
 
 function read(): LibraryData {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as LibraryData;
+    if (raw) {
+      const d = JSON.parse(raw) as LibraryData;
+      d.decor ??= [];
+      return d;
+    }
   } catch {
     /* fall through to a fresh library */
   }
@@ -85,9 +90,19 @@ export const localStore: Store = {
   async updatePositions(updates) {
     mutate((d) => {
       for (const u of updates) {
-        const b = d.books.find((x) => x.id === u.id);
-        if (b) Object.assign(b, { shelf_id: u.shelf_id, position: u.position });
+        const row = u.kind === "book" ? d.books.find((x) => x.id === u.id) : d.decor.find((x) => x.id === u.id);
+        if (row) Object.assign(row, { shelf_id: u.shelf_id, position: u.position });
       }
+    });
+  },
+  async insertDecor(userId, decor) {
+    const row: Decor = { ...decor, id: uid(), user_id: userId, created_at: new Date().toISOString() };
+    mutate((d) => d.decor.push(row));
+    return row;
+  },
+  async deleteDecor(id) {
+    mutate((d) => {
+      d.decor = d.decor.filter((x) => x.id !== id);
     });
   },
   async deleteBook(id) {
@@ -112,6 +127,7 @@ export const localStore: Store = {
     mutate((d) => {
       if (d.books.some((b) => b.shelf_id === id)) throw new Error("Only empty shelves can be deleted.");
       d.shelves = d.shelves.filter((s) => s.id !== id);
+      d.decor = d.decor.filter((x) => x.shelf_id !== id);
     });
   },
   async updateProfile(_userId, patch) {
@@ -126,6 +142,11 @@ export const localStore: Store = {
   async getPublicShelf(slug): Promise<PublicShelf | null> {
     const d = read();
     if (d.profile.public_slug !== slug || !d.profile.is_public) return null;
-    return { profile: { display_name: d.profile.display_name, wood_theme: d.profile.wood_theme }, shelves: d.shelves, books: d.books };
+    return {
+      profile: { display_name: d.profile.display_name, shelf_style: d.profile.shelf_style },
+      shelves: d.shelves,
+      books: d.books,
+      decor: d.decor,
+    };
   },
 };

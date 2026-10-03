@@ -1,4 +1,4 @@
-import type { Book, Shelf } from "./types";
+import type { Book, Decor, Shelf, ShelfItem } from "./types";
 import { olCoverByIsbn } from "./covers";
 
 export const EXAMPLE_SHELF: Shelf = {
@@ -9,11 +9,12 @@ export const EXAMPLE_SHELF: Shelf = {
   is_want_to_read: false,
 };
 
-type Seed = Pick<Book, "title" | "author" | "year_published" | "pages" | "genre" | "short_description" | "rating" | "what_i_liked" | "favourite_line" | "date_finished" | "cover_color"> & { isbn?: string };
+type Seed = Pick<Book, "title" | "author" | "year_published" | "pages" | "genre" | "short_description" | "rating" | "what_i_liked" | "favourite_line" | "date_finished" | "cover_color" | "display"> & { isbn?: string };
 
 const SEEDS: Seed[] = [
   {
     title: "Pride and Prejudice",
+    display: "cover",
     author: "Jane Austen",
     isbn: "9780141439518",
     year_published: 1813,
@@ -28,6 +29,7 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Jane Eyre",
+    display: "spine",
     author: "Charlotte Brontë",
     isbn: "9780141441146",
     year_published: 1847,
@@ -42,6 +44,7 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Little Women",
+    display: "spine",
     author: "Louisa May Alcott",
     isbn: "9780147514011",
     year_published: 1868,
@@ -56,6 +59,7 @@ const SEEDS: Seed[] = [
   },
   {
     title: "The Great Gatsby",
+    display: "cover",
     author: "F. Scott Fitzgerald",
     isbn: "9780743273565",
     year_published: 1925,
@@ -70,6 +74,7 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Gitanjali",
+    display: "spine",
     author: "Rabindranath Tagore",
     year_published: 1910,
     pages: 112,
@@ -96,3 +101,29 @@ export const EXAMPLE_BOOKS: Book[] = SEEDS.map(({ isbn, ...s }, i) => ({
 }));
 
 export const isExample = (b: Pick<Book, "id">) => b.id.startsWith("example-");
+
+const decor = (id: string, kind: Decor["kind"]): Decor => ({
+  id: `example-decor-${id}`,
+  user_id: "example",
+  shelf_id: EXAMPLE_SHELF.id,
+  kind,
+  position: 0,
+  created_at: "2026-01-01T00:00:00Z",
+});
+
+const asItem = (x: Book | Decor): ShelfItem =>
+  "title" in x
+    ? { type: "book", id: x.id, shelf_id: x.shelf_id, position: 0, created_at: x.created_at, book: x }
+    : { type: "decor", id: x.id, shelf_id: x.shelf_id, position: 0, created_at: x.created_at, decor: x };
+
+/** The example shelf as it's arranged: books mixed with a few objects, like a real shelf. */
+export const EXAMPLE_ITEMS: ShelfItem[] = [
+  decor("plant", "plant"),
+  EXAMPLE_BOOKS[0],
+  EXAMPLE_BOOKS[1],
+  EXAMPLE_BOOKS[2],
+  EXAMPLE_BOOKS[4],
+  decor("candles", "candles"),
+  EXAMPLE_BOOKS[3],
+  decor("globe", "globe"),
+].map((x, position) => ({ ...asItem(x), position }));

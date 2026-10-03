@@ -1,16 +1,24 @@
 "use client";
 
 import { toPng } from "html-to-image";
-import { useEffect, useRef, useState } from "react";
-import { coverColorOf, coverImageOf } from "@/lib/covers";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { coverImageOf } from "@/lib/covers";
 import { summary } from "@/lib/stats";
-import type { Book, Shelf, WoodTheme } from "@/lib/types";
-import { GeneratedCover } from "./BookCover";
+import { aestheticOf } from "@/lib/themes";
+import type { Book, Shelf, ShelfItem, ShelfStyle } from "@/lib/types";
+import { spineWidthPx } from "./BookSpine";
+import { decorSpec } from "./Decor";
 import { DownloadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
+import { ShelfWall } from "./ShelfWall";
 
 const W = 1080;
 const H = 1920;
+// Shelf scale inside the story image.
+const COVER_H = 200;
+const COVER_W = 132;
+const SPINE_SCALE = 1.45;
+const ROW_BUDGET = 820; // usable px per shelf row
 
 async function toDataUrl(url: string): Promise<string | null> {
   if (url.startsWith("data:")) return url;
@@ -18,7 +26,7 @@ async function toDataUrl(url: string): Promise<string | null> {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) return null;
     const blob = await res.blob();
-    if (!blob.type.startsWith("image/") || blob.size < 200) return null;
+    if (!blob.type.startsWith("image/")) return null;
     return await new Promise((resolve) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result as string);
@@ -30,27 +38,51 @@ async function toDataUrl(url: string): Promise<string | null> {
   }
 }
 
-export function ShareDialog({ open, onClose, shelves, booksByShelf, books, wood, owner }: {
+/** Approximate width an item takes on the share image's shelf, including its spacing. */
+function itemWidth(item: ShelfItem): number {
+  if (item.type === "decor") {
+    const d = decorSpec(item.decor.kind);
+    return COVER_H * d.h * (d.viewBox[0] / d.viewBox[1]) + 27;
+  }
+  if (item.book.display === "cover") return COVER_W + 27;
+  return spineWidthPx(item.book.pages) * SPINE_SCALE + 3;
+}
+
+export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, owner }: {
   open: boolean;
   onClose: () => void;
   shelves: Shelf[];
-  booksByShelf: Map<string, Book[]>;
+  itemsByShelf: Map<string, ShelfItem[]>;
   books: Book[];
-  wood: WoodTheme;
+  styleId: ShelfStyle;
   owner?: string | null;
 }) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const [images, setImages] = useState<Map<string, string | null> | null>(null);
   const [png, setPng] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const aesthetic = aestheticOf(styleId);
 
-  // Prefer read shelves; show up to 4 non-empty shelves, 6 covers each.
-  const picked = [...shelves]
-    .filter((s) => (booksByShelf.get(s.id) ?? []).length)
-    .sort((a, b) => Number(a.is_want_to_read) - Number(b.is_want_to_read) || a.position - b.position)
-    .slice(0, 4)
-    .sort((a, b) => a.position - b.position);
-  const shown = picked.flatMap((s) => (booksByShelf.get(s.id) ?? []).slice(0, 6));
+  // Up to 4 shelves that hold books (read shelves first), trimmed to what fits across the image.
+  const picked = useMemo(() => {
+    const withBooks = [...shelves]
+      .filter((s) => (itemsByShelf.get(s.id) ?? []).some((i) => i.type === "book"))
+      .sort((a, b) => Number(a.is_want_to_read) - Number(b.is_want_to_read) || a.position - b.position)
+      .slice(0, 4)
+      .sort((a, b) => a.position - b.position);
+    return withBooks.map((shelf) => {
+      let used = 0;
+      const items: ShelfItem[] = [];
+      for (const item of itemsByShelf.get(shelf.id) ?? []) {
+        const w = itemWidth(item);
+        if (used + w > ROW_BUDGET) break;
+        used += w;
+        items.push(item);
+      }
+      return { shelf, items };
+    });
+  }, [shelves, itemsByShelf]);
+
   const stats = summary(shelves, books);
 
   useEffect(() => {
@@ -62,8 +94,9 @@ export function ShareDialog({ open, onClose, shelves, booksByShelf, books, wood,
     }
     let alive = true;
     (async () => {
+      const shownBooks = picked.flatMap((p) => p.items).flatMap((i) => (i.type === "book" ? [i.book] : []));
       const entries = await Promise.all(
-        shown.map(async (b) => {
+        shownBooks.map(async (b) => {
           const src = coverImageOf(b);
           return [b.id, src ? await toDataUrl(src) : null] as const;
         }),
@@ -76,13 +109,31 @@ export function ShareDialog({ open, onClose, shelves, booksByShelf, books, wood,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Books with covers swapped for inlined data URLs, so html-to-image can draw them.
+  const itemsForImage = useMemo(() => {
+    if (!images) return null;
+    return new Map(
+      picked.map(({ shelf, items }) => [
+        shelf.id,
+        items.map((i): ShelfItem => {
+          if (i.type !== "book") return i;
+          const data = images.get(i.book.id) ?? null;
+          return { ...i, book: { ...i.book, cover_url: data, uploaded_cover: null } };
+        }),
+      ]),
+    );
+  }, [images, picked]);
+
   useEffect(() => {
-    if (!images || !nodeRef.current) return;
+    if (!itemsForImage || !nodeRef.current) return;
     let alive = true;
     (async () => {
       try {
         await document.fonts?.ready;
-        const url = await toPng(nodeRef.current!, { width: W, height: H, pixelRatio: 1, cacheBust: false });
+        // Let spine colours (sampled from the covers) settle before rendering.
+        await new Promise((r) => setTimeout(r, 450));
+        if (!alive || !nodeRef.current) return;
+        const url = await toPng(nodeRef.current, { width: W, height: H, pixelRatio: 1 });
         if (alive) setPng(url);
       } catch (e) {
         console.error(e);
@@ -92,11 +143,13 @@ export function ShareDialog({ open, onClose, shelves, booksByShelf, books, wood,
     return () => {
       alive = false;
     };
-  }, [images]);
+  }, [itemsForImage]);
+
+  const vars = { "--cover-h": `${COVER_H}px`, "--cover-w": `${COVER_W}px`, "--spine-scale": SPINE_SCALE, width: W, height: H, backgroundAttachment: "scroll" } as CSSProperties;
 
   return (
     <Sheet open={open} onClose={onClose} title="Share my shelf">
-      <p className="text-sm text-ink-soft">A 1080 × 1920 image, sized for Instagram stories.</p>
+      <p className="text-sm text-ink-soft">A 1080 × 1920 image of your shelf in its current room, sized for Instagram stories.</p>
       <div className="mx-auto mt-4 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-ink/5 shadow-inner ring-1 ring-line">
         {png ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -108,72 +161,43 @@ export function ShareDialog({ open, onClose, shelves, booksByShelf, books, wood,
         )}
       </div>
       <div className="mt-5 flex justify-center">
-        <a
-          className={`btn-primary px-6 ${png ? "" : "pointer-events-none opacity-50"}`}
-          href={png ?? undefined}
-          download="ex-libris-shelf.png"
-          aria-disabled={!png}
-        >
+        <a className={`btn-primary px-6 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="ex-libris-shelf.png" aria-disabled={!png}>
           <DownloadIcon width={16} height={16} /> Download image
         </a>
       </div>
 
       {/* Off-screen render target */}
-      {open && images && (
+      {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
-          <div
-            ref={nodeRef}
-            data-wood={wood}
-            style={{ ["--back-dark" as string]: "var(--back)", ["--frame-light" as string]: "color-mix(in srgb, var(--frame) 70%, white)", width: W, height: H, background: "radial-gradient(ellipse 70% 40% at 0% 0%, #ffffff, transparent 70%), linear-gradient(180deg,#f7f3ec 0%,#efe8dd 100%)", color: "#2f2a28", fontFamily: '"Libre Franklin", sans-serif' }}
-            className="flex flex-col px-[80px] py-[110px]"
-          >
-            <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 26, letterSpacing: 6, color: "#547562" }}>EX LIBRIS</p>
-            <h1 style={{ fontFamily: '"Gloock", serif', fontSize: 104, lineHeight: 1, marginTop: 18 }}>
-              {owner ? `${owner}'s shelf` : "My bookshelf"}
-            </h1>
-            <div className="mt-[44px] flex gap-[56px]" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+          <div ref={nodeRef} data-style={aesthetic.id} className="room flex flex-col px-[80px] pb-[90px] pt-[110px] text-ink" style={vars}>
+            <p className="font-mono text-[26px] tracking-[6px] text-accent">EX LIBRIS</p>
+            <h1 className="mt-[18px] font-serif text-[100px] leading-none">{owner ? `${owner}'s shelf` : "My bookshelf"}</h1>
+            <div className="mt-[40px] flex gap-[56px] font-mono">
               {[
                 [stats.booksRead, "books read"],
                 [stats.avgRating === null ? "–" : `${stats.avgRating.toFixed(1)}★`, "avg rating"],
                 [stats.linesKept, "lines kept"],
               ].map(([v, l]) => (
                 <div key={String(l)}>
-                  <div style={{ fontSize: 60, fontWeight: 500 }}>{v}</div>
-                  <div style={{ fontSize: 22, color: "#5c5c54", textTransform: "uppercase", letterSpacing: 3 }}>{l}</div>
+                  <div className="text-[60px] font-medium leading-tight">{v}</div>
+                  <div className="text-[22px] uppercase tracking-[3px] text-ink-soft">{l}</div>
                 </div>
               ))}
             </div>
 
-            <div className="bookcase mt-[110px]" style={{ padding: "0 26px" }}>
-              <div className="case-top" style={{ margin: "0 -26px", height: 30 }} />
-              {picked.map((s, i) => (
-                <div key={s.id}>
-                  <div className="case-cell" style={{ padding: "22px 28px 0" }}>
-                    <p style={{ fontFamily: '"Gloock", serif', fontSize: 38, marginBottom: 18 }}>{s.name}</p>
-                    <div className="flex items-end gap-[22px]" style={{ height: 222 }}>
-                      {(booksByShelf.get(s.id) ?? []).slice(0, 6).map((b) => {
-                        const data = images.get(b.id);
-                        return (
-                          <div key={b.id} style={{ width: 132, height: 198, boxShadow: "0 14px 18px -8px rgba(0,0,0,.4)", borderRadius: 4, overflow: "hidden", flexShrink: 0 }}>
-                            {data ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={data} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            ) : (
-                              <GeneratedCover title={b.title} author={b.author} color={coverColorOf(b)} />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  {i < picked.length - 1 && <div className="plank" style={{ height: 24 }} />}
-                </div>
-              ))}
-              <div className="case-base" style={{ margin: "0 -26px", height: 36 }} />
+            <div className="mt-auto [&_h2]:!text-[34px]">
+              <ShelfWall
+                shelves={picked.map((p) => p.shelf)}
+                itemsByShelf={itemsForImage}
+                structure={aesthetic.structure}
+                onOpenBook={() => {}}
+                readOnly
+                floor={false}
+              />
             </div>
 
-            <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 22, color: "#68615c", marginTop: "auto", letterSpacing: 2 }}>
-              {stats.booksRead} finished · made with Ex Libris
+            <p className="mt-[50px] font-mono text-[22px] tracking-[2px] text-ink-soft">
+              {aesthetic.name} · {stats.booksRead} finished · made with Ex Libris
             </p>
           </div>
         </div>

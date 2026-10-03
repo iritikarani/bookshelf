@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { EXAMPLE_BOOKS } from "@/lib/examples";
+import { EXAMPLE_ITEMS, EXAMPLE_SHELF } from "@/lib/examples";
 import { store } from "@/lib/store";
-import { BookCover } from "./BookCover";
+import { ShelfWall } from "./ShelfWall";
 import { GoogleIcon } from "./Icons";
 
 export function AuthScreen() {
@@ -34,26 +34,10 @@ export function AuthScreen() {
   }
 
   return (
-    <main data-wood="blush" className="mx-auto flex min-h-dvh max-w-5xl flex-col items-center justify-center gap-10 px-4 py-10 md:flex-row md:gap-16">
+    <main data-style="pastel" className="room flex min-h-dvh flex-col items-center justify-center gap-10 px-4 py-10 md:flex-row md:gap-16">
       <div className="w-full max-w-sm md:order-2">
-        <div aria-hidden className="bookcase mx-auto max-w-[360px]">
-          <div className="case-top" />
-          <div className="case-cell flex items-end justify-center gap-2 px-3 pt-8">
-            {EXAMPLE_BOOKS.slice(0, 4).map((b, i) => (
-              <div key={b.id} className="overflow-hidden rounded-[3px] shadow-lg" style={{ width: 58, height: [88, 94, 84, 92][i] }}>
-                <BookCover book={b} />
-              </div>
-            ))}
-          </div>
-          <div className="plank" />
-          <div className="case-cell flex items-end justify-center gap-2 px-3 pt-8">
-            {[EXAMPLE_BOOKS[4], EXAMPLE_BOOKS[0], EXAMPLE_BOOKS[2]].map((b, i) => (
-              <div key={i} className="overflow-hidden rounded-[3px] shadow-lg" style={{ width: 58, height: [86, 92, 90][i] }}>
-                <BookCover book={b} />
-              </div>
-            ))}
-          </div>
-          <div className="case-base" />
+        <div aria-hidden className="mx-auto max-w-[360px]">
+          <ShelfWall shelves={[EXAMPLE_SHELF]} itemsByShelf={new Map([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]])} structure="case" onOpenBook={() => {}} readOnly floor={false} />
         </div>
         <p className="mt-6 text-center font-serif text-xl leading-snug text-ink-soft">“I declare after all there is no enjoyment like reading!”</p>
       </div>

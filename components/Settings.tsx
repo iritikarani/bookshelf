@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useColorMode, type ColorMode } from "@/lib/colorMode";
 import { useLibrary } from "@/lib/library";
 import { store } from "@/lib/store";
-import { CASE_THEMES } from "@/lib/themes";
 import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 
 export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { profile, user, setWoodTheme, setPublic } = useLibrary();
+  const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
   const [copied, setCopied] = useState(false);
   const publicUrl = profile && typeof window !== "undefined" ? `${window.location.origin}/s/${profile.public_slug}` : "";
@@ -18,35 +17,8 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
     <Sheet open={open} onClose={onClose} title="Settings">
       <div className="space-y-7">
         <fieldset>
-          <legend className="label">Bookcase finish</legend>
-          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Bookcase finish">
-            {CASE_THEMES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="radio"
-                aria-checked={profile?.wood_theme === t.id}
-                aria-label={`${t.name}, ${t.note}`}
-                onClick={() => setWoodTheme(t.id)}
-                className={`rounded-xl border p-1.5 text-left transition ${profile?.wood_theme === t.id ? "border-accent ring-2 ring-accent/40" : "border-line hover:border-ink-soft"}`}
-              >
-                <div data-wood={t.id} className="bookcase !px-1.5 rounded-sm" aria-hidden>
-                  <div className="case-top !-mx-1.5 !h-1.5" />
-                  <div className="case-cell flex h-9 items-end gap-0.5 px-1">
-                    <span className="h-6 w-2.5 rounded-[1px] bg-[#f2c4c0]" />
-                    <span className="h-7 w-2.5 rounded-[1px] bg-[#bfd8ee]" />
-                    <span className="h-5 w-2.5 rounded-[1px] bg-[#f3e3a2]" />
-                  </div>
-                  <div className="case-base !-mx-1.5 !h-1.5" />
-                </div>
-                <p className="mt-1.5 truncate text-xs font-medium">{t.name}</p>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
           <legend className="label">Appearance</legend>
+          <p className="mb-2 text-sm text-ink-soft">The room and shelf style live under the brush icon in the header.</p>
           <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-label="Colour mode">
             {(["light", "dark", "system"] as ColorMode[]).map((m) => (
               <button

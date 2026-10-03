@@ -1,0 +1,392 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Rooms & shelves. Each aesthetic ([data-style]) sets a handful of tokens:
+     --room-wall / --room-pattern   the wall behind everything
+     --frame-base / --board-base    case paint or wood, and the shelf boards
+     --back                         back panel inside a boxed case
+     --cell-ink                     text colour inside a compartment
+     --hardware                     brackets, rope or iron pipe
+     --floor / --skirting           the floor a standing case sits on
+   The structure ([data-structure]) decides how shelves are built.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+[data-style] {
+  --room-pattern: linear-gradient(transparent, transparent);
+  --board-base: var(--frame-base);
+  --frame: var(--frame-base);
+  --board: var(--board-base);
+  --frame-light: color-mix(in srgb, var(--frame) 72%, white);
+  --frame-dark: color-mix(in srgb, var(--frame) 76%, black);
+  --board-light: color-mix(in srgb, var(--board) 72%, white);
+  --board-dark: color-mix(in srgb, var(--board) 74%, black);
+  --cell-ink: rgb(var(--ink));
+  --hardware: #2d2a27;
+  --floor: #c99f72;
+  --skirting: #f6f2ec;
+  --grain: transparent;
+  --back: #f3eee6;
+}
+
+/* 1 · Pastel dream */
+[data-style="pastel"] {
+  --room-wall: #fbf1ed;
+  --room-pattern: radial-gradient(circle at 2px 2px, rgba(226, 160, 156, 0.22) 1.2px, transparent 1.8px) 0 0 / 24px 24px;
+  --frame-base: #ebc4c1;
+  --back: #f9ebe8;
+  --floor: #ead6c0;
+}
+
+/* 2 · Modern black — the classic black bookcase in a bright panelled room */
+[data-style="modern"] {
+  --room-wall: #f5f2ed;
+  --room-pattern:
+    linear-gradient(180deg, transparent 0 calc(100% - 340px), rgba(0, 0, 0, 0.035) calc(100% - 340px)),
+    repeating-linear-gradient(90deg, transparent 0 138px, rgba(0, 0, 0, 0.05) 138px 140px);
+  --frame-base: #232220;
+  --back: #2b2a28;
+  --cell-ink: #f1ede6;
+  --floor: #c4986a;
+  --grain: rgba(255, 255, 255, 0.03);
+}
+
+/* 3 · Scandi — white case with pale oak shelves */
+[data-style="scandi"] {
+  --room-wall: #eceeec;
+  --frame-base: #f8f7f4;
+  --board-base: #dcc29b;
+  --back: #fdfcfa;
+  --floor: #e4d8c6;
+  --grain: rgba(120, 80, 30, 0.12);
+}
+
+/* 4 · Japandi — floating ash boards on a limewashed wall */
+[data-style="japandi"] {
+  --room-wall: #ebe2d4;
+  --room-pattern:
+    radial-gradient(ellipse 50% 40% at 25% 20%, rgba(255, 255, 255, 0.55), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 80% 65%, rgba(150, 125, 95, 0.14), transparent 70%),
+    radial-gradient(ellipse 35% 30% at 55% 95%, rgba(150, 125, 95, 0.1), transparent 70%);
+  --frame-base: #c8ab86;
+  --hardware: #2f2b28;
+  --grain: rgba(90, 60, 30, 0.12);
+}
+
+/* 5 · Dark academia — walnut, forest green, brass. A dark room, so the ink flips. */
+[data-style="academia"] {
+  --room-wall: #2b3930;
+  --room-pattern: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 52px);
+  --frame-base: #4c2f1f;
+  --back: #321f17;
+  --cell-ink: #efe3cb;
+  --floor: #3d291d;
+  --skirting: #22302a;
+  --grain: rgba(0, 0, 0, 0.2);
+  --ink: 240 231 213;
+  --ink-soft: 196 186 165;
+  --paper: 46 60 51;
+  --line: 80 97 85;
+  --wall: 43 57 48;
+  --accent: 203 167 102;
+  --accent-ink: 33 26 18;
+  color-scheme: dark;
+}
+
+/* 6 · Cottagecore — sage-painted case, sprigged wallpaper */
+[data-style="cottage"] {
+  --room-wall: #f6efdf;
+  --room-pattern:
+    radial-gradient(circle at 9px 9px, rgba(224, 146, 158, 0.38) 2.6px, transparent 3.2px) 0 0 / 44px 44px,
+    radial-gradient(ellipse 2px 4px at 15px 11px, rgba(120, 160, 110, 0.4) 99%, transparent) 0 0 / 44px 44px,
+    radial-gradient(circle at 31px 31px, rgba(239, 196, 120, 0.4) 2.2px, transparent 2.8px) 0 0 / 44px 44px,
+    radial-gradient(ellipse 4px 2px at 36px 28px, rgba(120, 160, 110, 0.4) 99%, transparent) 0 0 / 44px 44px;
+  --frame-base: #a9b998;
+  --back: #f5f0e2;
+  --floor: #d5a66d;
+}
+
+/* 7 · Mid-century — floating teak on a mustard wall */
+[data-style="midcentury"] {
+  --room-wall: #e7cc8c;
+  --room-pattern: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 60%);
+  --frame-base: #985631;
+  --hardware: #3a2a20;
+  --ink-soft: 92 68 40;
+  --grain: rgba(0, 0, 0, 0.16);
+}
+
+/* 8 · Coastal — whitewashed case, pale blue beadboard */
+[data-style="coastal"] {
+  --room-wall: #dae7ed;
+  --room-pattern: repeating-linear-gradient(90deg, transparent 0 34px, rgba(50, 85, 105, 0.08) 34px 36px);
+  --frame-base: #f2eee5;
+  --board-base: #e7e0d2;
+  --back: #f9f7f2;
+  --floor: #e2d1b2;
+}
+
+/* 9 · Boho — rope-hung boards on a terracotta arch */
+[data-style="boho"] {
+  --room-wall: #e8c4aa;
+  --room-pattern:
+    radial-gradient(ellipse 34% 62% at 50% 100%, rgba(255, 241, 226, 0.5) 99%, transparent 100%),
+    radial-gradient(circle at 3px 3px, rgba(160, 90, 60, 0.12) 1px, transparent 1.6px) 0 0 / 18px 18px;
+  --frame-base: #c69967;
+  --hardware: #d8c19b;
+  --grain: rgba(90, 50, 20, 0.12);
+}
+
+/* 10 · Industrial — iron pipe, reclaimed boards, painted brick */
+[data-style="industrial"] {
+  --room-wall: #b06d58;
+  --room-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32'%3E%3Cg fill='none' stroke='rgba(255,240,230,0.28)' stroke-width='2'%3E%3Cpath d='M0 1h64M0 17h64M1 1v16M33 17v16'/%3E%3C/g%3E%3C/svg%3E");
+  --frame-base: #7a5940;
+  --hardware: #242424;
+  --ink: 30 20 16;
+  --ink-soft: 52 33 26;
+  --line: 140 84 66;
+  --grain: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode: rooms dim, cases keep their hue, compartments sink into shadow. */
+.dark [data-style] {
+  --frame: color-mix(in srgb, var(--frame-base) 78%, #1a1c1a);
+  --board: color-mix(in srgb, var(--board-base) 78%, #1a1c1a);
+  --back: color-mix(in srgb, var(--frame-base) 14%, #1c1e1c);
+  --cell-ink: rgb(var(--ink));
+  --floor: color-mix(in srgb, #8a6a4a 40%, #161816);
+  --skirting: #262926;
+}
+
+/* ───── the room ───── */
+.room {
+  color: rgb(var(--ink));
+  background:
+    radial-gradient(ellipse 60% 45% at 0% 0%, rgba(255, 255, 255, 0.4), transparent 70%),
+    var(--room-pattern),
+    var(--room-wall);
+  background-attachment: fixed;
+}
+.dark .room {
+  background: var(--room-pattern), color-mix(in srgb, var(--room-wall) 14%, #181a18);
+  background-attachment: fixed;
+}
+
+/* The floor a standing bookcase rests on: skirting board, then floorboards. Full-bleed. */
+.room-floor {
+  margin-left: calc(50% - 50vw);
+  width: 100vw;
+  height: 64px;
+  background:
+    linear-gradient(180deg, var(--skirting) 0 12px, rgba(0, 0, 0, 0.12) 12px 14px, transparent 14px),
+    repeating-linear-gradient(90deg, transparent 0 158px, rgba(0, 0, 0, 0.1) 158px 160px),
+    linear-gradient(180deg, color-mix(in srgb, var(--floor) 88%, black), var(--floor) 40%);
+}
+
+/* ───── shelf boards ───── */
+.plank {
+  position: relative;
+  height: 14px;
+  z-index: 2;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 37px, var(--grain) 37px 38px, transparent 38px 91px, var(--grain) 91px 93px),
+    linear-gradient(180deg, var(--board-light) 0 4px, var(--board) 4px calc(100% - 2px), var(--board-dark) calc(100% - 2px));
+  box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.35);
+}
+
+/* ───── shelf unit + structures ───── */
+.shelf-unit {
+  position: relative;
+}
+.shelf-cell {
+  position: relative;
+  color: var(--cell-ink);
+}
+
+/* Boxed bookcase: frame-coloured padding forms the side panels. */
+.shelf-unit[data-structure="case"] {
+  background: var(--frame);
+  padding: 0 12px;
+  box-shadow:
+    inset 3px 0 0 var(--frame-light),
+    inset -3px 0 0 var(--frame-dark),
+    0 30px 50px -24px rgba(40, 25, 15, 0.35);
+}
+.shelf-unit[data-structure="case"] .shelf-cell {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 34px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.1), transparent 18px, transparent calc(100% - 18px), rgba(0, 0, 0, 0.1)),
+    var(--back);
+}
+.shelf-unit[data-structure="case"] .plank {
+  --board: var(--frame);
+  --board-light: var(--frame-light);
+  --board-dark: var(--frame-dark);
+}
+[data-style="scandi"] .shelf-unit[data-structure="case"] .plank,
+[data-style="coastal"] .shelf-unit[data-structure="case"] .plank {
+  --board: var(--board-base);
+  --board-light: color-mix(in srgb, var(--board-base) 72%, white);
+  --board-dark: color-mix(in srgb, var(--board-base) 74%, black);
+}
+.case-top,
+.case-base {
+  position: relative;
+  z-index: 2;
+  margin: 0 -12px;
+}
+.case-top {
+  height: 18px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--frame-light), var(--frame) 40%, var(--frame-dark));
+  box-shadow: 0 4px 6px -3px rgba(0, 0, 0, 0.25);
+}
+.case-base {
+  height: 24px;
+  background: linear-gradient(180deg, var(--frame-dark), var(--frame) 30%, var(--frame-dark));
+}
+/* Little feet so the case stands on the floor */
+.case-base::before,
+.case-base::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  width: 18px;
+  height: 6px;
+  background: var(--frame-dark);
+}
+.case-base::before { left: 8px; }
+.case-base::after { right: 8px; }
+@media (min-width: 768px) {
+  .shelf-unit[data-structure="case"] { padding: 0 18px; }
+  .case-top,
+  .case-base { margin: 0 -18px; }
+}
+
+/* Wall-mounted structures: no case, more air between boards. */
+.shelf-unit:not([data-structure="case"]) .shelf-cell + .plank {
+  margin-bottom: 34px;
+  border-radius: 2px;
+  box-shadow: 0 16px 18px -12px rgba(0, 0, 0, 0.4);
+}
+.shelf-unit:not([data-structure="case"]) .plank:last-child {
+  margin-bottom: 8px;
+}
+
+/* Floating: two brackets under each board */
+.shelf-unit[data-structure="floating"] .plank::before,
+.shelf-unit[data-structure="floating"] .plank::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  width: 22px;
+  height: 18px;
+  border-left: 4px solid var(--hardware);
+  border-top: 3px solid var(--hardware);
+  border-radius: 0 0 0 3px;
+}
+.shelf-unit[data-structure="floating"] .plank::before { left: 12%; }
+.shelf-unit[data-structure="floating"] .plank::after { right: 12%; transform: scaleX(-1); }
+[data-style="midcentury"] .shelf-unit[data-structure="floating"] .plank {
+  height: 20px;
+}
+
+/* Hanging (rope) and pipe: two verticals running the full height, boards resting on them. */
+.shelf-unit[data-structure="hanging"],
+.shelf-unit[data-structure="pipe"] {
+  padding-top: 36px;
+}
+.shelf-unit[data-structure="hanging"] .shelf-cell,
+.shelf-unit[data-structure="pipe"] .shelf-cell {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+.shelf-unit[data-structure="hanging"]::before,
+.shelf-unit[data-structure="hanging"]::after,
+.shelf-unit[data-structure="pipe"]::before,
+.shelf-unit[data-structure="pipe"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 8px;
+  z-index: 1;
+}
+.shelf-unit[data-structure="hanging"]::before,
+.shelf-unit[data-structure="hanging"]::after {
+  width: 5px;
+  background: repeating-linear-gradient(160deg, var(--hardware) 0 4px, color-mix(in srgb, var(--hardware) 70%, black) 4px 6px);
+  border-radius: 3px;
+}
+.shelf-unit[data-structure="hanging"]::before { left: 14px; }
+.shelf-unit[data-structure="hanging"]::after { right: 14px; }
+.shelf-unit[data-structure="pipe"]::before,
+.shelf-unit[data-structure="pipe"]::after {
+  width: 10px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 40%, rgba(0, 0, 0, 0.3)),
+    var(--hardware);
+  border-radius: 2px;
+}
+.shelf-unit[data-structure="pipe"]::before { left: 12px; }
+.shelf-unit[data-structure="pipe"]::after { right: 12px; }
+/* Flanges where pipes meet the wall */
+.unit-cap {
+  display: none;
+}
+.shelf-unit[data-structure="pipe"] .unit-cap,
+.shelf-unit[data-structure="hanging"] .unit-cap {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+.shelf-unit[data-structure="pipe"] .unit-cap::before,
+.shelf-unit[data-structure="pipe"] .unit-cap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--hardware);
+}
+.shelf-unit[data-structure="pipe"] .unit-cap::before { left: 6px; }
+.shelf-unit[data-structure="pipe"] .unit-cap::after { right: 6px; }
+.shelf-unit[data-structure="hanging"] .unit-cap::before,
+.shelf-unit[data-structure="hanging"] .unit-cap::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 3px solid #8c7a62;
+}
+.shelf-unit[data-structure="hanging"] .unit-cap::before { left: 10px; }
+.shelf-unit[data-structure="hanging"] .unit-cap::after { right: 10px; }
+
+/* ───── book spines ───── */
+.spine {
+  position: relative;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 2px 2px 1px 1px;
+  padding: 10% 0 8%;
+  box-shadow:
+    inset 2px 0 0 rgba(255, 255, 255, 0.2),
+    inset -3px 0 4px rgba(0, 0, 0, 0.18),
+    0 4px 6px -3px rgba(0, 0, 0, 0.4);
+}
+.spine-title {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+}

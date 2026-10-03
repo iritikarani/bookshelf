@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/date";
-import type { Book, Shelf } from "@/lib/types";
+import type { Book, BookDisplay, Shelf } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { BookCover } from "./BookCover";
 import { ChevronLeft, ChevronRight, PencilIcon, TrashIcon } from "./Icons";
@@ -19,13 +19,14 @@ interface BookDetailProps {
   onEdit?: (book: Book) => void;
   onMove?: (book: Book, shelfId: string) => void;
   onNudge?: (book: Book, dir: -1 | 1) => void;
+  onDisplay?: (book: Book, display: BookDisplay) => void;
   onRemove?: (book: Book) => Promise<void>;
   ownerName?: string | null;
   readOnly?: boolean;
   example?: boolean;
 }
 
-export function BookDetail({ book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onRemove, ownerName, readOnly, example }: BookDetailProps) {
+export function BookDetail({ book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onRemove, ownerName, readOnly, example }: BookDetailProps) {
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const color = useCoverColor(book);
@@ -135,7 +136,21 @@ export function BookDetail({ book, shelves, index, shelfSize, onClose, onEdit, o
             )}
 
             <fieldset>
-              <legend className="label">Move</legend>
+              <legend className="label">Arrange</legend>
+              <div className="mb-3 inline-flex rounded-full border border-line p-1" role="radiogroup" aria-label="Show on the shelf as">
+                {(["spine", "cover"] as BookDisplay[]).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    role="radio"
+                    aria-checked={book.display === d}
+                    onClick={() => onDisplay?.(book, d)}
+                    className={`rounded-full px-3.5 py-1.5 text-sm ${book.display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+                  >
+                    {d === "spine" ? "Spine out" : "Cover facing out"}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
                 <select
                   className="field flex-1"
@@ -157,7 +172,7 @@ export function BookDetail({ book, shelves, index, shelfSize, onClose, onEdit, o
                 </button>
               </div>
               <p className="mt-1 font-mono text-[11px] text-ink-soft">
-                Position {index + 1} of {shelfSize} on {shelf?.name}
+                Spot {index + 1} of {shelfSize} on {shelf?.name}
               </p>
             </fieldset>
           </div>

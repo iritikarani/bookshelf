@@ -6,7 +6,7 @@ import { todayISO } from "@/lib/date";
 import { compressCover } from "@/lib/image";
 import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
-import type { Book, BookDraft } from "@/lib/types";
+import type { Book, BookDisplay, BookDraft } from "@/lib/types";
 import { BookCover, GeneratedCover } from "./BookCover";
 import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -48,6 +48,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   const [rating, setRating] = useState(editing?.rating ?? 0);
   const [liked, setLiked] = useState(editing?.what_i_liked ?? "");
   const [line, setLine] = useState(editing?.favourite_line ?? "");
+  const [display, setDisplay] = useState<BookDisplay>(editing?.display ?? "spine");
 
   const [covers, setCovers] = useState<string[]>(editing?.cover_url ? [editing.cover_url] : []);
   const [probing, setProbing] = useState(false);
@@ -158,6 +159,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         cover_url: choice.kind === "url" ? choice.url : null,
         uploaded_cover: uploaded,
         cover_color: choice.kind === "generated" ? swatch : null,
+        display,
         year_published: toInt(year),
         pages: toInt(pages),
         genre: genre.trim() || null,
@@ -387,6 +389,24 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
             <input id="ab-date" type="date" className="field font-mono" value={dateFinished} max={todayISO()} onChange={(e) => setDateFinished(e.target.value)} />
           </div>
         )}
+      </div>
+
+      <div>
+        <span className="label" id="ab-display">Stand it on the shelf</span>
+        <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-labelledby="ab-display">
+          {(["spine", "cover"] as BookDisplay[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              role="radio"
+              aria-checked={display === d}
+              onClick={() => setDisplay(d)}
+              className={`rounded-full px-3.5 py-1.5 text-sm ${display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+            >
+              {d === "spine" ? "Spine out" : "Cover facing out"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!wantToRead && (

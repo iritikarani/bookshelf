@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthUser, Book, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
 import type { Store } from "./types";
 
 let client: SupabaseClient | null = null;
@@ -74,7 +74,8 @@ export const supabaseStore: Store = {
       ) as Shelf[];
     }
     const books = check(await sb.from("books").select("*").order("position")) as Book[];
-    return { profile, shelves, books };
+    const decor = check(await sb.from("decor").select("*").order("position")) as Decor[];
+    return { profile, shelves, books, decor };
   },
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...draft, user_id: userId, position }).select().single()) as Book;
@@ -85,13 +86,21 @@ export const supabaseStore: Store = {
   async updatePositions(updates) {
     const sb = getSupabase();
     const results = await Promise.all(
-      updates.map((u) => sb.from("books").update({ shelf_id: u.shelf_id, position: u.position }).eq("id", u.id)),
+      updates.map((u) =>
+        sb.from(u.kind === "book" ? "books" : "decor").update({ shelf_id: u.shelf_id, position: u.position }).eq("id", u.id),
+      ),
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) throw new Error(failed.error.message);
   },
   async deleteBook(id) {
     check(await getSupabase().from("books").delete().eq("id", id));
+  },
+  async insertDecor(userId, decor) {
+    return check(await getSupabase().from("decor").insert({ ...decor, user_id: userId }).select().single()) as Decor;
+  },
+  async deleteDecor(id) {
+    check(await getSupabase().from("decor").delete().eq("id", id));
   },
   async insertShelf(userId, shelf) {
     return check(await getSupabase().from("shelves").insert({ ...shelf, user_id: userId }).select().single()) as Shelf;

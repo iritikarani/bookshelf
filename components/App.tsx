@@ -1,19 +1,21 @@
 "use client";
 
-import { DEFAULT_THEME } from "@/lib/themes";
 import { useMemo, useState } from "react";
-import { EXAMPLE_BOOKS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
-import { LibraryProvider, groupByShelf, useLibrary } from "@/lib/library";
+import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
+import { LibraryProvider, useLibrary } from "@/lib/library";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
-import type { Book } from "@/lib/types";
+import { aestheticOf } from "@/lib/themes";
+import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
 import { AddBookDialog } from "./AddBookDialog";
+import { ArrangeSheet } from "./ArrangeSheet";
 import { AuthScreen } from "./AuthScreen";
 import { BookDetail } from "./BookDetail";
+import { DecorSheet } from "./DecorSheet";
 import { EditShelves } from "./EditShelves";
 import { Header } from "./Header";
-import { GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
+import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { Settings } from "./Settings";
@@ -30,7 +32,7 @@ export function App() {
 
 function AppInner() {
   const lib = useLibrary();
-  const { user, authReady, loading, profile, shelves, books, booksByShelf } = lib;
+  const { user, authReady, loading, profile, shelves, books, itemsByShelf } = lib;
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
@@ -38,9 +40,12 @@ function AppInner() {
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  const [decorId, setDecorId] = useState<string | null>(null);
+  const aesthetic = aestheticOf(profile?.shelf_style);
 
   const showExamples = !loading && books.length === 0;
-  const exampleMap = useMemo(() => groupByShelf([EXAMPLE_SHELF], EXAMPLE_BOOKS), []);
+  const exampleMap = useMemo(() => new Map<string, ShelfItem[]>([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]]), []);
   // Quote wall & reading year show the examples too until the first real book arrives.
   const viewShelves = showExamples ? [EXAMPLE_SHELF, ...shelves] : shelves;
   const viewBooks = showExamples ? EXAMPLE_BOOKS : books;
@@ -50,7 +55,8 @@ function AppInner() {
   if (!user && store.mode === "supabase") return <AuthScreen />;
 
   const openBook = openId ? (viewBooks.find((b) => b.id === openId) ?? null) : null;
-  const openList = openBook ? (isExample(openBook) ? exampleMap.get(EXAMPLE_SHELF.id) : booksByShelf.get(openBook.shelf_id)) ?? [] : [];
+  const openList = openBook ? (isExample(openBook) ? exampleMap.get(EXAMPLE_SHELF.id) : itemsByShelf.get(openBook.shelf_id)) ?? [] : [];
+  const openDecor = decorId ? (lib.decor.find((d) => d.id === decorId) ?? null) : null;
   const openIndex = openBook ? openList.findIndex((b) => b.id === openBook.id) : 0;
 
   const startAdd = () => {
@@ -59,7 +65,7 @@ function AppInner() {
   };
 
   return (
-    <div data-wood={profile?.wood_theme ?? DEFAULT_THEME} className="min-h-dvh pb-24">
+    <div data-style={aesthetic.id} className="room min-h-dvh pb-24">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2">
         Skip to shelves
       </a>
@@ -72,6 +78,9 @@ function AppInner() {
             <button type="button" className="btn-primary hidden sm:inline-flex" onClick={startAdd}>
               <PlusIcon width={16} height={16} /> Add a book
             </button>
+            <IconButton label="Arrange: aesthetic and decor" onClick={() => setArrangeOpen(true)}>
+              <BrushIcon />
+            </IconButton>
             <IconButton label="Share my shelf" onClick={() => setShareOpen(true)} disabled={books.length === 0}>
               <ShareIcon />
             </IconButton>
@@ -93,8 +102,10 @@ function AppInner() {
             {showExamples ? (
               <ShelfWall
                 shelves={[EXAMPLE_SHELF]}
-                booksByShelf={exampleMap}
-                onOpen={(b) => setOpenId(b.id)}
+                itemsByShelf={exampleMap}
+                structure={aesthetic.structure}
+                onOpenBook={(b) => setOpenId(b.id)}
+                floor={false}
                 readOnly
                 shelfNote={() => (
                   <div className="mb-2 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
@@ -109,13 +120,15 @@ function AppInner() {
             <div className={showExamples ? "mt-10" : ""}>
               <ShelfWall
                 shelves={shelves}
-                booksByShelf={booksByShelf}
-                onOpen={(b) => setOpenId(b.id)}
-                onMove={(id, shelfId, index) => lib.moveBook(id, shelfId, index)}
+                itemsByShelf={itemsByShelf}
+                structure={aesthetic.structure}
+                onOpenBook={(b) => setOpenId(b.id)}
+                onOpenDecor={(d) => setDecorId(d.id)}
+                onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
                 justAddedId={lib.justAddedId}
               />
             </div>
-            <p className="mt-8 hidden text-center text-xs text-ink-soft md:block">Tip: drag covers to reorder them or move them between shelves.</p>
+            <p className="mt-6 hidden text-center text-xs text-ink-soft md:block">Tip: drag books and objects to rearrange them. Use the brush to change the room or add decor.</p>
           </>
         ) : tab === "quotes" ? (
           <>
@@ -152,11 +165,9 @@ function AppInner() {
           setEditing(b);
           setAddOpen(true);
         }}
-        onMove={(b, shelfId) => {
-          const count = booksByShelf.get(shelfId)?.length ?? 0;
-          lib.moveBook(b.id, shelfId, count);
-        }}
-        onNudge={(b, dir) => lib.nudgeBook(b.id, dir)}
+        onMove={(b, shelfId) => lib.sendToShelf(b.id, shelfId)}
+        onNudge={(b, dir) => lib.nudgeItem(b.id, dir)}
+        onDisplay={(b, display) => lib.updateBook(b.id, { display })}
         onRemove={(b) => lib.removeBook(b.id)}
       />
 
@@ -173,10 +184,20 @@ function AppInner() {
             setTab("shelf");
             // Bring the new book into view once it lands.
             window.setTimeout(() => {
-              document.querySelector(`[data-book-id="${b.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+              document.querySelector(`[data-item-id="${b.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
             }, 80);
           }
         }}
+      />
+      <ArrangeSheet open={arrangeOpen} onClose={() => setArrangeOpen(false)} />
+      <DecorSheet
+        decor={openDecor}
+        shelves={shelves}
+        itemsByShelf={itemsByShelf}
+        onClose={() => setDecorId(null)}
+        onNudge={(id, dir) => lib.nudgeItem(id, dir)}
+        onSend={(id, shelfId) => lib.sendToShelf(id, shelfId)}
+        onRemove={(id) => lib.removeDecor(id)}
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -184,9 +205,9 @@ function AppInner() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         shelves={shelves}
-        booksByShelf={booksByShelf}
+        itemsByShelf={itemsByShelf}
         books={books}
-        wood={profile?.wood_theme ?? DEFAULT_THEME}
+        styleId={aesthetic.id}
         owner={profile?.display_name && store.mode === "supabase" ? profile.display_name : null}
       />
 
@@ -233,7 +254,7 @@ export function ShelfSkeleton() {
               <div key={j} className="animate-pulse rounded-[3px] bg-ink/10" style={{ width: "var(--cover-w)", height: "var(--cover-h)" }} />
             ))}
           </div>
-          <div className="plank" />
+          <div className="h-3.5 rounded-sm bg-ink/10" />
         </div>
       ))}
     </div>
