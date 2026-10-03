@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { store, type LibraryData, type PositionUpdate } from "./store";
 import { saveUsername } from "./store/supabase";
+import { DECOR } from "@/components/Decor";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Shelf, ShelfItem, ShelfStyle } from "./types";
 
 interface LibraryContextValue {
@@ -59,10 +60,13 @@ export function groupByShelf(shelves: Shelf[], books: Book[]): Map<string, Book[
   return map;
 }
 
+const DECOR_KINDS = new Set<string>(DECOR.map((d) => d.kind));
+
 export function groupItems(shelves: Shelf[], books: Book[], decor: Decor[]): Map<string, ShelfItem[]> {
   const map = new Map<string, ShelfItem[]>(shelves.map((s) => [s.id, []]));
   for (const b of books) map.get(b.shelf_id)?.push({ type: "book", id: b.id, shelf_id: b.shelf_id, position: b.position, created_at: b.created_at, book: b });
-  for (const d of decor) map.get(d.shelf_id)?.push({ type: "decor", id: d.id, shelf_id: d.shelf_id, position: d.position, created_at: d.created_at, decor: d });
+  // Skip objects that were retired (like the old bust).
+  for (const d of decor) if (DECOR_KINDS.has(d.kind)) map.get(d.shelf_id)?.push({ type: "decor", id: d.id, shelf_id: d.shelf_id, position: d.position, created_at: d.created_at, decor: d });
   for (const list of map.values()) list.sort(byOrder);
   return map;
 }

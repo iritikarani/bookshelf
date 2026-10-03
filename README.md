@@ -2,7 +2,7 @@
 
 An online bookshelf for the books you've finished, with a personal journal entry for each one.
 
-It feels like a corner of home, drawn to look real: wood grain, painted and plastered surfaces (all generated SVG noise, no image downloads), bookcase compartments with depth and shadow, rounded cloth-textured spines, daylight from the window and floorboards in perspective. There's a window with curtains (a night sky in dark mode), a reading lamp you can switch on, a rug, and a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a globe or a bust. Mark books ❤ Favourite, 📖 Reading now or 🔖 To read; marks show as ribbon bookmarks and the filter chips highlight them, so shelves never have to double as categories. Click a book and it opens like a book, with the cover, rating and marks on the left page and your journal on the right. **Add a book** is one form: type a title, an author or a publisher (with suggestions for 50+ Indian publishers) to search Open Library and Google Books, and picking a match fills in its cover and details. Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
+It feels like a corner of home, drawn to look real: wood grain, painted and plastered surfaces (all generated SVG noise, no image downloads), bookcase compartments with depth and shadow, rounded cloth-textured spines, daylight from the window and floorboards in perspective. There's a window with curtains (a night sky in dark mode), a reading lamp you can switch on, a rug, and a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a sleeping cat, a cup of kulhad chai or a brass diya. Mark books ❤ Favourite, 📖 Reading now or 🔖 To read; marks show as ribbon bookmarks and the filter chips highlight them, so shelves never have to double as categories. Click a book and it opens like a book, with the cover, rating and marks on the left page and your journal on the right. **Add a book** is one form: type a title, an author or a publisher (with suggestions for 50+ Indian publishers) to search Open Library and Google Books, and picking a match fills in its cover and details. Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
 
 **Stack:** Next.js 15 (App Router) · React 19 · Tailwind CSS · Supabase (auth, Postgres, storage) · dnd-kit · html-to-image · Google Books and Open Library APIs.
 
@@ -23,7 +23,7 @@ npm run dev                  # http://localhost:3000
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
+2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) and [`0003_decor.sql`](supabase/migrations/0003_decor.sql) (new decor objects) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
    - `profiles`, `shelves` and `books`, with row-level security so each user sees only their own rows (private by default).
    - A sign-up trigger that gives every new user three plain shelves: **Top shelf**, **Middle shelf** and **Bottom shelf**.
    - `get_public_shelf(slug)`, a security-definer function that returns a shelf only when its owner has turned the public link on.
@@ -77,7 +77,7 @@ components/
   App.tsx                shell, tabs, dialogs, example shelf
   ShelfWall.tsx          shelf structures, books + decor in one row, drag & drop with an insertion marker
   BookSpine.tsx          spine-out books
-  Decor.tsx              the 10 decor objects (inline SVG)
+  Decor.tsx              the 17 decor objects (inline SVG)
   ArrangeSheet.tsx       pick an aesthetic, place decor
   DecorSheet.tsx         move or remove one object
   BookDetail.tsx         the open-book spread: rating, marks, journal, arrange controls, remove confirmation

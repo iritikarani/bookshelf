@@ -24,9 +24,16 @@ export type DecorKind =
   | "frame"
   | "globe"
   | "calendar"
-  | "bust"
   | "camera"
-  | "stack";
+  | "stack"
+  | "chai"
+  | "glasses"
+  | "hourglass"
+  | "diya"
+  | "typewriter"
+  | "cat"
+  | "quill"
+  | "fairyjar";
 
 export interface Decor {
   id: string;
