@@ -84,7 +84,7 @@ function AppInner() {
   };
 
   return (
-    <div data-style={aesthetic.id} className="room min-h-dvh pb-24">
+    <div data-style={aesthetic.id} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2">
         Skip to shelves
       </a>
@@ -113,7 +113,7 @@ function AppInner() {
         }
       />
 
-      <main id="main" className="mx-auto w-full max-w-6xl px-4 pt-6 md:px-8 md:pt-8">
+      <main id="main" className={`mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 md:px-8 md:pt-8`}>
         {loading ? (
           <ShelfSkeleton />
         ) : tab === "shelf" ? (
@@ -127,6 +127,9 @@ function AppInner() {
               </div>
             )}
             <MarkFilterBar value={filter} onChange={setFilter} books={viewBooks} />
+            <p className="-mt-2 mb-4 hidden text-center text-xs text-ink-soft md:block">
+              Tip: drag books and objects to rearrange them. Click the lamp to switch it on or off. The brush changes the room.
+            </p>
             <RoomScene standing={aesthetic.structure === "case"}>
               {showExamples ? (
                 <ShelfWall
@@ -152,9 +155,7 @@ function AppInner() {
                 />
               )}
             </RoomScene>
-            <p className="mt-4 hidden text-center text-xs text-ink-soft md:block">
-              Tip: drag books and objects to rearrange them. Click the lamp to switch it on or off. The brush changes the room.
-            </p>
+
           </>
         ) : tab === "quotes" ? (
           <>
