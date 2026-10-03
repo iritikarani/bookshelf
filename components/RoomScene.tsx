@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { WindowView } from "./WindowView";
 
 const LAMP_KEY = "exlibris:lamp";
 
@@ -30,13 +31,7 @@ export function RoomWindow({ className = "", compact = false }: { className?: st
       <div className="window-rod" />
       <div className="window-frame">
         <div className="window-sky">
-          <span className="window-sun" />
-          <span className="window-moon" />
-          <span className="window-stars" />
-          <span className="window-cloud" style={{ top: "18%", left: "12%" }} />
-          <span className="window-cloud" style={{ top: "40%", left: "55%", transform: "scale(.7)" }} />
-          <span className="window-view" />
-          <span className="window-branch" />
+          <WindowView />
         </div>
         <div className="window-glass" />
         <div className={`window-mullions ${compact ? "window-mullions--wide" : ""}`} />

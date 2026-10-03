@@ -733,7 +733,7 @@
 .dark .window-beam { display: none; }
 
 /* Window: deep frame, a view outside, reflections on the glass, sheer curtains */
-.room-window { --curtain-w: 28%; }
+.room-window { --curtain-w: 21%; }
 .window-rod {
   position: absolute;
   left: -10%;
@@ -783,82 +783,11 @@
   background: linear-gradient(180deg, #a9d1ef 0%, #cfe6f7 55%, #e9f3ee 100%);
 }
 .dark .window-sky { background: linear-gradient(180deg, #0f1729 0%, #1f2c48 70%, #2e3a57 100%); }
-/* Distant hills and a tree line */
-.window-view {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 48%;
-  background:
-    radial-gradient(ellipse 40% 55% at 80% 100%, #5d8a5a 98%, transparent),
-    radial-gradient(ellipse 30% 45% at 55% 100%, #6f9b68 98%, transparent),
-    radial-gradient(ellipse 60% 40% at 20% 100%, #82ab79 98%, transparent),
-    radial-gradient(ellipse 70% 30% at 70% 100%, #a8c6a4 98%, transparent),
-    linear-gradient(180deg, transparent 55%, #9fbf98 55%);
-  filter: saturate(0.85);
-}
-.dark .window-view { filter: brightness(0.25) saturate(0.4); }
-.window-sun {
-  position: absolute;
-  right: 18%;
-  top: 14%;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #fff8e0;
-  box-shadow: 0 0 34px 16px rgba(255, 246, 210, 0.85);
-}
-.window-moon,
-.window-stars { display: none; }
-.dark .window-sun,
-.dark .window-cloud { display: none; }
-.dark .window-moon {
-  display: block;
-  position: absolute;
-  right: 18%;
-  top: 14%;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  box-shadow: -6px 4px 0 0 #f4ecd2;
-  filter: drop-shadow(0 0 6px rgba(244, 236, 210, 0.6));
-}
-.dark .window-stars {
-  display: block;
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 20% 20%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 40% 50%, #fff 99%, transparent),
-    radial-gradient(1.5px 1.5px at 70% 35%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 30% 40%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 85% 45%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 55% 12%, #fff 99%, transparent);
-  opacity: 0.85;
-}
-.window-cloud {
-  position: absolute;
-  width: 46px;
-  height: 13px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 12px -7px 0 2px rgba(255, 255, 255, 0.92), 26px 0 0 0 rgba(255, 255, 255, 0.92);
-  filter: blur(0.6px);
-}
-.window-branch {
-  position: absolute;
-  left: -12%;
-  top: -8%;
-  width: 62%;
-  height: 46%;
-  background:
-    radial-gradient(ellipse 14% 22% at 20% 40%, #6e9a60 98%, transparent),
-    radial-gradient(ellipse 16% 20% at 38% 28%, #5c8852 98%, transparent),
-    radial-gradient(ellipse 13% 18% at 55% 18%, #7fa86f 98%, transparent),
-    radial-gradient(ellipse 18% 24% at 12% 15%, #527c4a 98%, transparent),
-    radial-gradient(ellipse 12% 16% at 70% 8%, #6e9a60 98%, transparent);
-  filter: blur(0.4px);
-}
-.dark .window-branch { filter: brightness(0.25) saturate(0.5); }
+/* The view outside (see WindowView): day by default, night in dark mode */
+.window-view-night { display: none; }
+.dark .window-view-day { display: none; }
+.dark .window-view-night { display: inline; }
+
 /* Glass: two diagonal reflections */
 .window-glass {
   position: absolute;
@@ -907,16 +836,15 @@
   bottom: -40px;
   width: var(--curtain-w);
   z-index: 2;
-  opacity: 0.94;
   background:
     var(--tex-cloth),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 5px, rgba(0, 0, 0, 0.1) 9px, rgba(255, 255, 255, 0.18) 13px, rgba(0, 0, 0, 0.14) 19px, rgba(255, 255, 255, 0.28) 24px),
     linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 12%),
     var(--curtain);
-  filter: drop-shadow(4px 8px 8px rgba(0, 0, 0, 0.18));
+  box-shadow: 0 10px 14px -8px rgba(0, 0, 0, 0.22);
 }
-.curtain-left { left: -12%; border-radius: 0 0 30% 10% / 0 0 6% 4%; }
-.curtain-right { right: -12%; border-radius: 0 0 10% 30% / 0 0 4% 6%; }
+.curtain-left { left: -13%; border-radius: 0 0 30% 10% / 0 0 6% 4%; }
+.curtain-right { right: -13%; border-radius: 0 0 10% 30% / 0 0 4% 6%; }
 [data-style="industrial"] .curtain { display: none; }
 [data-style="cottage"] .curtain {
   background:
