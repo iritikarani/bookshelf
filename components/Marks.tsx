@@ -32,7 +32,7 @@ export function Ribbons({ book }: { book: Pick<Book, "favourite" | "status" | "d
         <span
           key={i}
           aria-hidden
-          className="pointer-events-none absolute -top-[3px] z-10 h-[52%] origin-top drop-shadow-[1px_1.5px_1px_rgba(0,0,0,0.35)]"
+          className="pointer-events-none absolute -top-[3px] z-10 h-[36%] origin-top drop-shadow-[1px_1.5px_1px_rgba(0,0,0,0.35)]"
           style={{
             width: cover ? 8 : 5,
             // on a spine, a second ribbon hangs at the opposite edge so the title stays clear
