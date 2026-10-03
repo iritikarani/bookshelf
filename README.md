@@ -53,7 +53,7 @@ The site is static (`output: "export"`), so any static host works. There's no se
 
 ### Vercel or Netlify
 
-Import the repo. The defaults work: build command `npm run build`, output directory `out`. Add the two `NEXT_PUBLIC_SUPABASE_*` environment variables if you want accounts. Leave `NEXT_PUBLIC_BASE_PATH` unset when the site is served from the domain root.
+Import the repo. [`vercel.json`](vercel.json) already tells Vercel to run `npm run build` and serve the static `out/` folder, whatever the project's framework setting is. Add the two `NEXT_PUBLIC_SUPABASE_*` environment variables if you want accounts. Leave `NEXT_PUBLIC_BASE_PATH` unset when the site is served from the domain root.
 
 ## Data model
 
