@@ -2,12 +2,13 @@
 
 import type { ReactNode } from "react";
 
-export type Tab = "shelf" | "quotes" | "year";
+export type Tab = "shelf" | "quotes" | "year" | "discover";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "shelf", label: "Shelf" },
   { id: "quotes", label: "Quote wall" },
   { id: "year", label: "Reading year" },
+  { id: "discover", label: "Discover" },
 ];
 
 interface Stats {
@@ -38,14 +39,14 @@ export function Header({ stats, tab, onTab, actions, subtitle }: { stats: Stats;
       </dl>
 
       {onTab && (
-        <nav className="mt-5 flex gap-1 border-b border-line" aria-label="Sections">
+        <nav className="no-scrollbar mt-5 flex gap-1 overflow-x-auto border-b border-line" aria-label="Sections">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => onTab(t.id)}
               aria-current={tab === t.id ? "page" : undefined}
-              className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium transition-colors md:px-4 ${
+              className={`-mb-px shrink-0 whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium transition-colors md:px-4 ${
                 tab === t.id ? "border-accent text-ink" : "border-transparent text-ink-soft hover:text-ink"
               }`}
             >

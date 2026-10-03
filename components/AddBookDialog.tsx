@@ -24,17 +24,19 @@ interface Props {
   editing?: Book | null;
   defaultShelfId?: string;
   onSaved?: (book: Book | null) => void;
+  /** Start from a known book (e.g. from Discover) instead of an empty search. */
+  prefill?: SearchResult | null;
 }
 
-export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved }: Props) {
+export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved, prefill }: Props) {
   return (
     <Sheet open={open} onClose={onClose} title={editing ? "Edit book" : "Add a book"} wide>
-      {open && <AddBookForm key={editing?.id ?? "new"} editing={editing ?? null} defaultShelfId={defaultShelfId} onDone={(b) => { onSaved?.(b); onClose(); }} />}
+      {open && <AddBookForm key={editing?.id ?? prefill?.key ?? "new"} editing={editing ?? null} prefill={prefill ?? null} defaultShelfId={defaultShelfId} onDone={(b) => { onSaved?.(b); onClose(); }} />}
     </Sheet>
   );
 }
 
-function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null) => void }) {
+function AddBookForm({ editing, prefill, defaultShelfId, onDone }: { editing: Book | null; prefill: SearchResult | null; defaultShelfId?: string; onDone: (b: Book | null) => void }) {
   const { shelves, addBook, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
@@ -132,6 +134,12 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
     setProbing(false);
     setChoice((c) => (c.kind === "upload" ? c : valid[0] ? { kind: "url", url: valid[0] } : { kind: "generated" }));
   }
+
+  // Opened from Discover: fill everything in from the chosen book straight away.
+  useEffect(() => {
+    if (prefill) pick(prefill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onUpload(file: File | undefined) {
     if (!file) return;

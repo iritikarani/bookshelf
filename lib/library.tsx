@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { store, type LibraryData, type PositionUpdate } from "./store";
+import { saveUsername } from "./store/supabase";
+import { bookKey } from "./goodreads";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Shelf, ShelfItem, ShelfStyle } from "./types";
 
 interface LibraryContextValue {
@@ -21,6 +23,8 @@ interface LibraryContextValue {
   clearError(): void;
 
   addBook(draft: BookDraft): Promise<Book>;
+  /** Add many books, spread evenly across the shelves, skipping ones already there. */
+  importBooks(books: Omit<BookDraft, "shelf_id">[]): Promise<{ added: number; skipped: number }>;
   updateBook(id: string, patch: Partial<BookDraft>): Promise<void>;
   removeBook(id: string): Promise<void>;
   /** Move a book or decor item to `toIndex` among all items on `toShelfId`. */
@@ -41,6 +45,8 @@ interface LibraryContextValue {
 
   setShelfStyle(style: ShelfStyle): Promise<void>;
   setPublic(isPublic: boolean): Promise<void>;
+  /** Accounts only: choose or change the reader's username. Throws with a readable message. */
+  setUsername(username: string): Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -174,6 +180,40 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       fail(e, "Couldn't add that book.");
       throw e;
     }
+  }, []);
+
+  const importBooks = useCallback(async (incoming: Omit<BookDraft, "shelf_id">[]) => {
+    const u = requireUser();
+    const d = dataRef.current;
+    if (!d || !d.shelves.length) throw new Error("Add a shelf first.");
+    const have = new Set(d.books.map((b) => bookKey(b.title, b.author)));
+    const fresh: Omit<BookDraft, "shelf_id">[] = [];
+    for (const b of incoming) {
+      const k = bookKey(b.title, b.author);
+      if (have.has(k)) continue;
+      have.add(k);
+      fresh.push(b);
+    }
+    // Deal books out like cards so no single shelf gets all of them.
+    const grouped = groupItems(d.shelves, d.books, d.decor);
+    const shelves = [...d.shelves].sort((a, b) => a.position - b.position);
+    const next = new Map(shelves.map((s) => [s.id, (grouped.get(s.id) ?? []).length]));
+    const rows = fresh.map((b, i) => {
+      const shelf = shelves[i % shelves.length];
+      const position = next.get(shelf.id)!;
+      next.set(shelf.id, position + 1);
+      return { ...b, shelf_id: shelf.id, position };
+    });
+    if (rows.length) {
+      try {
+        const saved = await store.insertBooks(u.id, rows);
+        setData((cur) => (cur ? { ...cur, books: [...cur.books, ...saved] } : cur));
+      } catch (e) {
+        fail(e, "Couldn't import those books.");
+        throw e;
+      }
+    }
+    return { added: rows.length, skipped: incoming.length - rows.length };
   }, []);
 
   const moveItem = useCallback(
@@ -364,6 +404,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [run],
   );
 
+  const setUsername = useCallback(async (username: string) => {
+    const u = requireUser();
+    await saveUsername(u.id, username);
+    setData((d) => (d ? { ...d, profile: { ...d.profile, username, display_name: username } } : d));
+  }, []);
+
   const value: LibraryContextValue = {
     user,
     authReady,
@@ -378,6 +424,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     error,
     clearError: () => setError(null),
     addBook,
+    importBooks,
     updateBook,
     removeBook,
     moveItem,
@@ -392,6 +439,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     deleteShelf,
     setShelfStyle,
     setPublic,
+    setUsername,
   };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

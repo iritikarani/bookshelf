@@ -19,12 +19,14 @@ export interface Store {
   getUser(): Promise<AuthUser | null>;
   onAuthChange(cb: (user: AuthUser | null) => void): () => void;
   signInWithEmail(email: string, password: string): Promise<void>;
-  signUpWithEmail(email: string, password: string): Promise<{ needsConfirmation: boolean }>;
+  signUpWithEmail(email: string, password: string, username?: string): Promise<{ needsConfirmation: boolean }>;
   signInWithGoogle(): Promise<void>;
   signOut(): Promise<void>;
 
   load(user: AuthUser): Promise<LibraryData>;
   insertBook(userId: string, draft: BookDraft, position: number): Promise<Book>;
+  /** Add many books at once (imports). */
+  insertBooks(userId: string, books: (BookDraft & { position: number })[]): Promise<Book[]>;
   updateBook(id: string, patch: Partial<BookDraft>): Promise<Book>;
   updatePositions(updates: PositionUpdate[]): Promise<void>;
   deleteBook(id: string): Promise<void>;

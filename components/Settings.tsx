@@ -8,15 +8,18 @@ import { siteUrl } from "@/lib/basePath";
 import { hasSupabase, setGuest, store } from "@/lib/store";
 import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
+import { UsernameDialog } from "./UsernameDialog";
 
-export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Settings({ open, onClose, onImport }: { open: boolean; onClose: () => void; onImport?: () => void }) {
   const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
   const [copied, setCopied] = useState(false);
+  const [usernameOpen, setUsernameOpen] = useState(false);
   const router = useRouter();
   const publicUrl = profile && typeof window !== "undefined" ? siteUrl(`/s/?u=${profile.public_slug}`) : "";
 
   return (
+    <>
     <Sheet open={open} onClose={onClose} title="Settings">
       <div className="space-y-7">
         <fieldset>
@@ -37,6 +40,23 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             ))}
           </div>
         </fieldset>
+
+        {onImport && (
+          <fieldset>
+            <legend className="label">Bring your books</legend>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                onClose();
+                onImport();
+              }}
+            >
+              Import from Goodreads
+            </button>
+            <p className="mt-1 text-xs text-ink-soft">Your shelves, ratings, reviews and dates read, from a Goodreads export file.</p>
+          </fieldset>
+        )}
 
         <fieldset>
           <legend className="label">Sharing</legend>
@@ -81,9 +101,15 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
           <legend className="label">Account</legend>
           {store.mode === "supabase" ? (
             <div className="flex items-center justify-between gap-3">
-              <p className="truncate text-sm">
-                Signed in as <span className="font-medium">{user?.email}</span>
-              </p>
+              <div className="min-w-0 text-sm">
+                <p className="truncate">
+                  {profile?.username ? <span className="font-medium">@{profile.username}</span> : <span className="text-ink-soft">No username yet</span>}
+                  <button type="button" className="ml-2 text-xs text-accent underline-offset-2 hover:underline" onClick={() => { setUsernameOpen(true); onClose(); }}>
+                    {profile?.username ? "Change" : "Choose one"}
+                  </button>
+                </p>
+                <p className="truncate text-xs text-ink-soft">{user?.email}</p>
+              </div>
               <button
                 type="button"
                 className="btn-ghost"
@@ -119,5 +145,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
         </fieldset>
       </div>
     </Sheet>
+    {usernameOpen && <UsernameDialog open onClose={() => setUsernameOpen(false)} />}
+    </>
   );
 }

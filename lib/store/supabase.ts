@@ -41,13 +41,14 @@ export const supabaseStore: Store = {
     const { error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
   },
-  async signUpWithEmail(email, password) {
+  async signUpWithEmail(email, password, username) {
     const { data, error } = await getSupabase().auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: siteUrl("/") },
+      options: { emailRedirectTo: siteUrl("/"), data: username ? { username } : undefined },
     });
-    if (error) throw new Error(error.message);
+    // The profile insert fails if someone took the username a moment earlier.
+    if (error) throw new Error(/database error saving new user/i.test(error.message) ? "That username was just taken. Try another." : error.message);
     return { needsConfirmation: !data.session };
   },
   async signInWithGoogle() {
@@ -80,6 +81,16 @@ export const supabaseStore: Store = {
   },
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...draft, user_id: userId, position }).select().single()) as Book;
+  },
+  async insertBooks(userId, books) {
+    const sb = getSupabase();
+    const out: Book[] = [];
+    // Chunks keep each request small for big libraries.
+    for (let i = 0; i < books.length; i += 200) {
+      const chunk = books.slice(i, i + 200).map((b) => ({ ...b, user_id: userId }));
+      out.push(...(check(await sb.from("books").insert(chunk).select()) as Book[]));
+    }
+    return out;
   },
   async updateBook(id, patch) {
     return check(await getSupabase().from("books").update(patch).eq("id", id).select().single()) as Book;
@@ -144,4 +155,17 @@ export async function sendPasswordReset(email: string) {
 export async function setNewPassword(password: string) {
   const { error } = await getSupabase().auth.updateUser({ password });
   if (error) throw new Error(error.message);
+}
+
+/** Whether a username is free (works before signing in). */
+export async function isUsernameAvailable(name: string): Promise<boolean> {
+  const { data, error } = await getSupabase().rpc("username_available", { name });
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+/** Set or change the signed-in reader's username (also used as their display name). */
+export async function saveUsername(userId: string, username: string) {
+  const { error } = await getSupabase().from("profiles").update({ username, display_name: username }).eq("id", userId);
+  if (error) throw new Error(error.code === "23505" ? "That username is taken. Try another." : error.message);
 }

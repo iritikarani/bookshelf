@@ -2,7 +2,7 @@
 
 An online bookshelf for the books you've finished, with a personal journal entry for each one.
 
-It feels like a corner of home, drawn to look real: wood grain, painted and plastered surfaces (all generated SVG noise, no image downloads), bookcase compartments with depth and shadow, rounded cloth-textured spines, daylight from the window and floorboards in perspective. There's a window with curtains (a night sky in dark mode), a reading lamp you can switch on, a rug, and a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a globe or a bust. Mark books ❤ Favourite, 📖 Reading now or 🔖 To read; marks show as ribbon bookmarks and the filter chips highlight them, so shelves never have to double as categories. Click a book and it opens like a book, with the cover, rating and marks on the left page and your journal on the right. Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
+It feels like a corner of home, drawn to look real: wood grain, painted and plastered surfaces (all generated SVG noise, no image downloads), bookcase compartments with depth and shadow, rounded cloth-textured spines, daylight from the window and floorboards in perspective. There's a window with curtains (a night sky in dark mode), a reading lamp you can switch on, a rug, and a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a globe or a bust. Mark books ❤ Favourite, 📖 Reading now or 🔖 To read; marks show as ribbon bookmarks and the filter chips highlight them, so shelves never have to double as categories. Click a book and it opens like a book, with the cover, rating and marks on the left page and your journal on the right. The **Discover** tab searches any book or author (Open Library + Google Books), browses a hand-picked guide to 42 Indian writers from Tagore to Banu Mushtaq, and imports a Goodreads library export (shelves, ratings, reviews, dates read). Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
 
 **Stack:** Next.js 15 (App Router) · React 19 · Tailwind CSS · Supabase (auth, Postgres, storage) · dnd-kit · html-to-image · Google Books and Open Library APIs.
 
@@ -23,7 +23,7 @@ npm run dev                  # http://localhost:3000
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). It creates:
+2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
    - `profiles`, `shelves` and `books`, with row-level security so each user sees only their own rows (private by default).
    - A sign-up trigger that gives every new user three plain shelves: **Top shelf**, **Middle shelf** and **Bottom shelf**.
    - `get_public_shelf(slug)`, a security-definer function that returns a shelf only when its owner has turned the public link on.
@@ -62,7 +62,7 @@ Import the repo. [`vercel.json`](vercel.json) already tells Vercel to run `npm r
 | `shelves` | id, user_id, name, position |
 | `books` | id, user_id, title, author, cover_url, uploaded_cover, cover_color, display (`spine` / `cover`), status (`read` / `reading` / `to_read`), favourite, year_published, pages, genre, short_description, shelf_id, position, rating (0–5), what_i_liked, favourite_line, date_finished, created_at, updated_at |
 | `decor` | id, user_id, shelf_id, kind, position (shares the shelf's ordering with books) |
-| `profiles` | id, display_name, shelf_style (one of the 10 aesthetics), is_public, public_slug |
+| `profiles` | id, display_name, username (unique, 3–20 of `a-z 0-9 _ .`), shelf_style (one of the 10 aesthetics), is_public, public_slug |
 
 Beyond the brief: `status` and `favourite` are the marks (they replace the brief's "Want to read" shelf), `cover_color` stores the pastel picked for a generated cover, `display` says whether a book stands spine-out or cover-out, and the `decor` table holds the objects on each shelf.
 
@@ -82,6 +82,8 @@ components/
   DecorSheet.tsx         move or remove one object
   BookDetail.tsx         the open-book spread: rating, marks, journal, arrange controls, remove confirmation
   RoomScene.tsx          window, reading lamp, rug and floor around the shelves
+  Discover.tsx           search any book, Indian authors guide, Goodreads entry point
+  ImportGoodreads.tsx    import a Goodreads CSV export (lib/goodreads.ts parses it)
   Marks.tsx              mark definitions, ribbons, chips and the mark picker
   AddBookDialog.tsx      search-as-you-type, cover picker, generated covers, upload, journal fields
   EditShelves.tsx        rename, reorder, add, delete empty shelves

@@ -6,7 +6,9 @@ import { EXAMPLE_ITEMS, EXAMPLE_SHELF } from "@/lib/examples";
 import { hasSupabase, setGuest, store } from "@/lib/store";
 import { sendPasswordReset, setNewPassword } from "@/lib/store/supabase";
 import type { ShelfItem } from "@/lib/types";
+import { normalizeUsername } from "@/lib/username";
 import { GoogleIcon } from "./Icons";
+import { UsernameField, usernameOk, type UsernameStatus } from "./UsernameField";
 import { RoomWindow } from "./RoomScene";
 import { ShelfWall } from "./ShelfWall";
 
@@ -100,6 +102,8 @@ function NoAccounts({ onEnter }: { onEnter: () => void }) {
 
 function AuthCard({ mode, setMode, onGuest, onDone }: { mode: Mode; setMode: (m: Mode) => void; onGuest: () => void; onDone: () => void }) {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("empty");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -122,7 +126,11 @@ function AuthCard({ mode, setMode, onGuest, onDone }: { mode: Mode; setMode: (m:
         await store.signInWithEmail(email, password);
         onDone();
       } else if (mode === "signup") {
-        const { needsConfirmation } = await store.signUpWithEmail(email, password);
+        if (!usernameOk(usernameStatus)) {
+          setError(usernameStatus === "taken" ? "That username is taken. Try another." : "Choose a username first.");
+          return;
+        }
+        const { needsConfirmation } = await store.signUpWithEmail(email, password, normalizeUsername(username));
         if (needsConfirmation) setNotice("Almost there. We sent you an email; tap the link in it to open your shelf.");
         else onDone();
       } else if (mode === "forgot") {
@@ -188,6 +196,9 @@ function AuthCard({ mode, setMode, onGuest, onDone }: { mode: Mode; setMode: (m:
       )}
 
       <form onSubmit={submit} className={`space-y-3 ${mode === "forgot" || mode === "reset" ? "mt-6" : ""}`}>
+        {mode === "signup" && (
+          <UsernameField id="signup-username" value={username} onChange={setUsername} onStatus={setUsernameStatus} />
+        )}
         {needsEmail && (
           <div>
             <label className="label" htmlFor="login-email">Email</label>

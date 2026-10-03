@@ -16,6 +16,10 @@ import { AddBookDialog } from "./AddBookDialog";
 import { ArrangeSheet } from "./ArrangeSheet";
 import { BookDetail } from "./BookDetail";
 import { DecorSheet } from "./DecorSheet";
+import { Discover } from "./Discover";
+import { ImportGoodreads } from "./ImportGoodreads";
+import type { SearchResult } from "@/lib/search";
+import { UsernameDialog } from "./UsernameDialog";
 import { EditShelves } from "./EditShelves";
 import { Header } from "./Header";
 import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
@@ -48,6 +52,10 @@ function AppInner() {
   const aesthetic = aestheticOf(profile?.shelf_style);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
+  const [prefill, setPrefill] = useState<SearchResult | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  // Accounts made with Google have no username yet: ask once per visit.
+  const [usernameSkipped, setUsernameSkipped] = useState(false);
   const router = useRouter();
   // Signed out with accounts switched on: the front door is the login page.
   useEffect(() => {
@@ -110,7 +118,12 @@ function AppInner() {
           <>
             {showExamples && (
               <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
+                <p className="text-ink-soft">
+                  These are example books. They disappear when you add your first one.{" "}
+                  <button type="button" className="font-medium text-accent underline-offset-2 hover:underline" onClick={() => setImportOpen(true)}>
+                    Coming from Goodreads? Import your books
+                  </button>
+                </p>
                 <button type="button" className="btn-primary shrink-0" onClick={startAdd}>
                   <PlusIcon width={16} height={16} /> Add my first book
                 </button>
@@ -151,11 +164,20 @@ function AppInner() {
             {showExamples && <ExampleNote />}
             <QuoteWall books={viewBooks} onOpen={(b) => setOpenId(b.id)} />
           </>
-        ) : (
+        ) : tab === "year" ? (
           <>
             {showExamples && <ExampleNote />}
             <ReadingYear shelves={viewShelves} books={viewBooks} onOpen={(b) => setOpenId(b.id)} />
           </>
+        ) : (
+          <Discover
+            onReadIt={(r) => {
+              setEditing(null);
+              setPrefill(r);
+              setAddOpen(true);
+            }}
+            onImport={() => setImportOpen(true)}
+          />
         )}
       </main>
 
@@ -175,7 +197,7 @@ function AppInner() {
         index={openIndex}
         shelfSize={openList.length}
         example={openBook ? isExample(openBook) : false}
-        ownerName={profile?.display_name}
+        ownerName={profile?.username ?? profile?.display_name}
         onClose={() => setOpenId(null)}
         onEdit={(b) => {
           setEditing(b);
@@ -192,9 +214,11 @@ function AppInner() {
       <AddBookDialog
         open={addOpen}
         editing={editing}
+        prefill={prefill}
         onClose={() => {
           setAddOpen(false);
           setEditing(null);
+          setPrefill(null);
         }}
         onSaved={(b) => {
           if (b) {
@@ -207,6 +231,9 @@ function AppInner() {
           }
         }}
       />
+      {store.mode === "supabase" && profile && !profile.username && !usernameSkipped && (
+        <UsernameDialog open firstTime onClose={() => setUsernameSkipped(true)} />
+      )}
       <ArrangeSheet open={arrangeOpen} onClose={() => setArrangeOpen(false)} />
       <DecorSheet
         decor={openDecor}
@@ -218,7 +245,8 @@ function AppInner() {
         onRemove={(id) => lib.removeDecor(id)}
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
-      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} onImport={() => setImportOpen(true)} />
+      <ImportGoodreads open={importOpen} onClose={() => setImportOpen(false)} />
       <ShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -226,7 +254,7 @@ function AppInner() {
         itemsByShelf={itemsByShelf}
         books={books}
         styleId={aesthetic.id}
-        owner={profile?.display_name && store.mode === "supabase" ? profile.display_name : null}
+        owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
       />
 
       {lib.error && (
