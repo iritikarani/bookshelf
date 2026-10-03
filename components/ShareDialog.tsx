@@ -9,6 +9,7 @@ import type { Book, Shelf, ShelfItem, ShelfStyle } from "@/lib/types";
 import { spineWidthPx } from "./BookSpine";
 import { decorSpec } from "./Decor";
 import { DownloadIcon } from "./Icons";
+import { RoomScene } from "./RoomScene";
 import { Sheet } from "./Sheet";
 import { ShelfWall } from "./ShelfWall";
 
@@ -35,6 +36,69 @@ async function toDataUrl(url: string): Promise<string | null> {
     });
   } catch {
     return null;
+  }
+}
+
+const textureCache = new Map<string, Promise<string | null>>();
+
+/** Draw an SVG texture (a data URI using SVG filters) into a PNG data URI. */
+function rasterizeSvg(dataUrl: string): Promise<string | null> {
+  let hit = textureCache.get(dataUrl);
+  if (!hit) {
+    hit = (async () => {
+      try {
+        const svg = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1));
+        const w = Number(/width='(\d+)'/.exec(svg)?.[1] ?? 300);
+        const h = Number(/height='(\d+)'/.exec(svg)?.[1] ?? 300);
+        const img = new Image();
+        img.src = dataUrl;
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        return canvas.toDataURL("image/png");
+      } catch {
+        return null;
+      }
+    })();
+    textureCache.set(dataUrl, hit);
+  }
+  return hit;
+}
+
+const SVG_URL = /url\("(data:image\/svg\+xml[^"]*)"\)/g;
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+
+async function flatten(bg: string): Promise<string> {
+  let out = bg;
+  for (const [, url] of bg.matchAll(SVG_URL)) out = out.replace(url, (await rasterizeSvg(url)) ?? BLANK);
+  return out;
+}
+
+/**
+ * The room's wood grain, plaster and paint are SVG noise filters. html-to-image can't draw SVG
+ * filters (they come out solid black), so swap every one for a PNG of itself before rendering.
+ */
+async function flattenTextures(root: HTMLElement) {
+  const rules: string[] = [];
+  const els = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  await Promise.all(
+    els.map(async (el, i) => {
+      const bg = getComputedStyle(el).backgroundImage;
+      if (bg.includes("data:image/svg+xml")) el.style.backgroundImage = await flatten(bg);
+      for (const pseudo of ["::before", "::after"]) {
+        const pbg = getComputedStyle(el, pseudo).backgroundImage;
+        if (!pbg.includes("data:image/svg+xml")) continue;
+        el.classList.add(`tx${i}`);
+        rules.push(`.tx${i}${pseudo}{background-image:${await flatten(pbg)} !important}`);
+      }
+    }),
+  );
+  if (rules.length) {
+    const style = document.createElement("style");
+    style.textContent = rules.join("\n");
+    root.appendChild(style);
   }
 }
 
@@ -131,6 +195,8 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
         // Let spine colours (sampled from the covers) settle before rendering.
         await new Promise((r) => setTimeout(r, 450));
         if (!alive || !nodeRef.current) return;
+        await flattenTextures(nodeRef.current);
+        if (!alive || !nodeRef.current) return;
         const url = await toPng(nodeRef.current, { width: W, height: H, pixelRatio: 1 });
         if (alive) setPng(url);
       } catch (e) {
@@ -167,7 +233,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       {/* Off-screen render target */}
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
-          <div ref={nodeRef} data-style={aesthetic.id} className="room flex flex-col px-[80px] pb-[90px] pt-[110px] text-ink" style={vars}>
+          <div ref={nodeRef} data-style={aesthetic.id} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={vars}>
             <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
             <h1 className="mt-[18px] font-serif text-[100px] leading-none">{owner ? `${owner}'s shelf` : "My bookshelf"}</h1>
             <div className="mt-[40px] flex gap-[56px] font-mono">
@@ -183,21 +249,23 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
               ))}
             </div>
 
-            <div className="mt-auto [&_h2]:!text-[34px]">
-              <ShelfWall
-                shelves={picked.map((p) => p.shelf)}
-                itemsByShelf={itemsForImage}
-                structure={aesthetic.structure}
-                onOpenBook={() => {}}
-                readOnly
-                floor={false}
-                stacked
-              />
+            {/* The room as it looks on screen: window and lamp, the shelves, the floor and rug. */}
+            <div className="share-room relative mt-[40px] flex flex-1 flex-col [&_h2]:!text-[34px]">
+              <RoomScene standing={aesthetic.structure === "case"}>
+                <ShelfWall
+                  shelves={picked.map((p) => p.shelf)}
+                  itemsByShelf={itemsForImage}
+                  structure={aesthetic.structure}
+                  onOpenBook={() => {}}
+                  readOnly
+                  floor={false}
+                  stacked
+                />
+              </RoomScene>
+              <p className="absolute inset-x-0 bottom-[44px] text-center font-mono text-[22px] tracking-[2px] text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
+                {aesthetic.name} · {stats.booksRead} finished · made with Cosmic Space
+              </p>
             </div>
-
-            <p className="mt-[50px] font-mono text-[22px] tracking-[2px] text-ink-soft">
-              {aesthetic.name} · {stats.booksRead} finished · made with Cosmic Space
-            </p>
           </div>
         </div>
       )}
