@@ -46,6 +46,8 @@ interface ShelfWallProps {
   shelfNote?: (shelf: Shelf) => ReactNode;
   /** Dim every book that doesn't carry this mark. */
   filter?: MarkFilter;
+  /** Stack bookcases one above the other instead of side by side (the share image can't swipe). */
+  stacked?: boolean;
 }
 
 // Prefer the item under the pointer over the shelf row that contains it.
@@ -58,9 +60,9 @@ const collision: CollisionDetection = (args) => {
   return rectIntersection(args);
 };
 
-/** Names that only describe position ("Top shelf") or the demo; these stay off the visible shelf. */
+/** Names that only describe position ("Top shelf", "Shelf 4") or the demo; these stay off the visible shelf. */
 const PLAIN_SHELF_NAMES = new Set(["top shelf", "middle shelf", "bottom shelf", "example shelf"]);
-const isPlainShelfName = (name: string) => PLAIN_SHELF_NAMES.has(name.trim().toLowerCase());
+const isPlainShelfName = (name: string) => PLAIN_SHELF_NAMES.has(name.trim().toLowerCase()) || /^shelf \d+$/i.test(name.trim());
 
 const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
   width: "var(--cover-w)",
@@ -70,7 +72,7 @@ const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
 const itemSize = (item: ShelfItem): CSSProperties =>
   item.type === "decor" ? decorSize(item.decor.kind) : item.book.display === "cover" ? coverSize(item.book) : spineSize(item.book);
 
-export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all" }: ShelfWallProps) {
+export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked }: ShelfWallProps) {
   const [active, setActive] = useState<ShelfItem | null>(null);
   const [insertion, setInsertion] = useState<Insertion | null>(null);
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
@@ -112,29 +114,40 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
     onMove?.(item.id, target.shelfId, index);
   };
 
+  const cases = toBookcases(shelves);
+  const renderCase = (group: Shelf[]) => (
+    <div className="shelf-unit" data-structure={structure}>
+      <div className="unit-cap" aria-hidden />
+      {structure === "case" && <div className="case-top" aria-hidden />}
+      {group.map((shelf, i) => (
+        <ShelfRow
+          key={shelf.id}
+          shelf={shelf}
+          items={itemsByShelf.get(shelf.id) ?? []}
+          onOpenBook={onOpenBook}
+          onOpenDecor={onOpenDecor}
+          readOnly={readOnly}
+          justAddedId={justAddedId}
+          insertion={insertion?.shelfId === shelf.id ? insertion.index : null}
+          draggingId={active?.id ?? null}
+          note={shelfNote?.(shelf)}
+          filter={filter}
+          board={structure !== "case" || i < group.length - 1}
+        />
+      ))}
+      {structure === "case" && <div className="case-base" aria-hidden />}
+    </div>
+  );
+
   const content = (
     <div>
-      <div className="shelf-unit" data-structure={structure}>
-        <div className="unit-cap" aria-hidden />
-        {structure === "case" && <div className="case-top" aria-hidden />}
-        {shelves.map((shelf, i) => (
-          <ShelfRow
-            key={shelf.id}
-            shelf={shelf}
-            items={itemsByShelf.get(shelf.id) ?? []}
-            onOpenBook={onOpenBook}
-            onOpenDecor={onOpenDecor}
-            readOnly={readOnly}
-            justAddedId={justAddedId}
-            insertion={insertion?.shelfId === shelf.id ? insertion.index : null}
-            draggingId={active?.id ?? null}
-            note={shelfNote?.(shelf)}
-            filter={filter}
-            board={structure !== "case" || i < shelves.length - 1}
-          />
-        ))}
-        {structure === "case" && <div className="case-base" aria-hidden />}
-      </div>
+      {cases.length <= 1 ? (
+        renderCase(shelves)
+      ) : stacked ? (
+        <div className="space-y-8">{cases.map((group, i) => <div key={i}>{renderCase(group)}</div>)}</div>
+      ) : (
+        <Bookcases count={cases.length}>{cases.map((group) => renderCase(group))}</Bookcases>
+      )}
       {structure === "case" && floor && <div className="room-floor" aria-hidden />}
     </div>
   );
@@ -167,6 +180,53 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
         ) : null}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/** How many shelves one bookcase holds. When they're all full, a new bookcase is added. */
+export const SHELVES_PER_BOOKCASE = 3;
+
+function toBookcases(shelves: Shelf[]): Shelf[][] {
+  const out: Shelf[][] = [];
+  for (let i = 0; i < shelves.length; i += SHELVES_PER_BOOKCASE) out.push(shelves.slice(i, i + SHELVES_PER_BOOKCASE));
+  return out;
+}
+
+/** Bookcases stand side by side; one fills the view at a time, and you swipe (or tap the arrows) to the next. */
+function Bookcases({ count, children }: { count: number; children: ReactNode[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [current, setCurrent] = useState(0);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (el) setCurrent(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
+  };
+  const go = (i: number) => {
+    const el = ref.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-center gap-3 text-sm">
+        <button type="button" onClick={() => go(current - 1)} disabled={current === 0} className="rounded-full bg-paper/80 px-3 py-1 shadow ring-1 ring-line disabled:opacity-40" aria-label="Previous bookcase">
+          ←
+        </button>
+        <span className="rounded-full bg-paper/80 px-3 py-1 font-medium shadow ring-1 ring-line" aria-live="polite">
+          Bookcase {current + 1} of {count}
+        </span>
+        <button type="button" onClick={() => go(current + 1)} disabled={current >= count - 1} className="rounded-full bg-paper/80 px-3 py-1 shadow ring-1 ring-line disabled:opacity-40" aria-label="Next bookcase">
+          →
+        </button>
+      </div>
+      <div ref={ref} onScroll={onScroll} className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto" aria-label="Bookcases">
+        {children.map((c, i) => (
+          <section key={i} aria-label={`Bookcase ${i + 1} of ${count}`} className="w-full shrink-0 snap-start">
+            {c}
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -236,6 +296,7 @@ function ShelfRow({
         {note && <div className="px-3 pt-2 md:px-4">{note}</div>}
         <div
           ref={setNodeRef}
+          data-shelf-row={shelf.id}
           className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 ${showName ? "pt-4" : "pt-7"} md:px-4 ${isOver ? "bg-accent/10" : ""}`}
           role="list"
           aria-label={`${shelf.name} shelf`}

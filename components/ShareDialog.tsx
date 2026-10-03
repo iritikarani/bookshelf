@@ -191,6 +191,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
                 onOpenBook={() => {}}
                 readOnly
                 floor={false}
+                stacked
               />
             </div>
 
