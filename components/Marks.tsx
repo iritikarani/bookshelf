@@ -14,23 +14,45 @@ export type MarkFilter = "all" | "favourite" | "reading" | "to_read";
 export const matchesFilter = (book: Pick<Book, "favourite" | "status">, f: MarkFilter) =>
   f === "all" ? true : f === "favourite" ? book.favourite : book.status === f;
 
-/** The ribbons that poke out of the top of a book on the shelf. */
-export function Ribbons({ book }: { book: Pick<Book, "favourite" | "status"> }) {
+/**
+ * Ribbon bookmarks, as if tucked between the pages: each one comes out of the page block at the
+ * top, folds over the top edge and hangs down the front, ending in a notched tail halfway down.
+ * On spines they sit near the edge so the title stays readable.
+ */
+export function Ribbons({ book }: { book: Pick<Book, "favourite" | "status" | "display"> }) {
   const ribbons: string[] = [];
   if (book.favourite) ribbons.push(MARKS.favourite.color);
   if (book.status === "reading") ribbons.push(MARKS.reading.color);
   if (book.status === "to_read") ribbons.push(MARKS.to_read.color);
   if (!ribbons.length) return null;
+  const cover = book.display === "cover";
   return (
-    <span aria-hidden className="pointer-events-none absolute -top-[9px] left-1/2 z-10 flex -translate-x-1/2 gap-[2px]">
+    <>
       {ribbons.map((c, i) => (
         <span
           key={i}
-          className="block h-[17px] w-[6px] shadow-[0_1px_1px_rgba(0,0,0,0.25)] md:h-[20px] md:w-[7px]"
-          style={{ backgroundColor: c, clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%)" }}
-        />
+          aria-hidden
+          className="pointer-events-none absolute -top-[3px] z-10 h-[52%] origin-top drop-shadow-[1px_1.5px_1px_rgba(0,0,0,0.35)]"
+          style={{
+            width: cover ? 8 : 5,
+            // on a spine, a second ribbon hangs at the opposite edge so the title stays clear
+            ...(cover ? { right: `calc(16% + ${i * 11}px)` } : i % 2 ? { left: 3 } : { right: 3 }),
+            transform: `rotate(${i % 2 ? -1.2 : 1.2}deg)`,
+          }}
+        >
+          {/* the bit that bends over the top edge of the pages */}
+          <span className="absolute inset-x-0 top-0 h-[4px] rounded-t-[2px]" style={{ backgroundColor: `color-mix(in srgb, ${c} 70%, black)` }} />
+          {/* the satin tail hanging down the front */}
+          <span
+            className="absolute inset-x-0 bottom-0 top-[3px]"
+            style={{
+              background: `linear-gradient(90deg, rgba(0,0,0,.22), rgba(255,255,255,.38) 38%, rgba(255,255,255,.1) 60%, rgba(0,0,0,.2)), linear-gradient(180deg, rgba(0,0,0,.18), transparent 18%), ${c}`,
+              clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 6px), 0 100%)",
+            }}
+          />
+        </span>
       ))}
-    </span>
+    </>
   );
 }
 
