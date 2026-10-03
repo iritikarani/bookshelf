@@ -44,3 +44,4 @@ export const GoogleIcon = (p: P) => (
     <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z" />
   </svg>
 );
+export const BrushIcon = (p: P) => (<svg {...base(p)}><path d="M14.5 4.5l5 5L11 18l-5-5z" /><path d="M6 13c-2 0-3 1.5-3 3.5S2 20 2 20s3.5.5 5.5-1.5S8 15 8 15" /><path d="M16.5 2.5l5 5" /></svg>);

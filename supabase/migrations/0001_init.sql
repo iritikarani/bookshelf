@@ -1,4 +1,4 @@
--- Ex Libris schema: profiles, shelves, books, cover storage, public sharing.
+-- Cosmic Space schema: profiles, shelves, books, cover storage, public sharing.
 -- Run in the Supabase SQL editor (or `supabase db push`).
 
 create extension if not exists "pgcrypto";
@@ -7,8 +7,8 @@ create extension if not exists "pgcrypto";
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text,
-  wood_theme text not null default 'sage'
-    check (wood_theme in ('sage', 'blush', 'powder', 'butter', 'lavender', 'birch', 'walnut', 'slate')),
+  shelf_style text not null default 'pastel'
+    check (shelf_style in ('pastel', 'modern', 'scandi', 'japandi', 'academia', 'cottage', 'midcentury', 'coastal', 'boho', 'industrial')),
   is_public boolean not null default false,
   public_slug text not null unique default encode(gen_random_bytes(6), 'hex'),
   created_at timestamptz not null default now(),
@@ -21,7 +21,6 @@ create table if not exists public.shelves (
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null check (char_length(name) between 1 and 60),
   position integer not null default 0,
-  is_want_to_read boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists shelves_user_idx on public.shelves (user_id, position);
@@ -36,6 +35,10 @@ create table if not exists public.books (
   cover_url text,
   uploaded_cover text,
   cover_color text, -- colour of the generated cover when no image is used
+  display text not null default 'spine' check (display in ('spine', 'cover')), -- spine-out or face-out
+  -- marks: reading status and favourite, shown as ribbons on the shelf
+  status text not null default 'read' check (status in ('read', 'reading', 'to_read')),
+  favourite boolean not null default false,
   year_published integer,
   pages integer,
   genre text,
@@ -50,6 +53,19 @@ create table if not exists public.books (
 );
 create index if not exists books_user_idx on public.books (user_id);
 create index if not exists books_shelf_idx on public.books (shelf_id, position);
+
+-- ───────────────────────── decor ─────────────────────────
+-- Objects placed between books (plants, candles, a globe…). They share the
+-- shelf's position ordering with books.
+create table if not exists public.decor (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  shelf_id uuid not null references public.shelves (id) on delete cascade,
+  kind text not null check (kind in ('plant', 'succulent', 'pampas', 'candles', 'frame', 'globe', 'calendar', 'bust', 'camera', 'stack')),
+  position integer not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists decor_shelf_idx on public.decor (shelf_id, position);
 
 -- updated_at maintenance
 create or replace function public.touch_updated_at() returns trigger
@@ -71,6 +87,7 @@ create trigger profiles_touch before update on public.profiles
 alter table public.profiles enable row level security;
 alter table public.shelves enable row level security;
 alter table public.books enable row level security;
+alter table public.decor enable row level security;
 
 drop policy if exists "own profile" on public.profiles;
 create policy "own profile" on public.profiles
@@ -88,6 +105,14 @@ create policy "own books" on public.books
     and exists (select 1 from public.shelves s where s.id = shelf_id and s.user_id = auth.uid())
   );
 
+drop policy if exists "own decor" on public.decor;
+create policy "own decor" on public.decor
+  for all using (auth.uid() = user_id)
+  with check (
+    auth.uid() = user_id
+    and exists (select 1 from public.shelves s where s.id = shelf_id and s.user_id = auth.uid())
+  );
+
 -- ───────────────────────── new user bootstrap ─────────────────────────
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -95,10 +120,10 @@ begin
   insert into public.profiles (id, display_name)
   values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)));
 
-  insert into public.shelves (user_id, name, position, is_want_to_read) values
-    (new.id, 'Favourites', 0, false),
-    (new.id, 'Read', 1, false),
-    (new.id, 'Want to read', 2, true);
+  insert into public.shelves (user_id, name, position) values
+    (new.id, 'Top shelf', 0),
+    (new.id, 'Middle shelf', 1),
+    (new.id, 'Bottom shelf', 2);
   return new;
 end $$;
 
@@ -111,12 +136,15 @@ create trigger on_auth_user_created after insert on auth.users
 create or replace function public.get_public_shelf(slug text) returns json
 language sql stable security definer set search_path = public as $$
   select json_build_object(
-    'profile', json_build_object('display_name', p.display_name, 'wood_theme', p.wood_theme),
+    'profile', json_build_object('display_name', p.display_name, 'shelf_style', p.shelf_style),
     'shelves', coalesce((
       select json_agg(s order by s.position) from public.shelves s where s.user_id = p.id
     ), '[]'::json),
     'books', coalesce((
       select json_agg(b order by b.position) from public.books b where b.user_id = p.id
+    ), '[]'::json),
+    'decor', coalesce((
+      select json_agg(d order by d.position) from public.decor d where d.user_id = p.id
     ), '[]'::json)
   )
   from public.profiles p

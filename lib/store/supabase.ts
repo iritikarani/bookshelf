@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthUser, Book, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
 import type { Store } from "./types";
+import { siteUrl } from "../basePath";
 
 let client: SupabaseClient | null = null;
 
@@ -21,9 +22,9 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
 }
 
 const DEFAULT_SHELVES = [
-  { name: "Favourites", position: 0, is_want_to_read: false },
-  { name: "Read", position: 1, is_want_to_read: false },
-  { name: "Want to read", position: 2, is_want_to_read: true },
+  { name: "Top shelf", position: 0 },
+  { name: "Middle shelf", position: 1 },
+  { name: "Bottom shelf", position: 2 },
 ];
 
 export const supabaseStore: Store = {
@@ -44,7 +45,7 @@ export const supabaseStore: Store = {
     const { data, error } = await getSupabase().auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: siteUrl("/") },
     });
     if (error) throw new Error(error.message);
     return { needsConfirmation: !data.session };
@@ -52,7 +53,7 @@ export const supabaseStore: Store = {
   async signInWithGoogle() {
     const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: siteUrl("/") },
     });
     if (error) throw new Error(error.message);
   },
@@ -74,7 +75,8 @@ export const supabaseStore: Store = {
       ) as Shelf[];
     }
     const books = check(await sb.from("books").select("*").order("position")) as Book[];
-    return { profile, shelves, books };
+    const decor = check(await sb.from("decor").select("*").order("position")) as Decor[];
+    return { profile, shelves, books, decor };
   },
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...draft, user_id: userId, position }).select().single()) as Book;
@@ -85,13 +87,21 @@ export const supabaseStore: Store = {
   async updatePositions(updates) {
     const sb = getSupabase();
     const results = await Promise.all(
-      updates.map((u) => sb.from("books").update({ shelf_id: u.shelf_id, position: u.position }).eq("id", u.id)),
+      updates.map((u) =>
+        sb.from(u.kind === "book" ? "books" : "decor").update({ shelf_id: u.shelf_id, position: u.position }).eq("id", u.id),
+      ),
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) throw new Error(failed.error.message);
   },
   async deleteBook(id) {
     check(await getSupabase().from("books").delete().eq("id", id));
+  },
+  async insertDecor(userId, decor) {
+    return check(await getSupabase().from("decor").insert({ ...decor, user_id: userId }).select().single()) as Decor;
+  },
+  async deleteDecor(id) {
+    check(await getSupabase().from("decor").delete().eq("id", id));
   },
   async insertShelf(userId, shelf) {
     return check(await getSupabase().from("shelves").insert({ ...shelf, user_id: userId }).select().single()) as Shelf;
@@ -123,3 +133,15 @@ export const supabaseStore: Store = {
     return (data as PublicShelf | null) ?? null;
   },
 };
+
+/** Email a password-reset link that brings the reader back to the login page. */
+export async function sendPasswordReset(email: string) {
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email, { redirectTo: siteUrl("/login/?reset=1") });
+  if (error) throw new Error(error.message);
+}
+
+/** Set a new password for the signed-in (recovering) user. */
+export async function setNewPassword(password: string) {
+  const { error } = await getSupabase().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}

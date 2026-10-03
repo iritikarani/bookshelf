@@ -8,7 +8,7 @@ import { BookCover } from "./BookCover";
 import { StarDisplay } from "./StarRating";
 
 export function ReadingYear({ shelves, books, onOpen }: { shelves: Shelf[]; books: Book[]; onOpen: (b: Book) => void }) {
-  const { read } = splitByReadState(shelves, books);
+  const { read } = splitByReadState(books);
   const years = useMemo(() => {
     const ys = new Set<number>([new Date().getFullYear()]);
     for (const b of read) {

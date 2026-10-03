@@ -6,7 +6,8 @@ import { todayISO } from "@/lib/date";
 import { compressCover } from "@/lib/image";
 import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
-import type { Book, BookDraft } from "@/lib/types";
+import type { Book, BookDisplay, BookDraft, ReadStatus } from "@/lib/types";
+import { MarkPicker } from "./Marks";
 import { BookCover, GeneratedCover } from "./BookCover";
 import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -43,11 +44,14 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   const [pages, setPages] = useState(editing?.pages?.toString() ?? "");
   const [genre, setGenre] = useState(editing?.genre ?? "");
   const [description, setDescription] = useState(editing?.short_description ?? "");
-  const [shelfId, setShelfId] = useState(editing?.shelf_id ?? defaultShelfId ?? shelves.find((s) => !s.is_want_to_read)?.id ?? shelves[0]?.id ?? "");
+  const [shelfId, setShelfId] = useState(editing?.shelf_id ?? defaultShelfId ?? shelves[0]?.id ?? "");
   const [dateFinished, setDateFinished] = useState(editing?.date_finished ?? todayISO());
   const [rating, setRating] = useState(editing?.rating ?? 0);
   const [liked, setLiked] = useState(editing?.what_i_liked ?? "");
   const [line, setLine] = useState(editing?.favourite_line ?? "");
+  const [display, setDisplay] = useState<BookDisplay>(editing?.display ?? "spine");
+  const [status, setStatus] = useState<ReadStatus>(editing?.status ?? "read");
+  const [favourite, setFavourite] = useState(editing?.favourite ?? false);
 
   const [covers, setCovers] = useState<string[]>(editing?.cover_url ? [editing.cover_url] : []);
   const [probing, setProbing] = useState(false);
@@ -71,8 +75,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   const pickToken = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const shelf = shelves.find((s) => s.id === shelfId);
-  const wantToRead = Boolean(shelf?.is_want_to_read);
+  const finished = status === "read";
 
   // Debounced search across Google Books + Open Library.
   useEffect(() => {
@@ -158,14 +161,17 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         cover_url: choice.kind === "url" ? choice.url : null,
         uploaded_cover: uploaded,
         cover_color: choice.kind === "generated" ? swatch : null,
+        display,
+        status,
+        favourite,
         year_published: toInt(year),
         pages: toInt(pages),
         genre: genre.trim() || null,
         short_description: description.trim() || null,
-        rating: wantToRead ? 0 : rating,
+        rating: finished ? rating : 0,
         what_i_liked: liked.trim() || null,
         favourite_line: line.trim() || null,
-        date_finished: wantToRead ? null : dateFinished || null,
+        date_finished: finished ? dateFinished || null : null,
       };
       if (editing) {
         await updateBook(editing.id, draft);
@@ -372,6 +378,11 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       </details>
 
       {/* ── Journal ── */}
+      <div>
+        <span className="label">Marks</span>
+        <MarkPicker favourite={favourite} status={status} onFavourite={setFavourite} onStatus={setStatus} />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="ab-shelf">Shelf</label>
@@ -381,7 +392,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
             ))}
           </select>
         </div>
-        {!wantToRead && (
+        {finished && (
           <div>
             <label className="label" htmlFor="ab-date">Date finished</label>
             <input id="ab-date" type="date" className="field font-mono" value={dateFinished} max={todayISO()} onChange={(e) => setDateFinished(e.target.value)} />
@@ -389,7 +400,25 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         )}
       </div>
 
-      {!wantToRead && (
+      <div>
+        <span className="label" id="ab-display">Stand it on the shelf</span>
+        <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-labelledby="ab-display">
+          {(["spine", "cover"] as BookDisplay[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              role="radio"
+              aria-checked={display === d}
+              onClick={() => setDisplay(d)}
+              className={`rounded-full px-3.5 py-1.5 text-sm ${display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+            >
+              {d === "spine" ? "Spine out" : "Cover facing out"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {finished && (
         <div>
           <span className="label" id="ab-rating">Rating</span>
           <StarInput value={rating} onChange={setRating} />
@@ -397,12 +426,12 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       )}
 
       <div>
-        <label className="label" htmlFor="ab-liked">{wantToRead ? "Why I want to read it" : "What I liked"}</label>
+        <label className="label" htmlFor="ab-liked">{status === "to_read" ? "Why I want to read it" : status === "reading" ? "What I'm enjoying so far" : "What I liked"}</label>
         <textarea
           id="ab-liked"
           rows={3}
           className="field resize-y"
-          placeholder={wantToRead ? "Who recommended it, what drew you in…" : "The part, character or moment that stayed with you"}
+          placeholder={status === "to_read" ? "Who recommended it, what drew you in…" : "The part, character or moment that stayed with you"}
           value={liked}
           onChange={(e) => setLiked(e.target.value)}
         />

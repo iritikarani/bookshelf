@@ -15,10 +15,16 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { heightFactor } from "@/lib/covers";
-import type { Book, Shelf } from "@/lib/types";
+import type { Structure } from "@/lib/themes";
+import type { Book, Decor, Shelf, ShelfItem } from "@/lib/types";
 import { BookCover } from "./BookCover";
+import { BookSpine, spineSize } from "./BookSpine";
+import { DecorArt, decorSize, decorSpec } from "./Decor";
+import { MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
+import { StarDisplay } from "./StarRating";
 
 interface Insertion {
   shelfId: string;
@@ -27,87 +33,109 @@ interface Insertion {
 
 interface ShelfWallProps {
   shelves: Shelf[];
-  booksByShelf: Map<string, Book[]>;
-  onOpen: (book: Book) => void;
-  onMove?: (bookId: string, shelfId: string, index: number) => void;
+  itemsByShelf: Map<string, ShelfItem[]>;
+  structure: Structure;
+  onOpenBook: (book: Book) => void;
+  onOpenDecor?: (decor: Decor) => void;
+  onMove?: (itemId: string, shelfId: string, index: number) => void;
   justAddedId?: string | null;
   readOnly?: boolean;
-  /** Rendered under a shelf's header, e.g. the example-shelf notice. */
+  /** Draw the floor under a standing bookcase (off for the share image). */
+  floor?: boolean;
+  /** Rendered at the top of a shelf compartment, e.g. the example-shelf notice. */
   shelfNote?: (shelf: Shelf) => ReactNode;
+  /** Dim every book that doesn't carry this mark. */
+  filter?: MarkFilter;
 }
 
-// Prefer the book under the pointer over the shelf row that contains it.
+// Prefer the item under the pointer over the shelf row that contains it.
 const collision: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
   if (hits.length) {
-    const book = hits.find((h) => String(h.id).startsWith("book:"));
-    return book ? [book] : hits;
+    const item = hits.find((h) => String(h.id).startsWith("slot:"));
+    return item ? [item] : hits;
   }
   return rectIntersection(args);
 };
 
-export function ShelfWall({ shelves, booksByShelf, onOpen, onMove, justAddedId, readOnly, shelfNote }: ShelfWallProps) {
-  const [activeBook, setActiveBook] = useState<Book | null>(null);
+/** Names that only describe position ("Top shelf") or the demo; these stay off the visible shelf. */
+const PLAIN_SHELF_NAMES = new Set(["top shelf", "middle shelf", "bottom shelf", "example shelf"]);
+const isPlainShelfName = (name: string) => PLAIN_SHELF_NAMES.has(name.trim().toLowerCase());
+
+const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
+  width: "var(--cover-w)",
+  height: `calc(var(--cover-h) * ${heightFactor(book.pages).toFixed(3)})`,
+});
+
+const itemSize = (item: ShelfItem): CSSProperties =>
+  item.type === "decor" ? decorSize(item.decor.kind) : item.book.display === "cover" ? coverSize(item.book) : spineSize(item.book);
+
+export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all" }: ShelfWallProps) {
+  const [active, setActive] = useState<ShelfItem | null>(null);
   const [insertion, setInsertion] = useState<Insertion | null>(null);
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
 
-  const findBook = (id: string) => {
-    for (const list of booksByShelf.values()) {
-      const b = list.find((x) => x.id === id);
-      if (b) return b;
+  const find = (id: string) => {
+    for (const list of itemsByShelf.values()) {
+      const x = list.find((i) => i.id === id);
+      if (x) return x;
     }
     return null;
   };
 
-  const onDragStart = (e: DragStartEvent) => setActiveBook(findBook(String(e.active.id)));
+  const onDragStart = (e: DragStartEvent) => setActive(find(String(e.active.id)));
 
   const onDragMove = (e: DragMoveEvent) => {
-    const over = e.over;
-    if (!over) return setInsertion(null);
-    const data = over.data.current as { shelfId: string; index?: number } | undefined;
-    if (!data) return setInsertion(null);
+    const data = e.over?.data.current as { shelfId: string; index?: number } | undefined;
+    if (!e.over || !data) return setInsertion(null);
     if (data.index === undefined) {
-      return setInsertion({ shelfId: data.shelfId, index: (booksByShelf.get(data.shelfId) ?? []).length });
+      return setInsertion({ shelfId: data.shelfId, index: (itemsByShelf.get(data.shelfId) ?? []).length });
     }
     const start = e.activatorEvent as MouseEvent;
     const pointerX = (start.clientX ?? 0) + e.delta.x;
-    const mid = over.rect.left + over.rect.width / 2;
+    const mid = e.over.rect.left + e.over.rect.width / 2;
     setInsertion({ shelfId: data.shelfId, index: data.index + (pointerX > mid ? 1 : 0) });
   };
 
   const onDragEnd = (e: DragEndEvent) => {
-    const book = findBook(String(e.active.id));
+    const item = find(String(e.active.id));
     const target = insertion;
-    setActiveBook(null);
+    setActive(null);
     setInsertion(null);
-    if (!book || !target || !e.over) return;
+    if (!item || !target || !e.over) return;
     let index = target.index;
-    if (target.shelfId === book.shelf_id) {
-      const from = (booksByShelf.get(book.shelf_id) ?? []).findIndex((b) => b.id === book.id);
+    if (target.shelfId === item.shelf_id) {
+      const from = (itemsByShelf.get(item.shelf_id) ?? []).findIndex((x) => x.id === item.id);
       if (from < index) index -= 1;
       if (from === index) return;
     }
-    onMove?.(book.id, target.shelfId, index);
+    onMove?.(item.id, target.shelfId, index);
   };
 
   const content = (
-    <div className="bookcase">
-      <div className="case-top" aria-hidden />
-      {shelves.map((shelf, i) => (
-        <ShelfRow
-          key={shelf.id}
-          shelf={shelf}
-          books={booksByShelf.get(shelf.id) ?? []}
-          onOpen={onOpen}
-          readOnly={readOnly}
-          justAddedId={justAddedId}
-          insertion={insertion?.shelfId === shelf.id ? insertion.index : null}
-          draggingId={activeBook?.id ?? null}
-          note={shelfNote?.(shelf)}
-          last={i === shelves.length - 1}
-        />
-      ))}
-      <div className="case-base" aria-hidden />
+    <div>
+      <div className="shelf-unit" data-structure={structure}>
+        <div className="unit-cap" aria-hidden />
+        {structure === "case" && <div className="case-top" aria-hidden />}
+        {shelves.map((shelf, i) => (
+          <ShelfRow
+            key={shelf.id}
+            shelf={shelf}
+            items={itemsByShelf.get(shelf.id) ?? []}
+            onOpenBook={onOpenBook}
+            onOpenDecor={onOpenDecor}
+            readOnly={readOnly}
+            justAddedId={justAddedId}
+            insertion={insertion?.shelfId === shelf.id ? insertion.index : null}
+            draggingId={active?.id ?? null}
+            note={shelfNote?.(shelf)}
+            filter={filter}
+            board={structure !== "case" || i < shelves.length - 1}
+          />
+        ))}
+        {structure === "case" && <div className="case-base" aria-hidden />}
+      </div>
+      {structure === "case" && floor && <div className="room-floor" aria-hidden />}
     </div>
   );
 
@@ -121,20 +149,20 @@ export function ShelfWall({ shelves, booksByShelf, onOpen, onMove, justAddedId, 
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       onDragCancel={() => {
-        setActiveBook(null);
+        setActive(null);
         setInsertion(null);
       }}
       accessibility={{
         screenReaderInstructions: {
-          draggable: "Drag with a mouse to reorder. Keyboard users can open the book and use Move.",
+          draggable: "Drag with a mouse to rearrange. Keyboard users can open an item and use its Arrange controls.",
         },
       }}
     >
       {content}
       <DragOverlay dropAnimation={null}>
-        {activeBook ? (
-          <div className="rotate-3 shadow-2xl" style={coverSize(activeBook)}>
-            <BookCover book={activeBook} className="rounded-[3px]" />
+        {active ? (
+          <div className="rotate-2 drop-shadow-2xl" style={itemSize(active)}>
+            <ItemVisual item={active} />
           </div>
         ) : null}
       </DragOverlay>
@@ -142,76 +170,103 @@ export function ShelfWall({ shelves, booksByShelf, onOpen, onMove, justAddedId, 
   );
 }
 
-const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
-  width: "var(--cover-w)",
-  height: `calc(var(--cover-h) * ${heightFactor(book.pages).toFixed(3)})`,
-});
+function ItemVisual({ item }: { item: ShelfItem }) {
+  if (item.type === "decor")
+    return (
+      <span className="shelf-item-shadow block h-full w-full">
+        <DecorArt kind={item.decor.kind} />
+      </span>
+    );
+  if (item.book.display === "cover")
+    return (
+      <span className="shelf-item-shadow cover-3d">
+        <span className="cover-face">
+          <BookCover book={item.book} />
+        </span>
+      </span>
+    );
+  return (
+    <span className="shelf-item-shadow block h-full w-full">
+      <BookSpine book={item.book} />
+    </span>
+  );
+}
 
 function ShelfRow({
   shelf,
-  books,
-  onOpen,
+  items,
+  onOpenBook,
+  onOpenDecor,
   readOnly,
   justAddedId,
   insertion,
   draggingId,
   note,
-  last,
+  filter,
+  board,
 }: {
   shelf: Shelf;
-  books: Book[];
-  onOpen: (b: Book) => void;
+  items: ShelfItem[];
+  onOpenBook: (b: Book) => void;
+  onOpenDecor?: (d: Decor) => void;
   readOnly?: boolean;
   justAddedId?: string | null;
   insertion: number | null;
   draggingId: string | null;
   note?: ReactNode;
-  last: boolean;
+  filter: MarkFilter;
+  board: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `shelf:${shelf.id}`, data: { shelfId: shelf.id }, disabled: readOnly });
   const headingId = `shelf-${shelf.id}-name`;
+  // A real shelf doesn't say "top shelf". Only names the reader chose are shown on the wood.
+  const showName = !isPlainShelfName(shelf.name);
 
   return (
     <>
-      <section aria-labelledby={headingId} className="case-cell">
-        <div className="flex items-baseline justify-between gap-3 px-3 pt-3 md:px-4">
-          <h2 id={headingId} className="font-serif text-lg leading-tight md:text-xl">
-            {shelf.name}
-          </h2>
-          <span className="rounded-full bg-paper/70 px-2 py-0.5 font-mono text-[11px] text-ink-soft">
-            {books.length} {books.length === 1 ? "book" : "books"}
-          </span>
-        </div>
+      <section aria-labelledby={headingId} className="shelf-cell">
+        {/* inside of the compartment: side walls, underside of the shelf above, the surface books stand on */}
+        <span aria-hidden className="cell-depth cell-wall-l" />
+        <span aria-hidden className="cell-depth cell-wall-r" />
+        <span aria-hidden className="cell-depth cell-ceiling" />
+        <span aria-hidden className="cell-depth cell-surface" />
+        <h2 id={headingId} className={showName ? "px-3 pt-3 font-serif text-base leading-tight opacity-80 md:px-4 md:text-lg" : "sr-only"}>
+          {shelf.name}
+        </h2>
         {note && <div className="px-3 pt-2 md:px-4">{note}</div>}
         <div
           ref={setNodeRef}
-          className={`shelf-scroll relative flex ${books.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-3 overflow-x-auto px-3 pb-0 pt-4 md:gap-4 md:px-4 ${isOver ? "bg-accent/10" : ""}`}
+          className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 ${showName ? "pt-4" : "pt-7"} md:px-4 ${isOver ? "bg-accent/10" : ""}`}
           role="list"
           aria-label={`${shelf.name} shelf`}
         >
-          {books.length === 0 && (
-            <p className="relative self-center pb-3 text-sm italic text-ink-soft">
+          {items.length === 0 && (
+            <p className="relative self-center pb-3 text-sm italic opacity-70">
               {insertion === 0 && <Marker side="left" />}
-              {readOnly ? "Empty shelf" : shelf.is_want_to_read ? "Books you're planning to read go here." : "Nothing on this shelf yet."}
+              {readOnly ? "Empty shelf" : "Nothing on this shelf yet."}
             </p>
           )}
-          {books.map((book, i) => (
-            <ShelfBook
-              key={book.id}
-              book={book}
+          {items.map((item, i) => (
+            <Slot
+              key={item.id}
+              item={item}
               index={i}
               shelf={shelf}
-              onOpen={onOpen}
+              onOpenBook={onOpenBook}
+              onOpenDecor={onOpenDecor}
               readOnly={readOnly}
-              justAdded={book.id === justAddedId}
-              dimmed={book.id === draggingId}
-              marker={insertion === i ? "left" : insertion === books.length && i === books.length - 1 ? "right" : null}
+              justAdded={item.id === justAddedId}
+              dimmed={item.id === draggingId}
+              faded={filter !== "all" && (item.type === "decor" || !matchesFilter(item.book, filter))}
+              // Leave breathing room around face-out covers and objects, like a styled shelf.
+              spaced={item.type === "decor" || item.book.display === "cover"}
+              marker={insertion === i ? "left" : insertion === items.length && i === items.length - 1 ? "right" : null}
             />
           ))}
-          <div className="w-1 shrink-0" aria-hidden />
+          <div className="w-2 shrink-0" aria-hidden />
         </div>
       </section>
-      {!last && <div className="plank" aria-hidden />}
+      {board && <div className="plank" aria-hidden />}
     </>
   );
 }
@@ -220,68 +275,132 @@ function Marker({ side }: { side: "left" | "right" }) {
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute bottom-0 top-0 z-20 w-1 rounded-full bg-accent shadow-[0_0_0_3px_rgb(var(--accent)/0.25)] ${side === "left" ? "-left-2 md:-left-2.5" : "-right-2 md:-right-2.5"}`}
+      className={`pointer-events-none absolute bottom-0 top-0 z-20 w-1 rounded-full bg-accent shadow-[0_0_0_3px_rgb(var(--accent)/0.25)] ${side === "left" ? "-left-1.5" : "-right-1.5"}`}
     />
   );
 }
 
-function ShelfBook({
-  book,
+function Slot({
+  item,
   index,
   shelf,
-  onOpen,
+  onOpenBook,
+  onOpenDecor,
   readOnly,
   justAdded,
   dimmed,
+  faded,
+  spaced,
   marker,
 }: {
-  book: Book;
+  item: ShelfItem;
   index: number;
   shelf: Shelf;
-  onOpen: (b: Book) => void;
+  onOpenBook: (b: Book) => void;
+  onOpenDecor?: (d: Decor) => void;
   readOnly?: boolean;
   justAdded: boolean;
   dimmed: boolean;
+  faded: boolean;
+  spaced: boolean;
   marker: "left" | "right" | null;
 }) {
-  const drag = useDraggable({ id: book.id, data: { shelfId: shelf.id }, disabled: readOnly });
-  const drop = useDroppable({ id: `book:${book.id}`, data: { shelfId: shelf.id, index }, disabled: readOnly });
+  const drag = useDraggable({ id: item.id, data: { shelfId: shelf.id }, disabled: readOnly });
+  const drop = useDroppable({ id: `slot:${item.id}`, data: { shelfId: shelf.id, index }, disabled: readOnly });
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [peek, setPeek] = useState<DOMRect | null>(null);
 
-  const label = `${book.title}${book.author ? ` by ${book.author}` : ""}${!shelf.is_want_to_read && book.rating ? `, rated ${book.rating} of 5` : ""}. Open journal entry.`;
+  useEffect(() => {
+    if (justAdded) ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [justAdded]);
+
+  const isBook = item.type === "book";
+  const decorOnly = !isBook && (readOnly || !onOpenDecor);
+  const label = isBook
+    ? `${item.book.title}${item.book.author ? ` by ${item.book.author}` : ""}${item.book.status === "read" && item.book.rating ? `, rated ${item.book.rating} of 5` : ""}${item.book.favourite ? ", favourite" : ""}${item.book.status === "reading" ? ", reading now" : item.book.status === "to_read" ? ", to read" : ""}. Open journal entry.`
+    : `${decorSpec(item.decor.kind).name}. Arrange.`;
 
   return (
     <div
-      ref={drop.setNodeRef}
+      ref={(n) => {
+        drop.setNodeRef(n);
+        ref.current = n;
+      }}
       role="listitem"
-      data-book-id={book.id}
-      className={`relative shrink-0 ${justAdded ? "animate-drop-in" : ""}`}
-      style={coverSize(book)}
+      data-item-id={item.id}
+      className={`relative shrink-0 transition-[opacity,filter] duration-300 ${spaced ? "mx-2 md:mx-3" : ""} ${justAdded ? "animate-drop-in" : ""} ${faded ? "opacity-25 saturate-50" : ""}`}
+      style={itemSize(item)}
     >
       {marker && <Marker side={marker} />}
-      <button
-        ref={drag.setNodeRef}
-        type="button"
-        {...(readOnly ? {} : drag.listeners)}
-        onClick={() => onOpen(book)}
-        aria-label={label}
-        title={book.title}
-        className={`group block h-full w-full rounded-[3px] text-left outline-offset-4 ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
-      >
-        <span className="relative block h-full w-full origin-bottom transition-transform duration-200 ease-out group-hover:-translate-y-2 group-hover:-rotate-2 group-focus-visible:-translate-y-2 motion-reduce:transform-none">
-          <span className="block h-full w-full overflow-hidden rounded-[3px] shadow-[0_6px_10px_-4px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.3)] transition-shadow group-hover:shadow-[0_14px_18px_-6px_rgba(0,0,0,0.5)]">
-            <BookCover book={book} />
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[3px] bg-[linear-gradient(90deg,rgba(0,0,0,0.28),rgba(255,255,255,0.18)_3%,transparent_9%,transparent_92%,rgba(0,0,0,0.12))]"
-            />
+      {decorOnly ? (
+        <div role="img" aria-label={decorSpec(item.decor.kind).name} className="h-full w-full">
+          <DecorArt kind={item.decor.kind} />
+        </div>
+      ) : (
+        <button
+          ref={drag.setNodeRef}
+          type="button"
+          {...(readOnly ? {} : drag.listeners)}
+          onClick={() => {
+            setPeek(null);
+            if (isBook) onOpenBook(item.book);
+            else onOpenDecor?.(item.decor);
+          }}
+          onMouseEnter={(e) => isBook && setPeek(e.currentTarget.getBoundingClientRect())}
+          onMouseLeave={() => setPeek(null)}
+          onMouseDown={(e) => {
+            setPeek(null);
+            if (!readOnly) (drag.listeners as { onMouseDown?: (e: ReactMouseEvent) => void } | undefined)?.onMouseDown?.(e);
+          }}
+          aria-label={label}
+          title={isBook ? item.book.title : decorSpec(item.decor.kind).name}
+          className={`group block h-full w-full rounded-[3px] text-left outline-offset-4 ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
+        >
+          <span
+            className={`relative block h-full w-full origin-bottom transition-transform duration-200 ease-out motion-reduce:transform-none ${
+              isBook && item.book.display === "cover" ? "group-hover:-translate-y-2 group-hover:-rotate-2" : "group-hover:-translate-y-1.5"
+            } group-focus-visible:-translate-y-2`}
+          >
+            <ItemVisual item={item} />
+            {isBook && <Ribbons book={item.book} />}
+            {isBook && item.book.status === "read" && item.book.rating === 5 && (
+              // On a spine the badge sits low, clear of the title and the mark ribbons.
+              <span
+                className={`absolute z-10 whitespace-nowrap rounded-full bg-amber-400 px-1 py-0.5 font-mono text-[9px] font-semibold leading-none text-amber-950 shadow md:text-[10px] ${
+                  item.book.display === "cover" ? "-right-1.5 -top-1.5" : "bottom-[14%] left-1/2 -translate-x-1/2"
+                }`}
+              >
+                ★5
+              </span>
+            )}
           </span>
-          {!shelf.is_want_to_read && book.rating === 5 && (
-            <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none text-amber-950 shadow">
-              ★5
-            </span>
-          )}
-        </span>
-      </button>
+        </button>
+      )}
+      {peek && isBook && !dimmed && <Peek book={item.book} rect={peek} />}
     </div>
+  );
+}
+
+/** Hover preview: a little card above the book with the essentials. Desktop pointers only. */
+function Peek({ book, rect }: { book: Book; rect: DOMRect }) {
+  if (typeof document === "undefined") return null;
+  const left = Math.min(Math.max(rect.left + rect.width / 2, 120), window.innerWidth - 120);
+  return createPortal(
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-40 hidden w-56 -translate-x-1/2 -translate-y-full animate-fade-in rounded-xl bg-paper p-3 text-ink shadow-xl ring-1 ring-line [@media(hover:hover)]:block"
+      style={{ left, top: rect.top - 14 }}
+    >
+      <p className="font-serif text-base leading-tight">{book.title}</p>
+      {book.author && <p className="mt-0.5 text-xs text-ink-soft">{book.author}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {book.status === "read" ? (
+          book.rating ? <StarDisplay rating={book.rating} size={14} /> : <span className="text-xs text-ink-soft">Not rated</span>
+        ) : null}
+        <MarkChips book={book} />
+      </div>
+      <p className="mt-2 text-[11px] text-ink-soft">Click to open</p>
+    </div>,
+    document.body,
   );
 }

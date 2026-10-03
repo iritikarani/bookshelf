@@ -22,7 +22,7 @@ export function Sheet({
   onClose: () => void;
   title: string;
   children: ReactNode;
-  variant?: "panel" | "modal";
+  variant?: "panel" | "modal" | "book";
   wide?: boolean;
   hideTitle?: boolean;
 }) {
@@ -68,7 +68,9 @@ export function Sheet({
   if (!open) return null;
 
   const desktop =
-    variant === "panel"
+    variant === "book"
+      ? "md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[90dvh] md:w-[min(940px,94vw)] md:rounded-lg md:animate-book-open"
+      : variant === "panel"
       ? "md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:h-full md:max-h-none md:w-[440px] md:rounded-none md:rounded-l-2xl md:animate-panel-in"
       : `md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[90dvh] md:rounded-2xl md:animate-fade-in ${wide ? "md:w-[680px]" : "md:w-[520px]"}`;
 
@@ -89,7 +91,7 @@ export function Sheet({
             <XIcon />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6">{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${variant === "book" ? "" : "px-5 pb-6"}`}>{children}</div>
       </div>
     </div>
   );
