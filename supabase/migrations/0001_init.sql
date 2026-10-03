@@ -21,7 +21,6 @@ create table if not exists public.shelves (
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null check (char_length(name) between 1 and 60),
   position integer not null default 0,
-  is_want_to_read boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists shelves_user_idx on public.shelves (user_id, position);
@@ -37,6 +36,9 @@ create table if not exists public.books (
   uploaded_cover text,
   cover_color text, -- colour of the generated cover when no image is used
   display text not null default 'spine' check (display in ('spine', 'cover')), -- spine-out or face-out
+  -- marks: reading status and favourite, shown as ribbons on the shelf
+  status text not null default 'read' check (status in ('read', 'reading', 'to_read')),
+  favourite boolean not null default false,
   year_published integer,
   pages integer,
   genre text,
@@ -118,10 +120,10 @@ begin
   insert into public.profiles (id, display_name)
   values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)));
 
-  insert into public.shelves (user_id, name, position, is_want_to_read) values
-    (new.id, 'Favourites', 0, false),
-    (new.id, 'Read', 1, false),
-    (new.id, 'Want to read', 2, true);
+  insert into public.shelves (user_id, name, position) values
+    (new.id, 'Top shelf', 0),
+    (new.id, 'Middle shelf', 1),
+    (new.id, 'Bottom shelf', 2);
   return new;
 end $$;
 

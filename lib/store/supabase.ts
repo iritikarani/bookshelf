@@ -21,9 +21,9 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
 }
 
 const DEFAULT_SHELVES = [
-  { name: "Favourites", position: 0, is_want_to_read: false },
-  { name: "Read", position: 1, is_want_to_read: false },
-  { name: "Want to read", position: 2, is_want_to_read: true },
+  { name: "Top shelf", position: 0 },
+  { name: "Middle shelf", position: 1 },
+  { name: "Bottom shelf", position: 2 },
 ];
 
 export const supabaseStore: Store = {

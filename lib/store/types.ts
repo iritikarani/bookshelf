@@ -30,7 +30,7 @@ export interface Store {
   deleteBook(id: string): Promise<void>;
   insertDecor(userId: string, decor: { shelf_id: string; kind: DecorKind; position: number }): Promise<Decor>;
   deleteDecor(id: string): Promise<void>;
-  insertShelf(userId: string, shelf: Pick<Shelf, "name" | "position" | "is_want_to_read">): Promise<Shelf>;
+  insertShelf(userId: string, shelf: Pick<Shelf, "name" | "position">): Promise<Shelf>;
   updateShelves(updates: (Pick<Shelf, "id"> & Partial<Pick<Shelf, "name" | "position">>)[]): Promise<void>;
   deleteShelf(id: string): Promise<void>;
   updateProfile(userId: string, patch: Partial<Pick<Profile, "shelf_style" | "is_public">>): Promise<Profile>;

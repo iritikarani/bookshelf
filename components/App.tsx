@@ -8,6 +8,9 @@ import { summary } from "@/lib/stats";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
+import { todayISO } from "@/lib/date";
+import { MARKS, matchesFilter, type MarkFilter } from "./Marks";
+import { RoomScene } from "./RoomScene";
 import { AddBookDialog } from "./AddBookDialog";
 import { ArrangeSheet } from "./ArrangeSheet";
 import { AuthScreen } from "./AuthScreen";
@@ -44,12 +47,13 @@ function AppInner() {
   const [decorId, setDecorId] = useState<string | null>(null);
   const aesthetic = aestheticOf(profile?.shelf_style);
 
-  const showExamples = !loading && books.length === 0;
+  const [filter, setFilter] = useState<MarkFilter>("all");
+  const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
   const exampleMap = useMemo(() => new Map<string, ShelfItem[]>([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]]), []);
   // Quote wall & reading year show the examples too until the first real book arrives.
   const viewShelves = showExamples ? [EXAMPLE_SHELF, ...shelves] : shelves;
   const viewBooks = showExamples ? EXAMPLE_BOOKS : books;
-  const stats = summary(shelves, books);
+  const stats = summary(books);
 
   if (!authReady) return <Splash />;
   if (!user && store.mode === "supabase") return <AuthScreen />;
@@ -99,36 +103,43 @@ function AppInner() {
           <ShelfSkeleton />
         ) : tab === "shelf" ? (
           <>
-            {showExamples ? (
-              <ShelfWall
-                shelves={[EXAMPLE_SHELF]}
-                itemsByShelf={exampleMap}
-                structure={aesthetic.structure}
-                onOpenBook={(b) => setOpenId(b.id)}
-                floor={false}
-                readOnly
-                shelfNote={() => (
-                  <div className="mb-2 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
-                    <button type="button" className="btn-primary shrink-0" onClick={startAdd}>
-                      <PlusIcon width={16} height={16} /> Add my first book
-                    </button>
-                  </div>
-                )}
-              />
-            ) : null}
-            <div className={showExamples ? "mt-10" : ""}>
-              <ShelfWall
-                shelves={shelves}
-                itemsByShelf={itemsByShelf}
-                structure={aesthetic.structure}
-                onOpenBook={(b) => setOpenId(b.id)}
-                onOpenDecor={(d) => setDecorId(d.id)}
-                onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
-                justAddedId={lib.justAddedId}
-              />
-            </div>
-            <p className="mt-6 hidden text-center text-xs text-ink-soft md:block">Tip: drag books and objects to rearrange them. Use the brush to change the room or add decor.</p>
+            {showExamples && (
+              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
+                <button type="button" className="btn-primary shrink-0" onClick={startAdd}>
+                  <PlusIcon width={16} height={16} /> Add my first book
+                </button>
+              </div>
+            )}
+            <MarkFilterBar value={filter} onChange={setFilter} books={viewBooks} />
+            <RoomScene standing={aesthetic.structure === "case"}>
+              {showExamples ? (
+                <ShelfWall
+                  shelves={[EXAMPLE_SHELF]}
+                  itemsByShelf={exampleMap}
+                  structure={aesthetic.structure}
+                  onOpenBook={(b) => setOpenId(b.id)}
+                  filter={filter}
+                  floor={false}
+                  readOnly
+                />
+              ) : (
+                <ShelfWall
+                  shelves={shelves}
+                  itemsByShelf={itemsByShelf}
+                  structure={aesthetic.structure}
+                  onOpenBook={(b) => setOpenId(b.id)}
+                  onOpenDecor={(d) => setDecorId(d.id)}
+                  onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
+                  justAddedId={lib.justAddedId}
+                  filter={filter}
+                  floor={false}
+                />
+              )}
+            </RoomScene>
+            <p className="mt-4 hidden text-center text-xs text-ink-soft md:block">
+              Tip: drag books and objects to rearrange them. Click the lamp to switch it on or off. The brush changes the room.
+            </p>
           </>
         ) : tab === "quotes" ? (
           <>
@@ -168,6 +179,8 @@ function AppInner() {
         onMove={(b, shelfId) => lib.sendToShelf(b.id, shelfId)}
         onNudge={(b, dir) => lib.nudgeItem(b.id, dir)}
         onDisplay={(b, display) => lib.updateBook(b.id, { display })}
+        onMarks={(b, patch) => lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch)}
+        onRate={(b, rating) => lib.updateBook(b.id, { rating })}
         onRemove={(b) => lib.removeBook(b.id)}
       />
 
@@ -228,6 +241,38 @@ function IconButton({ label, onClick, children, disabled }: { label: string; onC
     <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="rounded-full p-2.5 text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40">
       {children}
     </button>
+  );
+}
+
+function MarkFilterBar({ value, onChange, books }: { value: MarkFilter; onChange: (f: MarkFilter) => void; books: Book[] }) {
+  const options: { id: MarkFilter; label: string; icon?: string; color?: string }[] = [
+    { id: "all", label: "All books" },
+    { id: "favourite", label: "Favourites", icon: MARKS.favourite.icon, color: MARKS.favourite.color },
+    { id: "reading", label: "Reading now", icon: MARKS.reading.icon, color: MARKS.reading.color },
+    { id: "to_read", label: "To read", icon: MARKS.to_read.icon, color: MARKS.to_read.color },
+  ];
+  return (
+    <div className="mb-5 flex gap-2 overflow-x-auto pb-1 no-scrollbar" role="radiogroup" aria-label="Highlight books by mark">
+      {options.map((o) => {
+        const on = value === o.id;
+        const count = o.id === "all" ? books.length : books.filter((b) => matchesFilter(b, o.id)).length;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.id)}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm backdrop-blur transition ${on ? "shadow-sm" : "border-line bg-paper/50 text-ink-soft hover:text-ink"}`}
+            style={on ? { borderColor: o.color ?? "rgb(var(--accent))", backgroundColor: o.color ? `${o.color}22` : "rgb(var(--accent) / 0.12)", color: o.color ?? "rgb(var(--ink))" } : undefined}
+          >
+            {o.icon && <span aria-hidden>{o.icon}</span>}
+            {o.label}
+            <span className="font-mono text-[11px] opacity-70">{count}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

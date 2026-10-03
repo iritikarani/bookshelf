@@ -58,9 +58,7 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
           );
         })}
       </ul>
-      {shelves.some((s) => s.is_want_to_read) && (
-        <p className="mt-2 text-xs text-ink-soft">Books on “{shelves.find((s) => s.is_want_to_read)?.name}” count as your to-read pile.</p>
-      )}
+      <p className="mt-2 text-xs text-ink-soft">Shelves are just places. Use marks on each book (❤ Favourite, 📖 Reading now, 🔖 To read) to keep track of them.</p>
       <form
         className="mt-5 flex gap-2"
         onSubmit={(e) => {
@@ -71,13 +69,13 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
           setNewName("");
         }}
       >
-        <input className="field flex-1" placeholder="New shelf, e.g. Made me cry" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New shelf name" maxLength={60} />
+        <input className="field flex-1" placeholder="New shelf, e.g. Poetry corner" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New shelf name" maxLength={60} />
         <button type="submit" className="btn-primary" disabled={!newName.trim()}>
           <PlusIcon width={16} height={16} /> Add
         </button>
       </form>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {["Made me cry", `Read in ${new Date().getFullYear()}`, "Comfort reads", "Book club"].map((idea) => (
+        {["By the window", "Classics", "Poetry corner", `Read in ${new Date().getFullYear()}`].map((idea) => (
           <button key={idea} type="button" className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-soft hover:border-accent hover:text-accent" onClick={() => setNewName(idea)}>
             {idea}
           </button>

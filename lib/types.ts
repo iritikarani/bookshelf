@@ -10,6 +10,9 @@ export type ShelfStyle =
   | "boho"
   | "industrial";
 
+/** Where a book is in your reading life. Shown as a ribbon mark on the shelf. */
+export type ReadStatus = "read" | "reading" | "to_read";
+
 /** How a book stands on the shelf. */
 export type BookDisplay = "spine" | "cover";
 
@@ -39,7 +42,6 @@ export interface Shelf {
   user_id: string;
   name: string;
   position: number;
-  is_want_to_read: boolean;
 }
 
 export interface Book {
@@ -52,6 +54,8 @@ export interface Book {
   uploaded_cover: string | null;
   cover_color: string | null;
   display: BookDisplay;
+  status: ReadStatus;
+  favourite: boolean;
   year_published: number | null;
   pages: number | null;
   genre: string | null;

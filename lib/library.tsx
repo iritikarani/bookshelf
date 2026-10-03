@@ -286,7 +286,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const u = requireUser();
     const position = Math.max(-1, ...(dataRef.current?.shelves ?? []).map((s) => s.position)) + 1;
     try {
-      const shelf = await store.insertShelf(u.id, { name, position, is_want_to_read: false });
+      const shelf = await store.insertShelf(u.id, { name, position });
       setData((d) => (d ? { ...d, shelves: [...d.shelves, shelf] } : d));
     } catch (e) {
       fail(e, "Couldn't add that shelf.");

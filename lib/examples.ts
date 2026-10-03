@@ -6,14 +6,15 @@ export const EXAMPLE_SHELF: Shelf = {
   user_id: "example",
   name: "Example shelf",
   position: 0,
-  is_want_to_read: false,
 };
 
-type Seed = Pick<Book, "title" | "author" | "year_published" | "pages" | "genre" | "short_description" | "rating" | "what_i_liked" | "favourite_line" | "date_finished" | "cover_color" | "display"> & { isbn?: string };
+type Seed = Pick<Book, "title" | "author" | "year_published" | "pages" | "genre" | "short_description" | "rating" | "what_i_liked" | "favourite_line" | "date_finished" | "cover_color" | "display" | "status" | "favourite"> & { isbn?: string };
 
 const SEEDS: Seed[] = [
   {
     title: "Pride and Prejudice",
+    status: "read",
+    favourite: true,
     display: "cover",
     author: "Jane Austen",
     isbn: "9780141439518",
@@ -29,6 +30,8 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Jane Eyre",
+    status: "read",
+    favourite: true,
     display: "spine",
     author: "Charlotte Brontë",
     isbn: "9780141441146",
@@ -44,6 +47,8 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Little Women",
+    status: "to_read",
+    favourite: false,
     display: "spine",
     author: "Louisa May Alcott",
     isbn: "9780147514011",
@@ -51,14 +56,16 @@ const SEEDS: Seed[] = [
     pages: 449,
     genre: "Classics",
     short_description: "Four March sisters grow up through poverty, ambition and love in Civil War-era Massachusetts.",
-    rating: 4,
-    what_i_liked: "Jo in the attic, writing furiously with her 'scribbling suit' on.",
-    favourite_line: "I'm not afraid of storms, for I'm learning how to sail my ship.",
-    date_finished: "2025-12-20",
+    rating: 0,
+    what_i_liked: "Everyone says Jo March is the heroine I've been missing.",
+    favourite_line: null,
+    date_finished: null,
     cover_color: "#ecc5dc",
   },
   {
     title: "The Great Gatsby",
+    status: "read",
+    favourite: false,
     display: "cover",
     author: "F. Scott Fitzgerald",
     isbn: "9780743273565",
@@ -74,16 +81,18 @@ const SEEDS: Seed[] = [
   },
   {
     title: "Gitanjali",
+    status: "reading",
+    favourite: false,
     display: "spine",
     author: "Rabindranath Tagore",
     year_published: 1910,
     pages: 112,
     genre: "Poetry",
     short_description: "Song offerings: devotional poems that won Tagore the Nobel Prize in Literature.",
-    rating: 5,
+    rating: 0,
     what_i_liked: "Reading one poem each morning with tea.",
     favourite_line: "Where the mind is without fear and the head is held high…",
-    date_finished: "2026-04-21",
+    date_finished: null,
     cover_color: "#f3e3a2",
   },
 ];

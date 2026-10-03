@@ -1,7 +1,7 @@
 import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
 import type { LibraryData, Store } from "./types";
 
-const KEY = "exlibris:local:v2";
+const KEY = "exlibris:local:v3";
 const LOCAL_USER: AuthUser = { id: "local-user", email: null };
 
 const uid = () =>
@@ -14,9 +14,9 @@ function fresh(): LibraryData {
   return {
     profile: { id: user_id, display_name: "Reader", shelf_style: "pastel", is_public: false, public_slug: uid().slice(0, 12) },
     shelves: [
-      { id: uid(), user_id, name: "Favourites", position: 0, is_want_to_read: false },
-      { id: uid(), user_id, name: "Read", position: 1, is_want_to_read: false },
-      { id: uid(), user_id, name: "Want to read", position: 2, is_want_to_read: true },
+      { id: uid(), user_id, name: "Top shelf", position: 0 },
+      { id: uid(), user_id, name: "Middle shelf", position: 1 },
+      { id: uid(), user_id, name: "Bottom shelf", position: 2 },
     ],
     books: [],
     decor: [],

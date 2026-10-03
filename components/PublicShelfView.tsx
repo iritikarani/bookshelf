@@ -12,6 +12,7 @@ import { BookDetail } from "./BookDetail";
 import { Header } from "./Header";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
+import { RoomScene } from "./RoomScene";
 import { ShelfWall } from "./ShelfWall";
 
 export function PublicShelfView({ slug }: { slug: string }) {
@@ -44,7 +45,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
   return (
     <div data-style={aesthetic.id} className="room min-h-dvh pb-16">
       <Header
-        stats={summary(shelves, books)}
+        stats={summary(books)}
         tab={tab}
         onTab={setTab}
         subtitle={data ? `${name ? `${name}'s` : "A reader's"} shelf · read-only` : " "}
@@ -54,7 +55,9 @@ export function PublicShelfView({ slug }: { slug: string }) {
         {data === undefined ? (
           <ShelfSkeleton />
         ) : tab === "shelf" ? (
-          <ShelfWall shelves={shelves} itemsByShelf={items} structure={aesthetic.structure} onOpenBook={(b) => setOpenId(b.id)} readOnly />
+          <RoomScene standing={aesthetic.structure === "case"}>
+            <ShelfWall shelves={shelves} itemsByShelf={items} structure={aesthetic.structure} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
+          </RoomScene>
         ) : tab === "quotes" ? (
           <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} />
         ) : (

@@ -1,10 +1,11 @@
-import type { Book, Shelf } from "./types";
+import type { Book } from "./types";
 
-export function splitByReadState(shelves: Shelf[], books: Book[]) {
-  const wantIds = new Set(shelves.filter((s) => s.is_want_to_read).map((s) => s.id));
-  const read = books.filter((b) => !wantIds.has(b.shelf_id));
-  const toRead = books.filter((b) => wantIds.has(b.shelf_id));
-  return { read, toRead, wantIds };
+export function splitByReadState(books: Book[]) {
+  return {
+    read: books.filter((b) => b.status === "read"),
+    reading: books.filter((b) => b.status === "reading"),
+    toRead: books.filter((b) => b.status === "to_read"),
+  };
 }
 
 export function averageRating(books: Book[]): number | null {
@@ -15,8 +16,8 @@ export function averageRating(books: Book[]): number | null {
 
 export const hasLine = (b: Book) => Boolean(b.favourite_line?.trim());
 
-export function summary(shelves: Shelf[], books: Book[]) {
-  const { read, toRead } = splitByReadState(shelves, books);
+export function summary(books: Book[]) {
+  const { read, toRead } = splitByReadState(books);
   return {
     booksRead: read.length,
     avgRating: averageRating(read),

@@ -28,6 +28,12 @@
 
 /* 1 · Pastel dream */
 [data-style="pastel"] {
+  --curtain: #f4d8d4;
+  --window-frame: #fffdfb;
+  --lamp-shade: #f6e4d6;
+  --lamp-metal: #c9a27a;
+  --rug: #ecc9c5;
+  --rug-2: #f8ebe8;
   --room-wall: #fbf1ed;
   --room-pattern: radial-gradient(circle at 2px 2px, rgba(226, 160, 156, 0.22) 1.2px, transparent 1.8px) 0 0 / 24px 24px;
   --frame-base: #ebc4c1;
@@ -37,6 +43,12 @@
 
 /* 2 · Modern black — the classic black bookcase in a bright panelled room */
 [data-style="modern"] {
+  --curtain: #ece5d9;
+  --window-frame: #ffffff;
+  --lamp-shade: #f3ede3;
+  --lamp-metal: #c4a062;
+  --rug: #e6dfd3;
+  --rug-2: #d4cabc;
   --room-wall: #f5f2ed;
   --room-pattern:
     linear-gradient(180deg, transparent 0 calc(100% - 340px), rgba(0, 0, 0, 0.035) calc(100% - 340px)),
@@ -50,6 +62,12 @@
 
 /* 3 · Scandi — white case with pale oak shelves */
 [data-style="scandi"] {
+  --curtain: #f3f1ec;
+  --window-frame: #ffffff;
+  --lamp-shade: #fbfbfa;
+  --lamp-metal: #2a2a2a;
+  --rug: #dcd7ce;
+  --rug-2: #c2baad;
   --room-wall: #eceeec;
   --frame-base: #f8f7f4;
   --board-base: #dcc29b;
@@ -60,6 +78,12 @@
 
 /* 4 · Japandi — floating ash boards on a limewashed wall */
 [data-style="japandi"] {
+  --curtain: #e4dac8;
+  --window-frame: #8a6e4d;
+  --lamp-shade: #f3e9d6;
+  --lamp-metal: #6f5a43;
+  --rug: #cfc2aa;
+  --rug-2: #b8a78a;
   --room-wall: #ebe2d4;
   --room-pattern:
     radial-gradient(ellipse 50% 40% at 25% 20%, rgba(255, 255, 255, 0.55), transparent 70%),
@@ -72,6 +96,12 @@
 
 /* 5 · Dark academia — walnut, forest green, brass. A dark room, so the ink flips. */
 [data-style="academia"] {
+  --curtain: #6a2b2d;
+  --window-frame: #3a2618;
+  --lamp-shade: #2f4d3b;
+  --lamp-metal: #b8914f;
+  --rug: #6a2b2d;
+  --rug-2: #a1703e;
   --room-wall: #2b3930;
   --room-pattern: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 52px);
   --frame-base: #4c2f1f;
@@ -92,6 +122,12 @@
 
 /* 6 · Cottagecore — sage-painted case, sprigged wallpaper */
 [data-style="cottage"] {
+  --curtain: #f0d7d9;
+  --window-frame: #ffffff;
+  --lamp-shade: #f1d6da;
+  --lamp-metal: #d5c3a2;
+  --rug: #c8d6b5;
+  --rug-2: #efe5cf;
   --room-wall: #f6efdf;
   --room-pattern:
     radial-gradient(circle at 9px 9px, rgba(224, 146, 158, 0.38) 2.6px, transparent 3.2px) 0 0 / 44px 44px,
@@ -105,6 +141,12 @@
 
 /* 7 · Mid-century — floating teak on a mustard wall */
 [data-style="midcentury"] {
+  --curtain: #d4713c;
+  --window-frame: #8a5a35;
+  --lamp-shade: #efe0c0;
+  --lamp-metal: #2f2a26;
+  --rug: #4d6e68;
+  --rug-2: #e6c46c;
   --room-wall: #e7cc8c;
   --room-pattern: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 60%);
   --frame-base: #985631;
@@ -115,6 +157,12 @@
 
 /* 8 · Coastal — whitewashed case, pale blue beadboard */
 [data-style="coastal"] {
+  --curtain: #f7f5ef;
+  --window-frame: #ffffff;
+  --lamp-shade: #e6edf1;
+  --lamp-metal: #b9a27c;
+  --rug: #8db2c5;
+  --rug-2: #f2eee5;
   --room-wall: #dae7ed;
   --room-pattern: repeating-linear-gradient(90deg, transparent 0 34px, rgba(50, 85, 105, 0.08) 34px 36px);
   --frame-base: #f2eee5;
@@ -125,6 +173,12 @@
 
 /* 9 · Boho — rope-hung boards on a terracotta arch */
 [data-style="boho"] {
+  --curtain: #eadbc2;
+  --window-frame: #c69967;
+  --lamp-shade: #d1a76d;
+  --lamp-metal: #8a6a45;
+  --rug: #c46e49;
+  --rug-2: #e8c29a;
   --room-wall: #e8c4aa;
   --room-pattern:
     radial-gradient(ellipse 34% 62% at 50% 100%, rgba(255, 241, 226, 0.5) 99%, transparent 100%),
@@ -136,6 +190,12 @@
 
 /* 10 · Industrial — iron pipe, reclaimed boards, painted brick */
 [data-style="industrial"] {
+  --curtain: transparent;
+  --window-frame: #232323;
+  --lamp-shade: #2b2b2b;
+  --lamp-metal: #232323;
+  --rug: #6a6158;
+  --rug-2: #8d8377;
   --room-wall: #b06d58;
   --room-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32'%3E%3Cg fill='none' stroke='rgba(255,240,230,0.28)' stroke-width='2'%3E%3Cpath d='M0 1h64M0 17h64M1 1v16M33 17v16'/%3E%3C/g%3E%3C/svg%3E");
   --frame-base: #7a5940;
@@ -156,9 +216,18 @@
   --skirting: #262926;
 }
 
+/* Rooms that darken their own ink in light mode get the normal night ink back. */
+.dark [data-style="industrial"],
+.dark [data-style="midcentury"] {
+  --ink: 237 233 223;
+  --ink-soft: 172 169 158;
+  --line: 72 76 70;
+}
+
 /* ───── the room ───── */
 .room {
   color: rgb(var(--ink));
+  overflow-x: clip; /* the floor and lamp glow bleed past the content edges */
   background:
     radial-gradient(ellipse 60% 45% at 0% 0%, rgba(255, 255, 255, 0.4), transparent 70%),
     var(--room-pattern),
@@ -174,7 +243,7 @@
 .room-floor {
   margin-left: calc(50% - 50vw);
   width: 100vw;
-  height: 64px;
+  height: 72px;
   background:
     linear-gradient(180deg, var(--skirting) 0 12px, rgba(0, 0, 0, 0.12) 12px 14px, transparent 14px),
     repeating-linear-gradient(90deg, transparent 0 158px, rgba(0, 0, 0, 0.1) 158px 160px),
@@ -390,3 +459,184 @@
   white-space: nowrap;
   line-height: 1;
 }
+
+/* ═════════════ the room corner: window, lamp, rug ═════════════ */
+.room-stage {
+  isolation: isolate;
+}
+
+/* Warm pool of light from the lamp (top right), much stronger at night. */
+.lamp-glow {
+  opacity: 0;
+  transition: opacity 600ms ease;
+  background: radial-gradient(closest-side, rgba(255, 210, 140, 0.34), rgba(255, 210, 140, 0.12) 55%, transparent);
+  inset: auto -120px 40px auto !important;
+  width: 560px;
+  height: 640px;
+}
+.room-stage[data-lamp="on"] .lamp-glow { opacity: 1; }
+.dark .lamp-glow {
+  background: radial-gradient(closest-side, rgba(255, 196, 110, 0.26), rgba(255, 196, 110, 0.08) 55%, transparent);
+}
+@media (max-width: 1023px) {
+  .lamp-glow {
+    inset: -60px -60px auto auto !important;
+    width: 320px;
+    height: 320px;
+  }
+}
+.floor-lamp .lamp-cone { mix-blend-mode: screen; }
+
+/* Window */
+.room-window { --curtain-w: 26%; }
+.window-rod {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: -10px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--lamp-metal);
+  z-index: 3;
+}
+.window-frame {
+  position: absolute;
+  inset: 0 0 10px;
+  border: 8px solid var(--window-frame);
+  border-radius: 3px;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+.window-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #bcdcf2 0%, #dcedf8 60%, #eef6f2 100%);
+}
+.dark .window-sky { background: linear-gradient(180deg, #121a2e 0%, #24324f 70%, #34405c 100%); }
+.window-sun {
+  position: absolute;
+  right: 16%;
+  top: 14%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff6d8;
+  box-shadow: 0 0 30px 12px rgba(255, 244, 200, 0.8);
+}
+.window-moon,
+.window-stars { display: none; }
+.dark .window-sun,
+.dark .window-cloud { display: none; }
+.dark .window-moon {
+  display: block;
+  position: absolute;
+  right: 18%;
+  top: 14%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: -6px 4px 0 0 #f4ecd2;
+}
+.dark .window-stars {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 20%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 40% 60%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 70% 40%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 30% 80%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 85% 70%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 55% 15%, #fff 99%, transparent);
+  opacity: 0.8;
+}
+.window-cloud {
+  position: absolute;
+  width: 46px;
+  height: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 12px -7px 0 2px rgba(255, 255, 255, 0.9), 26px 0 0 0 rgba(255, 255, 255, 0.9);
+}
+/* A leafy branch reaching in from the corner */
+.window-branch {
+  position: absolute;
+  left: -10%;
+  bottom: -6%;
+  width: 70%;
+  height: 45%;
+  background:
+    radial-gradient(ellipse 14% 22% at 20% 40%, #7fa86f 98%, transparent),
+    radial-gradient(ellipse 16% 20% at 38% 58%, #6a955d 98%, transparent),
+    radial-gradient(ellipse 13% 18% at 55% 72%, #8db57c 98%, transparent),
+    radial-gradient(ellipse 18% 24% at 12% 75%, #5f8a55 98%, transparent),
+    radial-gradient(ellipse 12% 16% at 70% 88%, #7fa86f 98%, transparent);
+  opacity: 0.9;
+}
+.dark .window-branch { filter: brightness(0.35) saturate(0.6); }
+.window-mullions {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 3px), var(--window-frame) calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
+    linear-gradient(180deg, transparent calc(45% - 3px), var(--window-frame) calc(45% - 3px) calc(45% + 3px), transparent calc(45% + 3px));
+}
+.window-mullions--wide {
+  background:
+    linear-gradient(90deg, transparent calc(33% - 3px), var(--window-frame) calc(33% - 3px) calc(33% + 3px), transparent calc(33% + 3px) calc(67% - 3px), var(--window-frame) calc(67% - 3px) calc(67% + 3px), transparent calc(67% + 3px));
+}
+[data-style="industrial"] .window-mullions {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--window-frame) calc(25% - 2px) 25%),
+    repeating-linear-gradient(180deg, transparent 0 calc(20% - 2px), var(--window-frame) calc(20% - 2px) 20%);
+}
+.window-sill {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  bottom: 0;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--window-frame);
+  box-shadow: 0 6px 8px -4px rgba(0, 0, 0, 0.3);
+}
+.curtain {
+  position: absolute;
+  top: -8px;
+  bottom: -26px;
+  width: var(--curtain-w);
+  z-index: 2;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 6px, rgba(0, 0, 0, 0.07) 6px 12px),
+    var(--curtain);
+  box-shadow: 0 8px 16px -10px rgba(0, 0, 0, 0.35);
+}
+.curtain-left { left: -10%; border-radius: 0 0 40% 0 / 0 0 12% 0; }
+.curtain-right { right: -10%; border-radius: 0 0 0 40% / 0 0 0 12%; }
+[data-style="industrial"] .curtain { display: none; }
+[data-style="cottage"] .curtain {
+  background:
+    radial-gradient(circle at 6px 6px, rgba(214, 120, 135, 0.5) 2px, transparent 2.6px) 0 0 / 16px 16px,
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0 6px, rgba(0, 0, 0, 0.05) 6px 12px),
+    var(--curtain);
+}
+.dark .curtain { filter: brightness(0.55); }
+
+/* Rug on the floor, seen in perspective */
+.room-rug {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: min(72%, 780px);
+  height: 44px;
+  transform: translateX(-50%);
+  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
+  background:
+    linear-gradient(90deg, var(--rug-2) 0 4%, transparent 4% 96%, var(--rug-2) 96%),
+    linear-gradient(180deg, var(--rug-2) 0 12%, transparent 12% 88%, var(--rug-2) 88%),
+    repeating-linear-gradient(60deg, transparent 0 14px, color-mix(in srgb, var(--rug-2) 55%, transparent) 14px 16px),
+    repeating-linear-gradient(-60deg, transparent 0 14px, color-mix(in srgb, var(--rug-2) 55%, transparent) 14px 16px),
+    var(--rug);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+}
+.dark .room-rug { filter: brightness(0.5); }

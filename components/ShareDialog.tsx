@@ -67,9 +67,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   const picked = useMemo(() => {
     const withBooks = [...shelves]
       .filter((s) => (itemsByShelf.get(s.id) ?? []).some((i) => i.type === "book"))
-      .sort((a, b) => Number(a.is_want_to_read) - Number(b.is_want_to_read) || a.position - b.position)
-      .slice(0, 4)
-      .sort((a, b) => a.position - b.position);
+      .slice(0, 4);
     return withBooks.map((shelf) => {
       let used = 0;
       const items: ShelfItem[] = [];
@@ -83,7 +81,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
     });
   }, [shelves, itemsByShelf]);
 
-  const stats = summary(shelves, books);
+  const stats = summary(books);
 
   useEffect(() => {
     if (!open) {

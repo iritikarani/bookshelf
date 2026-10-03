@@ -2,7 +2,7 @@
 
 An online bookshelf for the books you've finished, with a personal journal entry for each one.
 
-It looks like a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a globe or a bust. Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
+It feels like a corner of home: a window with curtains (a night sky in dark mode), a reading lamp you can switch on, a rug, and a real bookshelf. Books stand spine-out (thickness from page count, colour from the cover) or turn to face their cover out, mixed with objects like plants, candles, a globe or a bust. Mark books ❤ Favourite, 📖 Reading now or 🔖 To read; marks show as ribbon bookmarks and the filter chips highlight them, so shelves never have to double as categories. Click a book and it opens like a book, with the cover, rating and marks on the left page and your journal on the right. Drag anything to rearrange it, and pick from 10 room aesthetics: Pastel dream, Modern black, Scandi, Japandi, Dark academia, Cottagecore, Mid-century, Coastal, Boho and Industrial. Each one changes the wall, the floor and how the shelves are built (boxed bookcase, floating boards, rope-hung or iron pipe). Tap one to open its card: rating, what you liked, your favourite line, the date you finished it, and an "EX LIBRIS" bookplate.
 
 **Stack:** Next.js 15 (App Router) · React 19 · Tailwind CSS · Supabase (auth, Postgres, storage) · dnd-kit · html-to-image · Google Books and Open Library APIs.
 
@@ -21,7 +21,7 @@ npm run dev                  # http://localhost:3000
 1. Create a project at [supabase.com](https://supabase.com).
 2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). It creates:
    - `profiles`, `shelves` and `books`, with row-level security so each user sees only their own rows (private by default).
-   - A sign-up trigger that gives every new user the shelves **Favourites**, **Read** and **Want to read**.
+   - A sign-up trigger that gives every new user three plain shelves: **Top shelf**, **Middle shelf** and **Bottom shelf**.
    - `get_public_shelf(slug)`, a security-definer function that returns a shelf only when its owner has turned the public link on.
    - A `covers` storage bucket for uploaded cover photos. Each user can only write inside their own folder.
 3. Copy the project URL and anon key from **Settings → API** into `.env.local`:
@@ -37,12 +37,12 @@ npm run dev                  # http://localhost:3000
 
 | Table | Fields |
 |---|---|
-| `shelves` | id, user_id, name, position, is_want_to_read |
-| `books` | id, user_id, title, author, cover_url, uploaded_cover, cover_color, display (`spine` / `cover`), year_published, pages, genre, short_description, shelf_id, position, rating (0–5), what_i_liked, favourite_line, date_finished, created_at, updated_at |
+| `shelves` | id, user_id, name, position |
+| `books` | id, user_id, title, author, cover_url, uploaded_cover, cover_color, display (`spine` / `cover`), status (`read` / `reading` / `to_read`), favourite, year_published, pages, genre, short_description, shelf_id, position, rating (0–5), what_i_liked, favourite_line, date_finished, created_at, updated_at |
 | `decor` | id, user_id, shelf_id, kind, position (shares the shelf's ordering with books) |
 | `profiles` | id, display_name, shelf_style (one of the 10 aesthetics), is_public, public_slug |
 
-Beyond the brief: `cover_color` stores the pastel picked for a generated cover, `display` says whether a book stands spine-out or cover-out, and the `decor` table holds the objects on each shelf.
+Beyond the brief: `status` and `favourite` are the marks (they replace the brief's "Want to read" shelf), `cover_color` stores the pastel picked for a generated cover, `display` says whether a book stands spine-out or cover-out, and the `decor` table holds the objects on each shelf.
 
 ## How it's organised
 
@@ -57,7 +57,9 @@ components/
   Decor.tsx              the 10 decor objects (inline SVG)
   ArrangeSheet.tsx       pick an aesthetic, place decor
   DecorSheet.tsx         move or remove one object
-  BookDetail.tsx         side panel / bottom sheet, move controls, remove confirmation
+  BookDetail.tsx         the open-book spread: rating, marks, journal, arrange controls, remove confirmation
+  RoomScene.tsx          window, reading lamp, rug and floor around the shelves
+  Marks.tsx              mark definitions, ribbons, chips and the mark picker
   AddBookDialog.tsx      search-as-you-type, cover picker, generated covers, upload, journal fields
   EditShelves.tsx        rename, reorder, add, delete empty shelves
   QuoteWall.tsx          masonry of favourite lines
