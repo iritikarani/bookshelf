@@ -856,3 +856,15 @@
     var(--curtain);
 }
 .dark .curtain { filter: brightness(0.5); }
+
+/* ───── share image: the room drawn into a fixed 1080 × 1920 canvas ───── */
+.share-art .room-floor {
+  /* reach the image's edges, not the browser window's */
+  margin-left: -80px;
+  margin-right: -80px;
+  width: auto;
+  min-height: 300px;
+}
+.share-art .room-stage { margin-top: 0; }
+.share-art .lamp-glow,
+.share-art .window-beam { display: none; }
