@@ -35,7 +35,8 @@ interface LibraryContextValue {
   addDecor(kind: DecorKind, shelfId: string): Promise<void>;
   removeDecor(id: string): Promise<void>;
 
-  addShelf(name: string): Promise<void>;
+  /** Resolves to the new shelf, or null if it couldn't be saved. */
+  addShelf(name: string): Promise<Shelf | null>;
   renameShelf(id: string, name: string): Promise<void>;
   moveShelf(id: string, dir: -1 | 1): Promise<void>;
   deleteShelf(id: string): Promise<void>;
@@ -291,8 +292,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       const shelf = await store.insertShelf(u.id, { name, position });
       setData((d) => (d ? { ...d, shelves: [...d.shelves, shelf] } : d));
+      // Callers may add a book to it straight away, before React re-renders.
+      if (dataRef.current) dataRef.current = { ...dataRef.current, shelves: [...dataRef.current.shelves, shelf] };
+      return shelf;
     } catch (e) {
       fail(e, "Couldn't add that shelf.");
+      return null;
     }
   }, []);
 

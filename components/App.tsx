@@ -41,6 +41,13 @@ function AppInner() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // A short message after adding, e.g. "your bookcase was full, so a new one was added".
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -199,7 +206,8 @@ function AppInner() {
           setAddOpen(false);
           setEditing(null);
         }}
-        onSaved={(b) => {
+        onSaved={(b, note) => {
+          if (note) setNotice(note);
           if (b) {
             setOpenId(null);
             setTab("shelf");
@@ -235,6 +243,14 @@ function AppInner() {
         owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
       />
 
+      {notice && !lib.error && (
+        <div role="status" className="fixed inset-x-4 bottom-20 z-[60] mx-auto flex max-w-md animate-fade-in items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
+          <p className="flex-1">{notice}</p>
+          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
+            <XIcon width={18} height={18} />
+          </button>
+        </div>
+      )}
       {lib.error && (
         <div role="alert" className="fixed inset-x-4 bottom-20 z-[60] mx-auto flex max-w-md items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
           <p className="flex-1">{lib.error}</p>

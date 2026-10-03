@@ -7,8 +7,10 @@ import { compressCover } from "@/lib/image";
 import { INDIAN_PUBLISHERS } from "@/lib/indianPublishers";
 import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
-import type { Book, BookDisplay, BookDraft, ReadStatus } from "@/lib/types";
+import { placeBook } from "@/lib/shelfRoom";
+import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
 import { MarkPicker } from "./Marks";
+import { SHELVES_PER_BOOKCASE } from "./ShelfWall";
 import { BookCover, GeneratedCover } from "./BookCover";
 import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -24,7 +26,8 @@ interface Props {
   onClose: () => void;
   editing?: Book | null;
   defaultShelfId?: string;
-  onSaved?: (book: Book | null) => void;
+  /** note: where the book went, if not the chosen shelf because it was full. */
+  onSaved?: (book: Book | null, note: string | null) => void;
 }
 
 export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved }: Props) {
@@ -35,8 +38,8 @@ export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved 
           key={editing?.id ?? "new"}
           editing={editing ?? null}
           defaultShelfId={defaultShelfId}
-          onDone={(b) => {
-            onSaved?.(b);
+          onDone={(b, note) => {
+            onSaved?.(b, note ?? null);
             onClose();
           }}
         />
@@ -45,8 +48,24 @@ export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved 
   );
 }
 
-function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null) => void }) {
-  const { shelves, addBook, updateBook, uploadCover } = useLibrary();
+/** "Top shelf" → "The top shelf"; a named shelf stays as named. */
+function shelfLabel(shelf: Shelf | undefined, lower = false): string {
+  if (!shelf) return lower ? "another shelf" : "That shelf";
+  const plain = /^(top|middle|bottom) shelf$|^shelf \d+$/i.test(shelf.name.trim());
+  const name = plain ? `the ${shelf.name.trim().toLowerCase()}` : `“${shelf.name.trim()}”`;
+  return lower ? name : name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** "Shelf 4", "Shelf 5"…: plain names, kept off the wood like "Top shelf". */
+function nextShelfNames(shelves: Shelf[], count: number): string[] {
+  const taken = new Set(shelves.map((s) => s.name.trim().toLowerCase()));
+  const names: string[] = [];
+  for (let n = shelves.length + 1; names.length < count; n++) if (!taken.has(`shelf ${n}`)) names.push(`Shelf ${n}`);
+  return names;
+}
+
+function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null, note?: string | null) => void }) {
+  const { shelves, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -190,9 +209,36 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       if (editing) {
         await updateBook(editing.id, draft);
         onDone(null);
-      } else {
-        onDone(await addBook(draft));
+        return;
       }
+      // A full shelf passes the book along, like at home: to the next shelf with room,
+      // or, when every shelf is full, to a new bookcase.
+      const chosen = shelves.find((s) => s.id === shelfId);
+      const place = placeBook(shelves, itemsByShelf, shelfId, display, draft.pages);
+      let note: string | null = null;
+      if ("newBookcase" in place) {
+        // If the last bookcase is missing shelves, fill it out; otherwise add a whole new bookcase.
+        const missing = (SHELVES_PER_BOOKCASE - (shelves.length % SHELVES_PER_BOOKCASE)) % SHELVES_PER_BOOKCASE;
+        const names = nextShelfNames(shelves, missing || SHELVES_PER_BOOKCASE);
+        const added: Shelf[] = [];
+        for (const name of names) {
+          const s = await addShelf(name);
+          if (!s) break;
+          added.push(s);
+        }
+        const target = added[0];
+        if (target) {
+          draft.shelf_id = target.id;
+          note = missing
+            ? "Your shelves were full, so it went on a new shelf."
+            : "Your bookcase is full, so a new bookcase was added for it. Swipe or use the arrows to see it.";
+        }
+      } else if (place.shelfId !== shelfId) {
+        draft.shelf_id = place.shelfId;
+        const to = shelves.find((s) => s.id === place.shelfId);
+        note = `${shelfLabel(chosen)} is full, so it went on ${shelfLabel(to, true)}.`;
+      }
+      onDone(await addBook(draft), note);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't save that book.");
     } finally {
