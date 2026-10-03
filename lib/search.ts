@@ -214,6 +214,38 @@ export async function searchBooks(title: string, author: string, signal: AbortSi
   return mergeResults(ol, google);
 }
 
+/** Free-text search: a title, an author, or both ("premchand", "god of small things roy"). */
+export async function searchAnything(query: string, signal: AbortSignal): Promise<SearchResult[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const [ol, google] = await Promise.all([
+    searchOpenLibrary(q, "", signal).catch(() => [] as SearchResult[]),
+    searchGoogle(q, signal).catch(() => [] as SearchResult[]),
+  ]);
+  return mergeResults(ol, google);
+}
+
+const lookups = new Map<string, Promise<SearchResult | null>>();
+
+/**
+ * Best match for a known title and author (cover, pages, description), cached for the visit.
+ * Used by Discover so curated books show real covers and come with details when added.
+ */
+export function lookupBook(title: string, author: string): Promise<SearchResult | null> {
+  const key = `${title}|${author}`.toLowerCase();
+  let hit = lookups.get(key);
+  if (!hit) {
+    hit = searchBooks(title, author, new AbortController().signal)
+      .then((results) => {
+        const surname = norm(author).split(" ").pop() ?? "";
+        return results.find((r) => norm(r.author).includes(surname)) ?? results[0] ?? null;
+      })
+      .catch(() => null);
+    lookups.set(key, hit);
+  }
+  return hit;
+}
+
 /** Fill in a description from the Open Library work record if we don't have one. */
 export async function fetchWorkDescription(workKey: string): Promise<string | null> {
   try {

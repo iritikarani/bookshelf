@@ -10,7 +10,7 @@ import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 import { UsernameDialog } from "./UsernameDialog";
 
-export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Settings({ open, onClose, onImport }: { open: boolean; onClose: () => void; onImport?: () => void }) {
   const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
   const [copied, setCopied] = useState(false);
@@ -40,6 +40,23 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             ))}
           </div>
         </fieldset>
+
+        {onImport && (
+          <fieldset>
+            <legend className="label">Bring your books</legend>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                onClose();
+                onImport();
+              }}
+            >
+              Import from Goodreads
+            </button>
+            <p className="mt-1 text-xs text-ink-soft">Your shelves, ratings, reviews and dates read, from a Goodreads export file.</p>
+          </fieldset>
+        )}
 
         <fieldset>
           <legend className="label">Sharing</legend>
