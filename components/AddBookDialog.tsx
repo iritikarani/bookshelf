@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "rea
 import { COVER_SWATCHES, defaultCoverColor, probeImage } from "@/lib/covers";
 import { todayISO } from "@/lib/date";
 import { compressCover } from "@/lib/image";
+import { INDIAN_PUBLISHERS } from "@/lib/indianPublishers";
 import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import type { Book, BookDisplay, BookDraft, ReadStatus } from "@/lib/types";
@@ -50,6 +51,8 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
 
   const [title, setTitle] = useState(editing?.title ?? "");
   const [author, setAuthor] = useState(editing?.author ?? "");
+  // Only narrows the search; it isn't saved with the book.
+  const [publisher, setPublisher] = useState("");
   const [year, setYear] = useState(editing?.year_published?.toString() ?? "");
   const [pages, setPages] = useState(editing?.pages?.toString() ?? "");
   const [genre, setGenre] = useState(editing?.genre ?? "");
@@ -89,7 +92,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
 
   // Debounced search across Google Books + Open Library.
   useEffect(() => {
-    if (!touched || (title.trim().length < 2 && author.trim().length < 2)) {
+    if (!touched || (title.trim().length < 2 && author.trim().length < 2 && publisher.trim().length < 2)) {
       setResults([]);
       setSearching(false);
       return;
@@ -98,7 +101,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
     setSearching(true);
     const t = window.setTimeout(async () => {
       try {
-        const r = await searchBooks(title, author, ctrl.signal);
+        const r = await searchBooks(title, author, ctrl.signal, publisher);
         if (!ctrl.signal.aborted) {
           setResults(r);
           setHighlight(-1);
@@ -112,7 +115,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       ctrl.abort();
       window.clearTimeout(t);
     };
-  }, [title, author, touched]);
+  }, [title, author, publisher, touched]);
 
   async function pick(r: SearchResult) {
     const token = ++pickToken.current;
@@ -266,9 +269,33 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
               }}
             />
           </div>
+          {!editing && (
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="ab-publisher">
+                Publisher <span className="font-normal normal-case tracking-normal text-ink-soft">(optional)</span>
+              </label>
+              <input
+                id="ab-publisher"
+                className="field"
+                value={publisher}
+                autoComplete="off"
+                list={`${listId}-publishers`}
+                placeholder="e.g. Rupa Publications, Rajkamal Prakashan"
+                onChange={(e) => {
+                  setPublisher(e.target.value);
+                  setTouched(true);
+                }}
+              />
+              <datalist id={`${listId}-publishers`}>
+                {INDIAN_PUBLISHERS.map((p) => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
+            </div>
+          )}
         </div>
         <p className="mt-1.5 text-xs text-ink-soft" aria-live="polite">
-          {searching ? "Searching Open Library and Google Books…" : touched && (title.trim().length >= 2 || author.trim().length >= 2) && !results.length ? "No matches. You can still add it by hand." : "Type a title or an author’s name; pick a match to fill in the details."}
+          {searching ? "Searching Open Library and Google Books…" : touched && (title.trim().length >= 2 || author.trim().length >= 2 || publisher.trim().length >= 2) && !results.length ? "No matches. You can still add it by hand." : "Type a title, an author or a publisher; pick a match to fill in the details."}
         </p>
 
         {showResults && results.length > 0 && (

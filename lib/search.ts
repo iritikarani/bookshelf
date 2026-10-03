@@ -135,12 +135,16 @@ interface OLDoc {
 const PER_SOURCE = 30;
 const MAX_RESULTS = 30;
 
-async function searchOpenLibrary(title: string, author: string, signal: AbortSignal, fuzzy = false): Promise<SearchResult[]> {
+async function searchOpenLibrary(title: string, author: string, signal: AbortSignal, fuzzy = false, publisher = ""): Promise<SearchResult[]> {
   const params = new URLSearchParams({
     limit: String(PER_SOURCE),
     fields: "key,title,author_name,first_publish_year,cover_i,isbn,number_of_pages_median,subject,first_sentence",
   });
-  if (author) {
+  if (publisher) {
+    params.set("publisher", publisher);
+    if (title) params.set("title", title);
+    if (author) params.set("author", author);
+  } else if (author) {
     params.set("title", title);
     params.set("author", author);
   } else {
@@ -217,24 +221,35 @@ export function mergeResults(ol: SearchResult[], google: SearchResult[]): Search
   return out.slice(0, MAX_RESULTS);
 }
 
-export async function searchBooks(title: string, author: string, signal: AbortSignal): Promise<SearchResult[]> {
+/**
+ * Search both catalogues. Any box can be left empty: a title, an author's name or a publisher
+ * on its own lists matching books, and filling more boxes narrows the results.
+ */
+export async function searchBooks(title: string, author: string, signal: AbortSignal, publisher = ""): Promise<SearchResult[]> {
   let t = title.trim();
   let a = author.trim();
-  if (t.length < 2) {
-    // Only the author typed: list their books.
-    if (a.length < 2) return [];
-    [t, a] = [a, ""];
-  }
-  // With an author, search fields precisely; with only one box filled, treat it as free text
-  // (a title, an author's name, or both).
-  const gq = a ? `intitle:${t} inauthor:${a}` : t;
+  const p = publisher.trim();
+  if (t.length < 2 && a.length < 2 && p.length < 2) return [];
+  if (t.length < 2) t = "";
+  if (a.length < 2) a = "";
+  // Only the author typed (no publisher): list their books as free text.
+  if (!t && a && !p) [t, a] = [a, ""];
+
+  const quote = (x: string) => `"${x.replace(/"/g, "")}"`;
+  // With more than one box filled, search fields precisely; with only a title (or only an
+  // author), treat it as free text so it matches titles and author names alike.
+  const gq = p
+    ? [t && `intitle:${t}`, a && `inauthor:${a}`, `inpublisher:${quote(p)}`].filter(Boolean).join(" ")
+    : a
+      ? `intitle:${t} inauthor:${a}`
+      : t;
   const [ol, google] = await Promise.all([
-    searchOpenLibrary(t, a, signal).catch(() => [] as SearchResult[]),
+    searchOpenLibrary(t, a, signal, false, p).catch(() => [] as SearchResult[]),
     searchGoogle(gq, signal).catch(() => [] as SearchResult[]),
   ]);
   let merged = mergeResults(ol, google);
   // Few or no matches usually means a typo: try again, forgiving one wrong letter per word.
-  if (merged.length < 3 && !signal.aborted) {
+  if (merged.length < 3 && !p && !signal.aborted) {
     const loose = await searchOpenLibrary(a ? `${t} ${a}` : t, "", signal, true).catch(() => [] as SearchResult[]);
     merged = mergeResults(merged, loose);
   }
