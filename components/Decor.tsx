@@ -1,4 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { DecorKind } from "@/lib/types";
 
 interface DecorSpec {
@@ -121,14 +123,7 @@ export const DECOR: DecorSpec[] = [
     h: 0.5,
     viewBox: [56, 56],
     art: (
-      <>
-        <rect x="3" y="8" width="50" height="46" rx="4" fill="#f7f3ec" stroke="#d6cdc0" />
-        <rect x="3" y="8" width="50" height="12" rx="4" fill="#2f2b28" />
-        <text x="28" y="17.5" textAnchor="middle" fontSize="8" fill="#f7f3ec" fontFamily="JetBrains Mono, monospace">NOV</text>
-        <text x="28" y="46" textAnchor="middle" fontSize="24" fill="#2f2b28" fontFamily="JetBrains Mono, monospace" fontWeight="600">05</text>
-        <path d="M3 33h50" stroke="#e3dbcf" />
-        <path d="M16 4v8M40 4v8" stroke="#8a8178" strokeWidth="2.5" strokeLinecap="round" />
-      </>
+<TodayCalendar />
     ),
   },
   {
@@ -197,5 +192,46 @@ export function DecorArt({ kind, className = "" }: { kind: DecorKind; className?
     <svg viewBox={`0 0 ${d.viewBox[0]} ${d.viewBox[1]}`} className={`block h-full w-full ${className}`} aria-hidden>
       {d.art}
     </svg>
+  );
+}
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/** The flip calendar shows today's date on the reader's own clock, and turns over at midnight. */
+function TodayCalendar() {
+  const [today, setToday] = useState(() => new Date());
+  useEffect(() => {
+    let timer: number;
+    const schedule = () => {
+      const now = new Date();
+      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      timer = window.setTimeout(() => {
+        setToday(new Date());
+        schedule();
+      }, midnight.getTime() - now.getTime() + 1000);
+    };
+    schedule();
+    // Coming back to the tab after a while (phones pause timers): check the date again.
+    const onVisible = () => document.visibilityState === "visible" && setToday(new Date());
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  return (
+    <>
+      <rect x="3" y="8" width="50" height="46" rx="4" fill="#f7f3ec" stroke="#d6cdc0" />
+      <rect x="3" y="8" width="50" height="12" rx="4" fill="#2f2b28" />
+      <text x="28" y="17.5" textAnchor="middle" fontSize="8" fill="#f7f3ec" fontFamily="JetBrains Mono, monospace" suppressHydrationWarning>
+        {MONTHS[today.getMonth()]}
+      </text>
+      <text x="28" y="46" textAnchor="middle" fontSize="24" fill="#2f2b28" fontFamily="JetBrains Mono, monospace" fontWeight="600" suppressHydrationWarning>
+        {String(today.getDate()).padStart(2, "0")}
+      </text>
+      <path d="M3 33h50" stroke="#e3dbcf" />
+      <path d="M16 4v8M40 4v8" stroke="#8a8178" strokeWidth="2.5" strokeLinecap="round" />
+    </>
   );
 }
