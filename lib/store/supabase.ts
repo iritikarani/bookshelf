@@ -82,16 +82,6 @@ export const supabaseStore: Store = {
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...draft, user_id: userId, position }).select().single()) as Book;
   },
-  async insertBooks(userId, books) {
-    const sb = getSupabase();
-    const out: Book[] = [];
-    // Chunks keep each request small for big libraries.
-    for (let i = 0; i < books.length; i += 200) {
-      const chunk = books.slice(i, i + 200).map((b) => ({ ...b, user_id: userId }));
-      out.push(...(check(await sb.from("books").insert(chunk).select()) as Book[]));
-    }
-    return out;
-  },
   async updateBook(id, patch) {
     return check(await getSupabase().from("books").update(patch).eq("id", id).select().single()) as Book;
   },
