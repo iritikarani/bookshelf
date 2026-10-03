@@ -21,7 +21,7 @@ export interface Aesthetic {
 /** Ten room aesthetics. Colours, wall patterns and floors live in globals.css under [data-style]. */
 export const AESTHETICS: Aesthetic[] = [
   { id: "pastel", name: "Pastel dream", blurb: "Blush bookcase, cream walls", structure: "case" },
-  { id: "modern", name: "Modern black", blurb: "Black case, panelled white room", structure: "case" },
+  { id: "modern", name: "Modern black", blurb: "Black wood-grain case, panelled white room", structure: "case" },
   { id: "scandi", name: "Scandi", blurb: "White case, pale oak shelves", structure: "case" },
   { id: "japandi", name: "Japandi", blurb: "Floating ash shelves, limewash", structure: "floating" },
   { id: "academia", name: "Dark academia", blurb: "Walnut, forest green, brass", structure: "case" },
