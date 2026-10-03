@@ -14,7 +14,11 @@ cp .env.example .env.local   # optional: add Supabase keys
 npm run dev                  # http://localhost:3000
 ```
 
-**Demo mode:** with no Supabase keys, the app runs entirely in the browser and saves to `localStorage`. All features work except real accounts and cross-device sharing. Use it to try the app or develop the UI.
+**Without Supabase keys** the app runs entirely in the browser and saves to `localStorage`. Everything works except real accounts and cross-device sharing.
+
+**With Supabase keys** visitors land on the sign-in page (`/login/`): Google, email and password, password reset, or *continue as a guest* (a guest shelf lives in that browser; a guest can sign up later from Settings).
+
+`npm run build` writes a fully static site to `out/`; `npm run preview` builds and serves it locally.
 
 ### Connecting Supabase
 
@@ -32,6 +36,24 @@ npm run dev                  # http://localhost:3000
 4. Set up auth:
    - **Email:** enabled by default. Under Authentication → URL configuration, set the Site URL to your app's URL.
    - **Google:** Authentication → Providers → Google. Add a Google OAuth client ID and secret. In Google Cloud, add `https://<project>.supabase.co/auth/v1/callback` as an authorised redirect URI. Add your app's origin to Supabase's redirect allow-list.
+   - **Redirect URLs** (Authentication → URL configuration): add your site's address, e.g. `https://<user>.github.io/bookshelf/**`, so sign-up confirmation, Google sign-in and password-reset links come back to the site.
+
+## Deploying
+
+The site is static (`output: "export"`), so any static host works. There's no server to run.
+
+### GitHub Pages (set up in this repo)
+
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds and publishes the site on every push to `main`.
+
+1. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. Optional, to switch on accounts: **Settings → Secrets and variables → Actions → New repository secret**, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the anon key is public by design, and row-level security protects the data).
+3. Merge to `main` (or run the workflow from the **Actions** tab). The site appears at `https://<user>.github.io/<repo>/`. The workflow sets the sub-folder path (`NEXT_PUBLIC_BASE_PATH`) automatically.
+4. If you use Supabase, add that address to its redirect URLs (see above).
+
+### Vercel or Netlify
+
+Import the repo. The defaults work: build command `npm run build`, output directory `out`. Add the two `NEXT_PUBLIC_SUPABASE_*` environment variables if you want accounts. Leave `NEXT_PUBLIC_BASE_PATH` unset when the site is served from the domain root.
 
 ## Data model
 
@@ -49,7 +71,8 @@ Beyond the brief: `status` and `favourite` are the marks (they replace the brief
 ```
 app/
   page.tsx               the app (shelf, quote wall, reading year)
-  s/[slug]/page.tsx      public read-only shelf
+  login/page.tsx         sign-in / sign-up / password reset / guest entry
+  s/page.tsx             public read-only shelf (/s/?u=<slug>)
 components/
   App.tsx                shell, tabs, dialogs, example shelf
   ShelfWall.tsx          shelf structures, books + decor in one row, drag & drop with an insertion marker

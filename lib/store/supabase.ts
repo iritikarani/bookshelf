@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
 import type { Store } from "./types";
+import { siteUrl } from "../basePath";
 
 let client: SupabaseClient | null = null;
 
@@ -44,7 +45,7 @@ export const supabaseStore: Store = {
     const { data, error } = await getSupabase().auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: siteUrl("/") },
     });
     if (error) throw new Error(error.message);
     return { needsConfirmation: !data.session };
@@ -52,7 +53,7 @@ export const supabaseStore: Store = {
   async signInWithGoogle() {
     const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: siteUrl("/") },
     });
     if (error) throw new Error(error.message);
   },
@@ -132,3 +133,15 @@ export const supabaseStore: Store = {
     return (data as PublicShelf | null) ?? null;
   },
 };
+
+/** Email a password-reset link that brings the reader back to the login page. */
+export async function sendPasswordReset(email: string) {
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email, { redirectTo: siteUrl("/login/?reset=1") });
+  if (error) throw new Error(error.message);
+}
+
+/** Set a new password for the signed-in (recovering) user. */
+export async function setNewPassword(password: string) {
+  const { error } = await getSupabase().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}

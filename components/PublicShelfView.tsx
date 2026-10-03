@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { groupItems } from "@/lib/library";
 import { aestheticOf } from "@/lib/themes";
@@ -15,12 +17,18 @@ import { ReadingYear } from "./ReadingYear";
 import { RoomScene } from "./RoomScene";
 import { ShelfWall } from "./ShelfWall";
 
+export function PublicShelfPage() {
+  const slug = useSearchParams().get("u") ?? "";
+  return <PublicShelfView slug={slug} />;
+}
+
 export function PublicShelfView({ slug }: { slug: string }) {
   const [data, setData] = useState<PublicShelf | null | undefined>(undefined);
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!slug) return setData(null);
     store.getPublicShelf(slug).then(setData).catch(() => setData(null));
   }, [slug]);
 
@@ -36,7 +44,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
       <main data-style="pastel" className="room flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
         <h1 className="font-serif text-4xl">This shelf is private</h1>
         <p className="max-w-sm text-ink-soft">The link may be wrong, or its owner has turned sharing off.</p>
-        <a href="/" className="btn-primary mt-4">Start your own shelf</a>
+        <Link href="/login/" className="btn-primary mt-4">Start your own shelf</Link>
       </main>
     );
   }
@@ -49,7 +57,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
         tab={tab}
         onTab={setTab}
         subtitle={data ? `${name ? `${name}'s` : "A reader's"} shelf · read-only` : " "}
-        actions={<a href="/" className="btn-ghost text-xs">Make your own</a>}
+        actions={<Link href="/login/" className="btn-ghost text-xs">Make your own</Link>}
       />
       <main className="mx-auto w-full max-w-6xl px-4 pt-6 md:px-8 md:pt-8">
         {data === undefined ? (

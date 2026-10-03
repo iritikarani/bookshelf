@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useColorMode, type ColorMode } from "@/lib/colorMode";
 import { useLibrary } from "@/lib/library";
-import { store } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { siteUrl } from "@/lib/basePath";
+import { hasSupabase, setGuest, store } from "@/lib/store";
 import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 
@@ -11,7 +13,8 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
   const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
   const [copied, setCopied] = useState(false);
-  const publicUrl = profile && typeof window !== "undefined" ? `${window.location.origin}/s/${profile.public_slug}` : "";
+  const router = useRouter();
+  const publicUrl = profile && typeof window !== "undefined" ? siteUrl(`/s/?u=${profile.public_slug}`) : "";
 
   return (
     <Sheet open={open} onClose={onClose} title="Settings">
@@ -76,19 +79,42 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
 
         <fieldset>
           <legend className="label">Account</legend>
-          {store.mode === "local" ? (
-            <p className="text-sm text-ink-soft">
-              You're in <strong>demo mode</strong>: everything is saved in this browser. Add Supabase keys to enable accounts, Google sign-in and syncing.
-            </p>
-          ) : (
+          {store.mode === "supabase" ? (
             <div className="flex items-center justify-between gap-3">
               <p className="truncate text-sm">
                 Signed in as <span className="font-medium">{user?.email}</span>
               </p>
-              <button type="button" className="btn-ghost" onClick={() => store.signOut()}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={async () => {
+                  await store.signOut();
+                  router.replace("/login/");
+                }}
+              >
                 Sign out
               </button>
             </div>
+          ) : hasSupabase ? (
+            <div className="space-y-3">
+              <p className="text-sm text-ink-soft">
+                You’re a <strong>guest</strong>: this shelf is saved in this browser only. Create an account to keep your books safe and see them on any device.
+              </p>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setGuest(false);
+                  router.push("/login/?signup=1");
+                }}
+              >
+                Sign in or create an account
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-ink-soft">
+              Your shelf is saved in this browser. Accounts, Google sign-in and syncing switch on once the site is connected to Supabase (see the README).
+            </p>
           )}
         </fieldset>
       </div>

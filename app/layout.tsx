@@ -4,8 +4,9 @@ import "./room.css";
 
 export const metadata: Metadata = {
   title: "Cosmic Space: your reading shelf",
+  applicationName: "Cosmic Space",
   description: "A private online bookshelf and reading journal for the books you've finished.",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/icon.svg` },
 };
 
 export const viewport: Viewport = {

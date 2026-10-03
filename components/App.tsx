@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
 import { store } from "@/lib/store";
@@ -13,7 +14,6 @@ import { MARKS, matchesFilter, type MarkFilter } from "./Marks";
 import { RoomScene } from "./RoomScene";
 import { AddBookDialog } from "./AddBookDialog";
 import { ArrangeSheet } from "./ArrangeSheet";
-import { AuthScreen } from "./AuthScreen";
 import { BookDetail } from "./BookDetail";
 import { DecorSheet } from "./DecorSheet";
 import { EditShelves } from "./EditShelves";
@@ -48,6 +48,11 @@ function AppInner() {
   const aesthetic = aestheticOf(profile?.shelf_style);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
+  const router = useRouter();
+  // Signed out with accounts switched on: the front door is the login page.
+  useEffect(() => {
+    if (authReady && !user && store.mode === "supabase") router.replace("/login/");
+  }, [authReady, user, router]);
   const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
   const exampleMap = useMemo(() => new Map<string, ShelfItem[]>([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]]), []);
   // Quote wall & reading year show the examples too until the first real book arrives.
@@ -56,7 +61,7 @@ function AppInner() {
   const stats = summary(books);
 
   if (!authReady) return <Splash />;
-  if (!user && store.mode === "supabase") return <AuthScreen />;
+  if (!user && store.mode === "supabase") return <Splash />; // on its way to /login
 
   const openBook = openId ? (viewBooks.find((b) => b.id === openId) ?? null) : null;
   const openList = openBook ? (isExample(openBook) ? exampleMap.get(EXAMPLE_SHELF.id) : itemsByShelf.get(openBook.shelf_id)) ?? [] : [];
