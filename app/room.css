@@ -278,11 +278,13 @@
 }
 
 /* ───── the floor: skirting board, then floorboards receding in perspective ───── */
+/* The floor runs to the bottom of the screen, however tall it is, so no wall shows beneath it. */
 .room-floor {
   position: relative;
   margin-left: calc(50% - 50vw);
   width: 100vw;
-  height: 150px;
+  flex: 1 0 auto;
+  min-height: 170px;
   overflow: hidden;
   perspective: 620px;
   perspective-origin: 50% -40%;
@@ -303,7 +305,8 @@
   left: -30%;
   right: -30%;
   top: 18px;
-  height: 560px;
+  /* Deep enough to reach the bottom of very tall screens; sizes inside are in px so they don't stretch. */
+  height: 2400px;
   transform-origin: 50% 0;
   transform: rotateX(72deg);
   background:
@@ -315,7 +318,7 @@
     /* boards vary slightly in tone */
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 75px, rgba(0, 0, 0, 0.05) 75px 150px, rgba(255, 255, 255, 0.02) 150px 225px),
     var(--tex-grain-v),
-    linear-gradient(180deg, color-mix(in srgb, var(--floor) 80%, black), var(--floor) 30%, color-mix(in srgb, var(--floor) 92%, white));
+    linear-gradient(180deg, color-mix(in srgb, var(--floor) 80%, black), var(--floor) 168px, color-mix(in srgb, var(--floor) 92%, white) 560px);
 }
 /* Contact shadow where the furniture meets the floor */
 .floor-plane::before {
@@ -332,9 +335,9 @@
 .floor-sun {
   position: absolute;
   left: 18%;
-  top: 6%;
+  top: 34px;
   width: 34%;
-  height: 70%;
+  height: 392px;
   transform: skewX(-28deg);
   background: linear-gradient(180deg, rgba(255, 248, 225, 0.4), rgba(255, 248, 225, 0.05));
   filter: blur(10px);
@@ -347,9 +350,9 @@
 .room-rug {
   position: absolute;
   left: 50%;
-  top: 14%;
+  top: 78px;
   width: 24%;
-  height: 32%;
+  height: 180px;
   transform: translateX(-50%);
   border-radius: 4px;
   background:

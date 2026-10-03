@@ -121,7 +121,7 @@ function PendantLamp({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 export function RoomScene({ children, standing }: { children: ReactNode; standing: boolean }) {
   const [lampOn, toggleLamp] = useLamp();
   return (
-    <div className="room-stage relative" data-lamp={lampOn ? "on" : "off"}>
+    <div className="room-stage relative flex flex-1 flex-col" data-lamp={lampOn ? "on" : "off"}>
       <div aria-hidden className="lamp-glow pointer-events-none absolute inset-0 -z-0" />
       <div aria-hidden className="window-beam hidden lg:block" />
 
