@@ -2,13 +2,12 @@
 
 import type { ReactNode } from "react";
 
-export type Tab = "shelf" | "quotes" | "year" | "discover";
+export type Tab = "shelf" | "quotes" | "year";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "shelf", label: "Shelf" },
   { id: "quotes", label: "Quote wall" },
   { id: "year", label: "Reading year" },
-  { id: "discover", label: "Discover" },
 ];
 
 interface Stats {

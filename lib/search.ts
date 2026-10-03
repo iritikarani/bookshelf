@@ -229,7 +229,7 @@ const lookups = new Map<string, Promise<SearchResult | null>>();
 
 /**
  * Best match for a known title and author (cover, pages, description), cached for the visit.
- * Used by Discover so curated books show real covers and come with details when added.
+ * Used by the Indian authors browser so curated books show real covers and come with details when added.
  */
 export function lookupBook(title: string, author: string): Promise<SearchResult | null> {
   const key = `${title}|${author}`.toLowerCase();

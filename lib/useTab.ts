@@ -5,7 +5,7 @@ import type { Tab } from "@/components/Header";
 
 const fromHash = (): Tab => {
   const h = typeof window === "undefined" ? "" : window.location.hash.slice(1);
-  return h === "quotes" || h === "year" || h === "discover" ? h : "shelf";
+  return h === "quotes" || h === "year" ? h : "shelf";
 };
 
 /** Current tab, mirrored in the URL hash so it survives reloads and back/forward. */
