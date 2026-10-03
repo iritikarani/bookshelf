@@ -1,0 +1,66 @@
+/**
+ * Indian publishers, suggested in the Publisher box of "Add a book".
+ * Names are written the way they usually appear in Open Library and Google Books records.
+ */
+export const INDIAN_PUBLISHERS: string[] = [
+  // English-language houses
+  "Penguin Books India",
+  "Penguin Random House India",
+  "HarperCollins India",
+  "Rupa Publications",
+  "Westland",
+  "Hachette India",
+  "Pan Macmillan India",
+  "Bloomsbury India",
+  "Aleph Book Company",
+  "Speaking Tiger",
+  "Juggernaut Books",
+  "Context",
+  "Tranquebar",
+  "Fingerprint Publishing",
+  "Jaico Publishing House",
+  "Srishti Publishers",
+  "Om Books International",
+  "Roli Books",
+  "Manjul Publishing House",
+  "Orient BlackSwan",
+  "Oxford University Press India",
+  "Sage Publications India",
+  "Permanent Black",
+  // Independent and feminist presses
+  "Seagull Books",
+  "Zubaan",
+  "Navayana",
+  "Yoda Press",
+  "Tulika Books",
+  "Katha",
+  // Children's books
+  "Pratham Books",
+  "Scholastic India",
+  "Tulika Publishers",
+  "Karadi Tales",
+  // Hindi and Urdu
+  "Rajkamal Prakashan",
+  "Vani Prakashan",
+  "Hind Pocket Books",
+  "Rajpal & Sons",
+  "Lokbharti Prakashan",
+  "Bharatiya Jnanpith",
+  "Prabhat Prakashan",
+  "Diamond Books",
+  // Other Indian languages
+  "Ananda Publishers",
+  "Dey's Publishing",
+  "DC Books",
+  "Mathrubhumi Books",
+  "Kalachuvadu Publications",
+  "Kizhakku Pathippagam",
+  "Popular Prakashan",
+  "Rajhans Prakashan",
+  "Mehta Publishing House",
+  "Navajivan Publishing House",
+  // National bodies
+  "Sahitya Akademi",
+  "National Book Trust",
+  "Publications Division",
+];
