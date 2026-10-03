@@ -65,7 +65,7 @@ function nextShelfNames(shelves: Shelf[], count: number): string[] {
 }
 
 function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null, note?: string | null) => void }) {
-  const { shelves, addBook, addShelf, updateBook, uploadCover } = useLibrary();
+  const { shelves, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -214,7 +214,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       // A full shelf passes the book along, like at home: to the next shelf with room,
       // or, when every shelf is full, to a new bookcase.
       const chosen = shelves.find((s) => s.id === shelfId);
-      const place = placeBook(shelves, shelfId, display, draft.pages);
+      const place = placeBook(shelves, itemsByShelf, shelfId, display, draft.pages);
       let note: string | null = null;
       if ("newBookcase" in place) {
         // If the last bookcase is missing shelves, fill it out; otherwise add a whole new bookcase.
