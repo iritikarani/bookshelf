@@ -19,7 +19,7 @@ export interface Store {
   getUser(): Promise<AuthUser | null>;
   onAuthChange(cb: (user: AuthUser | null) => void): () => void;
   signInWithEmail(email: string, password: string): Promise<void>;
-  signUpWithEmail(email: string, password: string): Promise<{ needsConfirmation: boolean }>;
+  signUpWithEmail(email: string, password: string, username?: string): Promise<{ needsConfirmation: boolean }>;
   signInWithGoogle(): Promise<void>;
   signOut(): Promise<void>;
 

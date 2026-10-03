@@ -16,6 +16,7 @@ import { AddBookDialog } from "./AddBookDialog";
 import { ArrangeSheet } from "./ArrangeSheet";
 import { BookDetail } from "./BookDetail";
 import { DecorSheet } from "./DecorSheet";
+import { UsernameDialog } from "./UsernameDialog";
 import { EditShelves } from "./EditShelves";
 import { Header } from "./Header";
 import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
@@ -48,6 +49,8 @@ function AppInner() {
   const aesthetic = aestheticOf(profile?.shelf_style);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
+  // Accounts made with Google have no username yet: ask once per visit.
+  const [usernameSkipped, setUsernameSkipped] = useState(false);
   const router = useRouter();
   // Signed out with accounts switched on: the front door is the login page.
   useEffect(() => {
@@ -175,7 +178,7 @@ function AppInner() {
         index={openIndex}
         shelfSize={openList.length}
         example={openBook ? isExample(openBook) : false}
-        ownerName={profile?.display_name}
+        ownerName={profile?.username ?? profile?.display_name}
         onClose={() => setOpenId(null)}
         onEdit={(b) => {
           setEditing(b);
@@ -207,6 +210,9 @@ function AppInner() {
           }
         }}
       />
+      {store.mode === "supabase" && profile && !profile.username && !usernameSkipped && (
+        <UsernameDialog open firstTime onClose={() => setUsernameSkipped(true)} />
+      )}
       <ArrangeSheet open={arrangeOpen} onClose={() => setArrangeOpen(false)} />
       <DecorSheet
         decor={openDecor}
@@ -226,7 +232,7 @@ function AppInner() {
         itemsByShelf={itemsByShelf}
         books={books}
         styleId={aesthetic.id}
-        owner={profile?.display_name && store.mode === "supabase" ? profile.display_name : null}
+        owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
       />
 
       {lib.error && (

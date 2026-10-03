@@ -74,6 +74,8 @@ export type BookDraft = Omit<Book, "id" | "user_id" | "position" | "created_at" 
 export interface Profile {
   id: string;
   display_name: string | null;
+  /** Chosen at sign-up (or on first visit after Google sign-in). Null in browser-only mode. */
+  username?: string | null;
   shelf_style: ShelfStyle;
   is_public: boolean;
   public_slug: string;

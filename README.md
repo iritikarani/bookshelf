@@ -23,7 +23,7 @@ npm run dev                  # http://localhost:3000
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). It creates:
+2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
    - `profiles`, `shelves` and `books`, with row-level security so each user sees only their own rows (private by default).
    - A sign-up trigger that gives every new user three plain shelves: **Top shelf**, **Middle shelf** and **Bottom shelf**.
    - `get_public_shelf(slug)`, a security-definer function that returns a shelf only when its owner has turned the public link on.
@@ -62,7 +62,7 @@ Import the repo. [`vercel.json`](vercel.json) already tells Vercel to run `npm r
 | `shelves` | id, user_id, name, position |
 | `books` | id, user_id, title, author, cover_url, uploaded_cover, cover_color, display (`spine` / `cover`), status (`read` / `reading` / `to_read`), favourite, year_published, pages, genre, short_description, shelf_id, position, rating (0–5), what_i_liked, favourite_line, date_finished, created_at, updated_at |
 | `decor` | id, user_id, shelf_id, kind, position (shares the shelf's ordering with books) |
-| `profiles` | id, display_name, shelf_style (one of the 10 aesthetics), is_public, public_slug |
+| `profiles` | id, display_name, username (unique, 3–20 of `a-z 0-9 _ .`), shelf_style (one of the 10 aesthetics), is_public, public_slug |
 
 Beyond the brief: `status` and `favourite` are the marks (they replace the brief's "Want to read" shelf), `cover_color` stores the pastel picked for a generated cover, `display` says whether a book stands spine-out or cover-out, and the `decor` table holds the objects on each shelf.
 

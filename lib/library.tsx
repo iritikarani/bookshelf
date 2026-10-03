@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { store, type LibraryData, type PositionUpdate } from "./store";
+import { saveUsername } from "./store/supabase";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Shelf, ShelfItem, ShelfStyle } from "./types";
 
 interface LibraryContextValue {
@@ -41,6 +42,8 @@ interface LibraryContextValue {
 
   setShelfStyle(style: ShelfStyle): Promise<void>;
   setPublic(isPublic: boolean): Promise<void>;
+  /** Accounts only: choose or change the reader's username. Throws with a readable message. */
+  setUsername(username: string): Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -364,6 +367,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [run],
   );
 
+  const setUsername = useCallback(async (username: string) => {
+    const u = requireUser();
+    await saveUsername(u.id, username);
+    setData((d) => (d ? { ...d, profile: { ...d.profile, username, display_name: username } } : d));
+  }, []);
+
   const value: LibraryContextValue = {
     user,
     authReady,
@@ -392,6 +401,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     deleteShelf,
     setShelfStyle,
     setPublic,
+    setUsername,
   };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
