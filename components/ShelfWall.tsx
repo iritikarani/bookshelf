@@ -58,6 +58,10 @@ const collision: CollisionDetection = (args) => {
   return rectIntersection(args);
 };
 
+/** Names that only describe position ("Top shelf") or the demo; these stay off the visible shelf. */
+const PLAIN_SHELF_NAMES = new Set(["top shelf", "middle shelf", "bottom shelf", "example shelf"]);
+const isPlainShelfName = (name: string) => PLAIN_SHELF_NAMES.has(name.trim().toLowerCase());
+
 const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
   width: "var(--cover-w)",
   height: `calc(var(--cover-h) * ${heightFactor(book.pages).toFixed(3)})`,
@@ -215,7 +219,8 @@ function ShelfRow({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `shelf:${shelf.id}`, data: { shelfId: shelf.id }, disabled: readOnly });
   const headingId = `shelf-${shelf.id}-name`;
-  const bookCount = items.filter((i) => i.type === "book").length;
+  // A real shelf doesn't say "top shelf". Only names the reader chose are shown on the wood.
+  const showName = !isPlainShelfName(shelf.name);
 
   return (
     <>
@@ -225,18 +230,13 @@ function ShelfRow({
         <span aria-hidden className="cell-depth cell-wall-r" />
         <span aria-hidden className="cell-depth cell-ceiling" />
         <span aria-hidden className="cell-depth cell-surface" />
-        <div className="flex items-baseline justify-between gap-3 px-3 pt-3 md:px-4">
-          <h2 id={headingId} className="font-serif text-lg leading-tight md:text-xl">
-            {shelf.name}
-          </h2>
-          <span className="rounded-full bg-black/5 px-2 py-0.5 font-mono text-[11px] opacity-80 dark:bg-white/10">
-            {bookCount} {bookCount === 1 ? "book" : "books"}
-          </span>
-        </div>
+        <h2 id={headingId} className={showName ? "px-3 pt-3 font-serif text-base leading-tight opacity-80 md:px-4 md:text-lg" : "sr-only"}>
+          {shelf.name}
+        </h2>
         {note && <div className="px-3 pt-2 md:px-4">{note}</div>}
         <div
           ref={setNodeRef}
-          className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 pt-4 md:px-4 ${isOver ? "bg-accent/10" : ""}`}
+          className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 ${showName ? "pt-4" : "pt-7"} md:px-4 ${isOver ? "bg-accent/10" : ""}`}
           role="list"
           aria-label={`${shelf.name} shelf`}
         >
