@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { groupItems } from "@/lib/library";
 import { aestheticOf } from "@/lib/themes";
-import { store } from "@/lib/store";
+import { hasSupabase } from "@/lib/store";
+import { localStore } from "@/lib/store/local";
+import { supabaseStore } from "@/lib/store/supabase";
 import { summary } from "@/lib/stats";
 import type { PublicShelf } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
@@ -24,13 +26,21 @@ export function PublicShelfPage() {
 
 export function PublicShelfView({ slug }: { slug: string }) {
   const [data, setData] = useState<PublicShelf | null | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return setData(null);
-    store.getPublicShelf(slug).then(setData).catch(() => setData(null));
-  }, [slug]);
+    setFailed(false);
+    setData(undefined);
+    // Shared shelves always come from accounts, even on a phone that once used a guest shelf.
+    (hasSupabase ? supabaseStore : localStore)
+      .getPublicShelf(slug)
+      .then(setData)
+      .catch(() => setFailed(true));
+  }, [slug, attempt]);
 
   const shelves = useMemo(() => [...(data?.shelves ?? [])].sort((a, b) => a.position - b.position), [data]);
   const books = useMemo(() => data?.books ?? [], [data]);
@@ -38,6 +48,18 @@ export function PublicShelfView({ slug }: { slug: string }) {
   const aesthetic = aestheticOf(data?.profile.shelf_style);
   const openBook = books.find((b) => b.id === openId) ?? null;
   const openList = openBook ? (items.get(openBook.shelf_id) ?? []) : [];
+
+  if (failed) {
+    return (
+      <main data-style="pastel" className="room flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+        <h1 className="font-serif text-4xl">Couldn’t open this shelf</h1>
+        <p className="max-w-sm text-ink-soft">Check the internet connection and try again.</p>
+        <button type="button" className="btn-primary mt-4" onClick={() => setAttempt((n) => n + 1)}>
+          Try again
+        </button>
+      </main>
+    );
+  }
 
   if (data === null) {
     return (

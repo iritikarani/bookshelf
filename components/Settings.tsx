@@ -43,40 +43,64 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
 
         <fieldset>
           <legend className="label">Sharing</legend>
-          <label className="flex cursor-pointer items-start justify-between gap-4">
-            <span>
-              <span className="block font-medium">Public read-only link</span>
-              <span className="block text-sm text-ink-soft">Your shelf is private unless this is on. Anyone with the link can view, but not change, your books and notes.</span>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="peer sr-only"
-              checked={Boolean(profile?.is_public)}
-              onChange={(e) => setPublic(e.target.checked)}
-            />
-            <span aria-hidden className="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-accent peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2" />
-          </label>
-          {profile?.is_public && (
-            <div className="mt-3 flex items-center gap-2">
-              <input readOnly className="field flex-1 font-mono text-xs" value={publicUrl} aria-label="Public link" onFocus={(e) => e.currentTarget.select()} />
+          {hasSupabase && store.mode === "local" ? (
+            // A guest shelf lives only in this browser, so a link to it can't open anywhere else.
+            <div className="space-y-3 text-sm">
+              <p>
+                <span className="block font-medium">Public read-only link</span>
+                <span className="block text-ink-soft">
+                  You’re using a guest shelf, which is saved only on this device, so a link to it won’t open on anyone else’s phone. Create an account (free) to share your shelf.
+                </span>
+              </p>
               <button
                 type="button"
-                className="btn-ghost"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(publicUrl);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1800);
-                  } catch {}
+                className="btn-primary"
+                onClick={() => {
+                  setGuest(false);
+                  router.push("/login/?signup=1");
                 }}
               >
-                <LinkIcon width={16} height={16} /> {copied ? "Copied" : "Copy"}
+                Create an account to share
               </button>
             </div>
-          )}
-          {profile?.is_public && store.mode === "local" && (
-            <p className="mt-2 text-xs text-ink-soft">Demo mode: this link only works in this browser. Connect Supabase to share it for real.</p>
+          ) : (
+            <>
+            <label className="flex cursor-pointer items-start justify-between gap-4">
+              <span>
+                <span className="block font-medium">Public read-only link</span>
+                <span className="block text-sm text-ink-soft">Your shelf is private unless this is on. Anyone with the link can view, but not change, your books and notes.</span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="peer sr-only"
+                checked={Boolean(profile?.is_public)}
+                onChange={(e) => setPublic(e.target.checked)}
+              />
+              <span aria-hidden className="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-accent peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2" />
+            </label>
+            {profile?.is_public && (
+              <div className="mt-3 flex items-center gap-2">
+                <input readOnly className="field flex-1 font-mono text-xs" value={publicUrl} aria-label="Public link" onFocus={(e) => e.currentTarget.select()} />
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(publicUrl);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1800);
+                    } catch {}
+                  }}
+                >
+                  <LinkIcon width={16} height={16} /> {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+            )}
+            {profile?.is_public && store.mode === "local" && (
+              <p className="mt-2 text-xs text-ink-soft">Demo mode: this link only works in this browser. Connect Supabase to share it for real.</p>
+            )}
+            </>
           )}
         </fieldset>
 
