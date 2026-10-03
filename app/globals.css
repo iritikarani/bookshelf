@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --wall: 245 241 234;
+  --wall-deep: 233 227 217;
+  --paper: 255 253 249;
+  --ink: 47 42 40;
+  --ink-soft: 104 97 92;
+  --line: 226 218 207;
+  --accent: 84 117 98;
+  --accent-ink: 255 255 255;
+  --danger: 158 49 38;
+  --cover-w: 72px;
+  --cover-h: 108px;
+  color-scheme: light;
+}
+
+.dark body {
+  background-image: none;
+}
+
+.dark {
+  --wall: 31 35 32;
+  --wall-deep: 23 26 24;
+  --paper: 41 44 40;
+  --ink: 237 233 223;
+  --ink-soft: 172 169 158;
+  --line: 72 76 70;
+  --accent: 143 184 158;
+  --accent-ink: 18 28 22;
+  --danger: 236 128 112;
+  color-scheme: dark;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --cover-w: 90px;
+    --cover-h: 136px;
+  }
+}
+
+/* ───── bookcase finishes ─────
+   --frame: the case's paint/wood; --back: the back panel inside each compartment. */
+[data-wood] {
+  --frame-light: color-mix(in srgb, var(--frame) 70%, white);
+  --frame-dark: color-mix(in srgb, var(--frame) 78%, black);
+  --grain: transparent;
+}
+[data-wood="sage"]     { --frame: #b7c9ae; --back: #e9f0e3; }
+[data-wood="blush"]    { --frame: #e9c3c1; --back: #f8e9e6; }
+[data-wood="powder"]   { --frame: #b5cbe0; --back: #e8f0f7; }
+[data-wood="butter"]   { --frame: #e9d79f; --back: #faf3dc; }
+[data-wood="lavender"] { --frame: #cbbde3; --back: #f0ebf8; }
+[data-wood="birch"]    { --frame: #dcc097; --back: #f3e7d4; --grain: rgba(120, 80, 30, 0.12); }
+[data-wood="walnut"]   { --frame: #6e4b33; --back: #e9dccb; --grain: rgba(0, 0, 0, 0.14); }
+[data-wood="slate"]    { --frame: #7e8f9e; --back: #e2e7ec; }
+
+/* In dark mode the case keeps its hue but the back panel sinks into shadow. */
+.dark [data-wood] {
+  --frame-light: color-mix(in srgb, var(--frame) 70%, #2a2c2a);
+  --back-dark: color-mix(in srgb, var(--back) 14%, #1b1d1b);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-wall text-ink font-sans antialiased;
+    /* soft daylight from a window on the left */
+    background-image:
+      radial-gradient(ellipse 60% 50% at 0% 0%, rgb(255 255 255 / 0.7), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgb(255 236 230 / 0.45), transparent 70%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* A shelf board: lighter top edge, painted front, darker underside, soft drop shadow. */
+  .plank {
+    position: relative;
+    height: 14px;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 37px, var(--grain) 37px 38px, transparent 38px 91px, var(--grain) 91px 93px),
+      linear-gradient(180deg, var(--frame-light) 0 4px, var(--frame) 4px calc(100% - 2px), var(--frame-dark) calc(100% - 2px));
+    box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.35);
+    z-index: 1;
+  }
+  /* The whole bookcase: side panels come from the frame-coloured padding. */
+  .bookcase {
+    position: relative;
+    background: var(--frame);
+    padding: 0 12px;
+    box-shadow:
+      inset 3px 0 0 var(--frame-light),
+      inset -3px 0 0 var(--frame-dark),
+      0 30px 50px -24px rgba(60, 40, 30, 0.35),
+      0 8px 16px -10px rgba(60, 40, 30, 0.25);
+  }
+  @media (min-width: 768px) {
+    .bookcase { padding: 0 18px; }
+  }
+  .case-top {
+    height: 18px;
+    margin: 0 -18px;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, var(--frame-light), var(--frame) 40%, var(--frame-dark));
+    box-shadow: 0 4px 6px -3px rgba(0, 0, 0, 0.25);
+    position: relative;
+    z-index: 2;
+  }
+  @media (max-width: 767px) {
+    .case-top { margin: 0 -12px; }
+  }
+  .case-base {
+    height: 22px;
+    margin: 0 -12px;
+    background: linear-gradient(180deg, var(--frame-dark), var(--frame) 30%, var(--frame-dark));
+  }
+  @media (min-width: 768px) {
+    .case-base { margin: 0 -18px; }
+  }
+  /* Inside a compartment: the back panel, shaded under the board above and at the sides. */
+  .case-cell {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 34px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.08), transparent 18px, transparent calc(100% - 18px), rgba(0, 0, 0, 0.08)),
+      var(--back-dark, var(--back));
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-accent-ink hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply btn text-ink hover:bg-ink/5 border border-line;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:brightness-110 dark:text-wall-deep;
+  }
+  .field {
+    @apply w-full rounded-lg border border-line bg-paper px-3 py-2 text-ink placeholder:text-ink-soft/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wider text-ink-soft;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/* Thin, warm horizontal scrollbar for shelves */
+.shelf-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--ink) / 0.25) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
