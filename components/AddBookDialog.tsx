@@ -89,7 +89,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
 
   // Debounced search across Google Books + Open Library.
   useEffect(() => {
-    if (!touched || title.trim().length < 2) {
+    if (!touched || (title.trim().length < 2 && author.trim().length < 2)) {
       setResults([]);
       setSearching(false);
       return;
@@ -262,13 +262,13 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
               placeholder="e.g. Charlotte Brontë"
               onChange={(e) => {
                 setAuthor(e.target.value);
-                if (title.trim().length >= 2) setTouched(true);
+                setTouched(true);
               }}
             />
           </div>
         </div>
         <p className="mt-1.5 text-xs text-ink-soft" aria-live="polite">
-          {searching ? "Searching Open Library and Google Books…" : touched && title.trim().length >= 2 && !results.length ? "No matches. You can still add it by hand." : "Start typing to search; pick a match to fill in the details."}
+          {searching ? "Searching Open Library and Google Books…" : touched && (title.trim().length >= 2 || author.trim().length >= 2) && !results.length ? "No matches. You can still add it by hand." : "Type a title or an author’s name; pick a match to fill in the details."}
         </p>
 
         {showResults && results.length > 0 && (

@@ -85,7 +85,7 @@ interface GoogleVolume {
 }
 
 async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10&printType=books`;
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books`;
   const res = await fetch(url, { signal });
   if (!res.ok) return [];
   const json = (await res.json()) as { items?: GoogleVolume[] };
@@ -131,16 +131,21 @@ interface OLDoc {
   first_sentence?: string[];
 }
 
-async function searchOpenLibrary(title: string, author: string, signal: AbortSignal): Promise<SearchResult[]> {
+/** How many results to ask each source for, and how many merged results to show. */
+const PER_SOURCE = 30;
+const MAX_RESULTS = 30;
+
+async function searchOpenLibrary(title: string, author: string, signal: AbortSignal, fuzzy = false): Promise<SearchResult[]> {
   const params = new URLSearchParams({
-    limit: "10",
+    limit: String(PER_SOURCE),
     fields: "key,title,author_name,first_publish_year,cover_i,isbn,number_of_pages_median,subject,first_sentence",
   });
   if (author) {
     params.set("title", title);
     params.set("author", author);
   } else {
-    params.set("q", title);
+    // Free text matches titles and author names, so "premchand" lists his books.
+    params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
   const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal });
   if (!res.ok) return [];
@@ -164,6 +169,16 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
       source: "openlibrary" as const,
     };
   });
+}
+
+/** "premchnd godan" → "premchnd~1 godan~1": lets Open Library forgive one wrong letter per word. */
+function fuzzyQuery(q: string): string {
+  return q
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w.length >= 4 ? `${w}~1` : w))
+    .join(" ");
 }
 
 const uniq = <T,>(xs: T[]) => Array.from(new Set(xs));
@@ -199,19 +214,31 @@ export function mergeResults(ol: SearchResult[], google: SearchResult[]): Search
     existing.olWorkKey ??= r.olWorkKey;
     if (existing.source !== r.source) existing.source = "both";
   }
-  return out.slice(0, 10);
+  return out.slice(0, MAX_RESULTS);
 }
 
 export async function searchBooks(title: string, author: string, signal: AbortSignal): Promise<SearchResult[]> {
-  const t = title.trim();
-  const a = author.trim();
-  if (t.length < 2) return [];
-  const gq = `intitle:${t}${a ? ` inauthor:${a}` : ""}`;
+  let t = title.trim();
+  let a = author.trim();
+  if (t.length < 2) {
+    // Only the author typed: list their books.
+    if (a.length < 2) return [];
+    [t, a] = [a, ""];
+  }
+  // With an author, search fields precisely; with only one box filled, treat it as free text
+  // (a title, an author's name, or both).
+  const gq = a ? `intitle:${t} inauthor:${a}` : t;
   const [ol, google] = await Promise.all([
     searchOpenLibrary(t, a, signal).catch(() => [] as SearchResult[]),
     searchGoogle(gq, signal).catch(() => [] as SearchResult[]),
   ]);
-  return mergeResults(ol, google);
+  let merged = mergeResults(ol, google);
+  // Few or no matches usually means a typo: try again, forgiving one wrong letter per word.
+  if (merged.length < 3 && !signal.aborted) {
+    const loose = await searchOpenLibrary(a ? `${t} ${a}` : t, "", signal, true).catch(() => [] as SearchResult[]);
+    merged = mergeResults(merged, loose);
+  }
+  return merged;
 }
 
 /** Fill in a description from the Open Library work record if we don't have one. */
