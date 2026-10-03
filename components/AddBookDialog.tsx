@@ -9,8 +9,7 @@ import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/sear
 import type { Book, BookDisplay, BookDraft, ReadStatus } from "@/lib/types";
 import { MarkPicker } from "./Marks";
 import { BookCover, GeneratedCover } from "./BookCover";
-import { BookFinder } from "./BookFinder";
-import { ChevronLeft, SearchIcon, UploadIcon } from "./Icons";
+import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 import { StarInput } from "./StarRating";
 
@@ -27,47 +26,25 @@ interface Props {
   onSaved?: (book: Book | null) => void;
 }
 
-/**
- * Adding starts with the finder (search any book or author, or browse Indian authors);
- * picking a book opens the form with its details filled in. Editing goes straight to the form.
- */
 export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved }: Props) {
-  // undefined = still finding; null = adding by hand; a result = the picked book.
-  const [picked, setPicked] = useState<SearchResult | null | undefined>(undefined);
-  useEffect(() => {
-    if (!open) setPicked(undefined);
-  }, [open]);
-  const finding = !editing && picked === undefined;
-
   return (
-    <Sheet open={open} onClose={onClose} title={editing ? "Edit book" : picked ? "Your notes on it" : "Add a book"} wide>
-      {open &&
-        (finding ? (
-          <BookFinder onPick={(r) => setPicked(r)} onManual={() => setPicked(null)} />
-        ) : (
-          <>
-            {!editing && (
-              <button type="button" onClick={() => setPicked(undefined)} className="mb-3 inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink">
-                <ChevronLeft width={16} height={16} /> Back to search
-              </button>
-            )}
-            <AddBookForm
-              key={editing?.id ?? picked?.key ?? "manual"}
-              editing={editing ?? null}
-              prefill={picked ?? null}
-              defaultShelfId={defaultShelfId}
-              onDone={(b) => {
-                onSaved?.(b);
-                onClose();
-              }}
-            />
-          </>
-        ))}
+    <Sheet open={open} onClose={onClose} title={editing ? "Edit book" : "Add a book"} wide>
+      {open && (
+        <AddBookForm
+          key={editing?.id ?? "new"}
+          editing={editing ?? null}
+          defaultShelfId={defaultShelfId}
+          onDone={(b) => {
+            onSaved?.(b);
+            onClose();
+          }}
+        />
+      )}
     </Sheet>
   );
 }
 
-function AddBookForm({ editing, prefill, defaultShelfId, onDone }: { editing: Book | null; prefill: SearchResult | null; defaultShelfId?: string; onDone: (b: Book | null) => void }) {
+function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null) => void }) {
   const { shelves, addBook, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
@@ -166,11 +143,6 @@ function AddBookForm({ editing, prefill, defaultShelfId, onDone }: { editing: Bo
     setChoice((c) => (c.kind === "upload" ? c : valid[0] ? { kind: "url", url: valid[0] } : { kind: "generated" }));
   }
 
-  // Picked in the finder: fill everything in from the chosen book straight away.
-  useEffect(() => {
-    if (prefill) pick(prefill);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function onUpload(file: File | undefined) {
     if (!file) return;
