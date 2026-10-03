@@ -39,7 +39,7 @@ export function BookSpine({ book }: { book: Pick<Book, "title" | "author" | "cov
       )}
       {variant === 1 && <span aria-hidden className="absolute inset-x-[14%] top-[22%] bottom-[30%] rounded-[1px] bg-white/35 mix-blend-soft-light" />}
       {variant === 3 && <span aria-hidden className="absolute inset-x-0 top-0 h-[12%] bg-black/15" />}
-      <span className="spine-title font-serif" style={{ fontSize }}>
+      <span className="spine-title font-serif" style={{ fontSize, ...(variant === 2 && ink === "#ffffff" ? { color: "#e8cf8a" } : {}) }}>
         {book.title}
       </span>
       {surname && w >= 24 && (

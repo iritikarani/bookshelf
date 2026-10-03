@@ -35,8 +35,10 @@ export function RoomWindow({ className = "", compact = false }: { className?: st
           <span className="window-stars" />
           <span className="window-cloud" style={{ top: "18%", left: "12%" }} />
           <span className="window-cloud" style={{ top: "40%", left: "55%", transform: "scale(.7)" }} />
+          <span className="window-view" />
           <span className="window-branch" />
         </div>
+        <div className="window-glass" />
         <div className={`window-mullions ${compact ? "window-mullions--wide" : ""}`} />
       </div>
       <div className="window-sill" />
@@ -59,17 +61,43 @@ function FloorLamp({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     >
       <svg viewBox="0 0 110 420" className="h-full w-full overflow-visible" aria-hidden>
         <defs>
-          <radialGradient id="bulb" cx="50%" cy="0%" r="80%">
-            <stop offset="0%" stopColor="#fff3cf" stopOpacity="0.95" />
+          <radialGradient id="lamp-pool" cx="50%" cy="0%" r="80%">
+            <stop offset="0%" stopColor="#fff3cf" stopOpacity="0.9" />
             <stop offset="100%" stopColor="#ffd98a" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id="lamp-pole" x1="0" x2="1">
+            <stop offset="0" stopColor="#000" stopOpacity=".35" />
+            <stop offset=".35" stopColor="#fff" stopOpacity=".45" />
+            <stop offset="1" stopColor="#000" stopOpacity=".4" />
+          </linearGradient>
+          <linearGradient id="lamp-shade" x1="0" x2="1">
+            <stop offset="0" stopColor="#fff" stopOpacity=".35" />
+            <stop offset=".5" stopColor="#fff" stopOpacity="0" />
+            <stop offset="1" stopColor="#000" stopOpacity=".22" />
+          </linearGradient>
+          <radialGradient id="lamp-lit" cx="50%" cy="100%" r="90%">
+            <stop offset="0" stopColor="#fff6d8" stopOpacity=".95" />
+            <stop offset="1" stopColor="#ffd98a" stopOpacity=".15" />
+          </radialGradient>
+          <radialGradient id="lamp-base" cx="40%" cy="30%" r="70%">
+            <stop offset="0" stopColor="#fff" stopOpacity=".45" />
+            <stop offset="1" stopColor="#000" stopOpacity=".3" />
+          </radialGradient>
         </defs>
-        {on && <ellipse cx="55" cy="120" rx="70" ry="70" fill="url(#bulb)" className="lamp-cone" />}
+        {/* shadow on the floor */}
+        <ellipse cx="62" cy="414" rx="46" ry="7" fill="rgba(0,0,0,.22)" />
+        {on && <ellipse cx="55" cy="130" rx="74" ry="80" fill="url(#lamp-pool)" className="lamp-cone" />}
         <rect x="52" y="70" width="6" height="335" rx="3" fill="var(--lamp-metal)" />
-        <ellipse cx="55" cy="410" rx="34" ry="8" fill="var(--lamp-metal)" />
-        <path d="M22 78 L34 20 H76 L88 78 Z" fill="var(--lamp-shade)" stroke="rgba(0,0,0,.12)" />
-        <path d="M22 78 H88" stroke="rgba(0,0,0,.18)" strokeWidth="2" />
-        {on && <ellipse cx="55" cy="80" rx="22" ry="5" fill="#fff4d6" />}
+        <rect x="52" y="70" width="6" height="335" rx="3" fill="url(#lamp-pole)" />
+        <ellipse cx="55" cy="408" rx="32" ry="8" fill="var(--lamp-metal)" />
+        <ellipse cx="55" cy="408" rx="32" ry="8" fill="url(#lamp-base)" />
+        <ellipse cx="55" cy="406" rx="24" ry="5" fill="rgba(255,255,255,.12)" />
+        <path d="M20 80 L34 18 H76 L90 80 Z" fill="var(--lamp-shade)" />
+        {on && <path d="M20 80 L34 18 H76 L90 80 Z" fill="url(#lamp-lit)" opacity=".75" />}
+        <path d="M20 80 L34 18 H76 L90 80 Z" fill="url(#lamp-shade)" />
+        <path d="M34 18 H76" stroke="rgba(0,0,0,.18)" strokeWidth="1.5" />
+        <path d="M20 80 H90" stroke="rgba(0,0,0,.2)" strokeWidth="2.5" />
+        {on && <ellipse cx="55" cy="81" rx="26" ry="5" fill="#fff4d6" />}
         <circle cx="70" cy="140" r="3" fill="var(--lamp-metal)" />
         <path d="M70 140 v26" stroke="var(--lamp-metal)" strokeWidth="1.5" />
         <circle cx="70" cy="168" r="2.5" fill="var(--lamp-metal)" />
@@ -100,6 +128,7 @@ export function RoomScene({ children, standing }: { children: ReactNode; standin
   return (
     <div className="room-stage relative" data-lamp={lampOn ? "on" : "off"}>
       <div aria-hidden className="lamp-glow pointer-events-none absolute inset-0 -z-0" />
+      <div aria-hidden className="window-beam hidden lg:block" />
 
       {/* phones & tablets: window and pendant above the shelves */}
       <div className="mb-8 flex items-start gap-8 pl-4 lg:hidden">
@@ -115,8 +144,12 @@ export function RoomScene({ children, standing }: { children: ReactNode; standin
         </div>
       </div>
 
-      <div className="room-floor relative" aria-hidden>
-        <div className="room-rug" />
+      <div className="room-floor" aria-hidden>
+        <div className="skirting" />
+        <div className="floor-plane">
+          <div className="floor-sun" />
+          <div className="room-rug" />
+        </div>
       </div>
     </div>
   );

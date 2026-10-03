@@ -167,18 +167,25 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
 }
 
 function ItemVisual({ item }: { item: ShelfItem }) {
-  if (item.type === "decor") return <DecorArt kind={item.decor.kind} />;
-  if (item.book.display === "cover")
+  if (item.type === "decor")
     return (
-      <span className="relative block h-full w-full overflow-hidden rounded-[3px] shadow-[0_6px_10px_-4px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.3)]">
-        <BookCover book={item.book} />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.28),rgba(255,255,255,0.18)_3%,transparent_9%,transparent_92%,rgba(0,0,0,0.12))]"
-        />
+      <span className="shelf-item-shadow block h-full w-full">
+        <DecorArt kind={item.decor.kind} />
       </span>
     );
-  return <BookSpine book={item.book} />;
+  if (item.book.display === "cover")
+    return (
+      <span className="shelf-item-shadow cover-3d">
+        <span className="cover-face">
+          <BookCover book={item.book} />
+        </span>
+      </span>
+    );
+  return (
+    <span className="shelf-item-shadow block h-full w-full">
+      <BookSpine book={item.book} />
+    </span>
+  );
 }
 
 function ShelfRow({
@@ -213,6 +220,11 @@ function ShelfRow({
   return (
     <>
       <section aria-labelledby={headingId} className="shelf-cell">
+        {/* inside of the compartment: side walls, underside of the shelf above, the surface books stand on */}
+        <span aria-hidden className="cell-depth cell-wall-l" />
+        <span aria-hidden className="cell-depth cell-wall-r" />
+        <span aria-hidden className="cell-depth cell-ceiling" />
+        <span aria-hidden className="cell-depth cell-surface" />
         <div className="flex items-baseline justify-between gap-3 px-3 pt-3 md:px-4">
           <h2 id={headingId} className="font-serif text-lg leading-tight md:text-xl">
             {shelf.name}
@@ -224,7 +236,7 @@ function ShelfRow({
         {note && <div className="px-3 pt-2 md:px-4">{note}</div>}
         <div
           ref={setNodeRef}
-          className={`shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 pt-4 md:px-4 ${isOver ? "bg-accent/10" : ""}`}
+          className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 pt-4 md:px-4 ${isOver ? "bg-accent/10" : ""}`}
           role="list"
           aria-label={`${shelf.name} shelf`}
         >

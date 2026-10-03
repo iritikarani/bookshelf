@@ -9,6 +9,16 @@
    The structure ([data-structure]) decides how shelves are built.
    ═══════════════════════════════════════════════════════════════════════ */
 
+/* Procedural textures (SVG noise): wood grain, paint, plaster, cloth. No image downloads. */
+:root {
+  --tex-grain-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='180'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0025 0.085' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.25 0 0 0 -0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tex-grain-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='900'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.085 0.0025' numOctaves='4' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.25 0 0 0 -0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tex-paint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0 0 0 -0.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tex-plaster: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0 0 0 -0.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tex-plaster-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.22 0 0 0 -0.07'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tex-cloth: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4 0.35' numOctaves='2' seed='13' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.28 0 0 0 -0.11'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+
 [data-style] {
   --room-pattern: linear-gradient(transparent, transparent);
   --board-base: var(--frame-base);
@@ -24,6 +34,11 @@
   --skirting: #f6f2ec;
   --grain: transparent;
   --back: #f3eee6;
+  /* painted finish by default; wooden styles switch to grain */
+  --frame-tex-v: var(--tex-paint);
+  --frame-tex-h: var(--tex-paint);
+  --board-tex: var(--frame-tex-h);
+  --floor-tex: var(--tex-grain-h);
 }
 
 /* 1 · Pastel dream */
@@ -62,6 +77,7 @@
 
 /* 3 · Scandi — white case with pale oak shelves */
 [data-style="scandi"] {
+  --board-tex: var(--tex-grain-h);
   --curtain: #f3f1ec;
   --window-frame: #ffffff;
   --lamp-shade: #fbfbfa;
@@ -78,6 +94,8 @@
 
 /* 4 · Japandi — floating ash boards on a limewashed wall */
 [data-style="japandi"] {
+  --frame-tex-v: var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h);
   --curtain: #e4dac8;
   --window-frame: #8a6e4d;
   --lamp-shade: #f3e9d6;
@@ -96,6 +114,8 @@
 
 /* 5 · Dark academia — walnut, forest green, brass. A dark room, so the ink flips. */
 [data-style="academia"] {
+  --frame-tex-v: var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h);
   --curtain: #6a2b2d;
   --window-frame: #3a2618;
   --lamp-shade: #2f4d3b;
@@ -141,6 +161,8 @@
 
 /* 7 · Mid-century — floating teak on a mustard wall */
 [data-style="midcentury"] {
+  --frame-tex-v: var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h);
   --curtain: #d4713c;
   --window-frame: #8a5a35;
   --lamp-shade: #efe0c0;
@@ -157,6 +179,7 @@
 
 /* 8 · Coastal — whitewashed case, pale blue beadboard */
 [data-style="coastal"] {
+  --board-tex: var(--tex-grain-h);
   --curtain: #f7f5ef;
   --window-frame: #ffffff;
   --lamp-shade: #e6edf1;
@@ -173,6 +196,8 @@
 
 /* 9 · Boho — rope-hung boards on a terracotta arch */
 [data-style="boho"] {
+  --frame-tex-v: var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h);
   --curtain: #eadbc2;
   --window-frame: #c69967;
   --lamp-shade: #d1a76d;
@@ -190,6 +215,8 @@
 
 /* 10 · Industrial — iron pipe, reclaimed boards, painted brick */
 [data-style="industrial"] {
+  --frame-tex-v: var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h);
   --curtain: transparent;
   --window-frame: #232323;
   --lamp-shade: #2b2b2b;
@@ -229,72 +256,225 @@
   color: rgb(var(--ink));
   overflow-x: clip; /* the floor and lamp glow bleed past the content edges */
   background:
-    radial-gradient(ellipse 60% 45% at 0% 0%, rgba(255, 255, 255, 0.4), transparent 70%),
+    var(--tex-plaster),
+    var(--tex-plaster-soft),
+    radial-gradient(ellipse 70% 55% at 0% 0%, rgba(255, 252, 240, 0.45), transparent 70%),
     var(--room-pattern),
     var(--room-wall);
   background-attachment: fixed;
 }
 .dark .room {
-  background: var(--room-pattern), color-mix(in srgb, var(--room-wall) 14%, #181a18);
+  background:
+    var(--tex-plaster),
+    var(--room-pattern),
+    color-mix(in srgb, var(--room-wall) 14%, #181a18);
   background-attachment: fixed;
 }
 
-/* The floor a standing bookcase rests on: skirting board, then floorboards. Full-bleed. */
+/* ───── the floor: skirting board, then floorboards receding in perspective ───── */
 .room-floor {
+  position: relative;
   margin-left: calc(50% - 50vw);
   width: 100vw;
-  height: 72px;
-  background:
-    linear-gradient(180deg, var(--skirting) 0 12px, rgba(0, 0, 0, 0.12) 12px 14px, transparent 14px),
-    repeating-linear-gradient(90deg, transparent 0 158px, rgba(0, 0, 0, 0.1) 158px 160px),
-    linear-gradient(180deg, color-mix(in srgb, var(--floor) 88%, black), var(--floor) 40%);
+  height: 150px;
+  overflow: hidden;
+  perspective: 620px;
+  perspective-origin: 50% -40%;
 }
+.skirting {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 18px;
+  z-index: 2;
+  background:
+    var(--tex-paint),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 5px, rgba(0, 0, 0, 0.06) 5px 6px, transparent 6px calc(100% - 3px), rgba(0, 0, 0, 0.22) calc(100% - 3px)),
+    var(--skirting);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.12);
+}
+.floor-plane {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  top: 18px;
+  height: 560px;
+  transform-origin: 50% 0;
+  transform: rotateX(72deg);
+  background:
+    /* staggered butt joints */
+    repeating-linear-gradient(180deg, transparent 0 238px, rgba(0, 0, 0, 0.22) 238px 240px) 0 0 / 150px 480px,
+    repeating-linear-gradient(180deg, transparent 0 238px, rgba(0, 0, 0, 0.22) 238px 240px) 75px 120px / 150px 480px,
+    /* long seams between boards */
+    repeating-linear-gradient(90deg, transparent 0 73px, rgba(0, 0, 0, 0.28) 73px 75px),
+    /* boards vary slightly in tone */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 75px, rgba(0, 0, 0, 0.05) 75px 150px, rgba(255, 255, 255, 0.02) 150px 225px),
+    var(--tex-grain-v),
+    linear-gradient(180deg, color-mix(in srgb, var(--floor) 80%, black), var(--floor) 30%, color-mix(in srgb, var(--floor) 92%, white));
+}
+/* Contact shadow where the furniture meets the floor */
+.floor-plane::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 62%;
+  height: 70px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 50% 60% at 50% 0%, rgba(0, 0, 0, 0.32), transparent 70%);
+}
+/* Sunlight from the window lying across the floorboards */
+.floor-sun {
+  position: absolute;
+  left: 18%;
+  top: 6%;
+  width: 34%;
+  height: 70%;
+  transform: skewX(-28deg);
+  background: linear-gradient(180deg, rgba(255, 248, 225, 0.4), rgba(255, 248, 225, 0.05));
+  filter: blur(10px);
+  mix-blend-mode: soft-light;
+}
+.dark .floor-sun { display: none; }
+.dark .floor-plane { filter: brightness(0.45); }
+
+/* Rug lying on the floor plane, so it picks up the perspective */
+.room-rug {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 24%;
+  height: 32%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background:
+    var(--tex-cloth),
+    linear-gradient(90deg, var(--rug-2) 0 3%, transparent 3% 97%, var(--rug-2) 97%),
+    linear-gradient(180deg, var(--rug-2) 0 5%, transparent 5% 95%, var(--rug-2) 95%),
+    repeating-linear-gradient(60deg, transparent 0 22px, color-mix(in srgb, var(--rug-2) 60%, transparent) 22px 25px),
+    repeating-linear-gradient(-60deg, transparent 0 22px, color-mix(in srgb, var(--rug-2) 60%, transparent) 22px 25px),
+    var(--rug);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+}
+.room-rug::before,
+.room-rug::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 14px;
+  background: repeating-linear-gradient(90deg, var(--rug-2) 0 3px, transparent 3px 7px);
+}
+.room-rug::before { top: -14px; }
+.room-rug::after { bottom: -14px; }
 
 /* ───── shelf boards ───── */
 .plank {
   position: relative;
-  height: 14px;
+  height: 16px;
   z-index: 2;
   background:
-    repeating-linear-gradient(90deg, transparent 0 37px, var(--grain) 37px 38px, transparent 38px 91px, var(--grain) 91px 93px),
-    linear-gradient(180deg, var(--board-light) 0 4px, var(--board) 4px calc(100% - 2px), var(--board-dark) calc(100% - 2px));
-  box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.35);
+    var(--board-tex),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 40%, rgba(0, 0, 0, 0.12)),
+    linear-gradient(180deg, var(--board-light) 0 5px, var(--board) 5px calc(100% - 2px), var(--board-dark) calc(100% - 2px));
+  box-shadow: 0 7px 10px -6px rgba(0, 0, 0, 0.45);
 }
 
 /* ───── shelf unit + structures ───── */
-.shelf-unit {
-  position: relative;
-}
+.shelf-unit { position: relative; }
 .shelf-cell {
   position: relative;
   color: var(--cell-ink);
+  --side: 14px;
+  --ceil: 16px;
+  --surf: 12px;
 }
+.shelf-cell > :not(.cell-depth) { position: relative; z-index: 1; }
+.cell-depth { display: none; }
 
-/* Boxed bookcase: frame-coloured padding forms the side panels. */
+/* Boxed bookcase: textured frame; padding forms the side panels. Lit from the window on the left. */
 .shelf-unit[data-structure="case"] {
-  background: var(--frame);
   padding: 0 12px;
+  background:
+    var(--frame-tex-v),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.2)),
+    var(--frame);
   box-shadow:
-    inset 3px 0 0 var(--frame-light),
-    inset -3px 0 0 var(--frame-dark),
-    0 30px 50px -24px rgba(40, 25, 15, 0.35);
+    inset 2px 0 0 rgba(255, 255, 255, 0.25),
+    inset -2px 0 0 rgba(0, 0, 0, 0.25),
+    18px 26px 40px -18px rgba(30, 20, 10, 0.45),
+    40px 10px 60px -30px rgba(30, 20, 10, 0.25);
 }
+/* Inside each compartment: back panel with occlusion at the corners */
 .shelf-unit[data-structure="case"] .shelf-cell {
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 34px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.1), transparent 18px, transparent calc(100% - 18px), rgba(0, 0, 0, 0.1)),
+    radial-gradient(ellipse 80% 70% at 40% 55%, transparent 55%, rgba(0, 0, 0, 0.22)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 40%, rgba(0, 0, 0, 0.08)),
+    var(--frame-tex-v),
     var(--back);
 }
+.shelf-unit[data-structure="case"] .cell-depth {
+  display: block;
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Inner side walls, seen in perspective. The right wall faces the window so it's brighter. */
+.cell-wall-l,
+.cell-wall-r {
+  top: 0;
+  bottom: 0;
+  width: var(--side);
+}
+.cell-wall-l {
+  left: 0;
+  clip-path: polygon(0 0, 100% var(--ceil), 100% calc(100% - var(--surf)), 0 100%);
+  background: var(--frame-tex-v), linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.5)), var(--frame);
+}
+.cell-wall-r {
+  right: 0;
+  clip-path: polygon(0 var(--ceil), 100% 0, 100% 100%, 0 calc(100% - var(--surf)));
+  background: var(--frame-tex-v), linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.05)), var(--frame);
+}
+/* Underside of the shelf above, in shadow */
+.cell-ceiling {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--ceil);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--side)) 100%, var(--side) 100%);
+  background: var(--frame-tex-h), linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.4)), var(--frame);
+}
+/* The shelf's top surface the books stand on, catching the light */
+.cell-surface {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--surf);
+  clip-path: polygon(var(--side) 0, calc(100% - var(--side)) 0, 100% 100%, 0 100%);
+  background: var(--frame-tex-h), linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(255, 255, 255, 0.12)), var(--frame-light);
+}
+.shelf-unit[data-structure="case"] .shelf-row { padding-bottom: 5px; }
+/* keep the shelf label clear of the shadowed underside of the shelf above */
+.shelf-unit[data-structure="case"] .shelf-cell { padding-top: 8px; }
 .shelf-unit[data-structure="case"] .plank {
   --board: var(--frame);
   --board-light: var(--frame-light);
   --board-dark: var(--frame-dark);
+  --board-tex: var(--frame-tex-h);
+  height: 14px;
+  box-shadow: none;
 }
 [data-style="scandi"] .shelf-unit[data-structure="case"] .plank,
-[data-style="coastal"] .shelf-unit[data-structure="case"] .plank {
+[data-style="coastal"] .shelf-unit[data-structure="case"] .plank,
+[data-style="scandi"] .shelf-unit[data-structure="case"] .cell-surface,
+[data-style="coastal"] .shelf-unit[data-structure="case"] .cell-surface {
   --board: var(--board-base);
   --board-light: color-mix(in srgb, var(--board-base) 72%, white);
   --board-dark: color-mix(in srgb, var(--board-base) 74%, black);
+  --board-tex: var(--tex-grain-h);
+  --frame-light: color-mix(in srgb, var(--board-base) 80%, white);
+  --frame-tex-h: var(--tex-grain-h);
 }
 .case-top,
 .case-base {
@@ -303,44 +483,49 @@
   margin: 0 -12px;
 }
 .case-top {
-  height: 18px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--frame-light), var(--frame) 40%, var(--frame-dark));
-  box-shadow: 0 4px 6px -3px rgba(0, 0, 0, 0.25);
+  height: 20px;
+  border-radius: 2px 2px 0 0;
+  background:
+    var(--frame-tex-h),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px 30%, rgba(0, 0, 0, 0.25)),
+    var(--frame);
+  box-shadow: 0 5px 8px -4px rgba(0, 0, 0, 0.35);
 }
 .case-base {
-  height: 24px;
-  background: linear-gradient(180deg, var(--frame-dark), var(--frame) 30%, var(--frame-dark));
+  height: 26px;
+  background:
+    var(--frame-tex-h),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 25%, rgba(0, 0, 0, 0.18)),
+    var(--frame);
 }
-/* Little feet so the case stands on the floor */
 .case-base::before,
 .case-base::after {
   content: "";
   position: absolute;
   top: 100%;
-  width: 18px;
-  height: 6px;
+  width: 20px;
+  height: 7px;
   background: var(--frame-dark);
 }
-.case-base::before { left: 8px; }
-.case-base::after { right: 8px; }
+.case-base::before { left: 10px; }
+.case-base::after { right: 10px; }
 @media (min-width: 768px) {
   .shelf-unit[data-structure="case"] { padding: 0 18px; }
   .case-top,
   .case-base { margin: 0 -18px; }
+  .shelf-cell { --side: 18px; --ceil: 18px; --surf: 14px; }
 }
 
 /* Wall-mounted structures: no case, more air between boards. */
 .shelf-unit:not([data-structure="case"]) .shelf-cell + .plank {
   margin-bottom: 34px;
   border-radius: 2px;
-  box-shadow: 0 16px 18px -12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 18px 20px -14px rgba(0, 0, 0, 0.45);
 }
-.shelf-unit:not([data-structure="case"]) .plank:last-child {
-  margin-bottom: 8px;
-}
+.shelf-unit:not([data-structure="case"]) .plank:last-child { margin-bottom: 8px; }
+.shelf-unit:not([data-structure="case"]) .plank { height: 18px; }
 
-/* Floating: two brackets under each board */
+/* Floating: two metal brackets under each board */
 .shelf-unit[data-structure="floating"] .plank::before,
 .shelf-unit[data-structure="floating"] .plank::after {
   content: "";
@@ -351,18 +536,15 @@
   border-left: 4px solid var(--hardware);
   border-top: 3px solid var(--hardware);
   border-radius: 0 0 0 3px;
+  filter: drop-shadow(2px 3px 2px rgba(0, 0, 0, 0.3));
 }
 .shelf-unit[data-structure="floating"] .plank::before { left: 12%; }
 .shelf-unit[data-structure="floating"] .plank::after { right: 12%; transform: scaleX(-1); }
-[data-style="midcentury"] .shelf-unit[data-structure="floating"] .plank {
-  height: 20px;
-}
+[data-style="midcentury"] .shelf-unit[data-structure="floating"] .plank { height: 22px; }
 
 /* Hanging (rope) and pipe: two verticals running the full height, boards resting on them. */
 .shelf-unit[data-structure="hanging"],
-.shelf-unit[data-structure="pipe"] {
-  padding-top: 36px;
-}
+.shelf-unit[data-structure="pipe"] { padding-top: 36px; }
 .shelf-unit[data-structure="hanging"] .shelf-cell,
 .shelf-unit[data-structure="pipe"] .shelf-cell {
   padding-left: 22px;
@@ -383,23 +565,22 @@
   width: 5px;
   background: repeating-linear-gradient(160deg, var(--hardware) 0 4px, color-mix(in srgb, var(--hardware) 70%, black) 4px 6px);
   border-radius: 3px;
+  filter: drop-shadow(3px 2px 2px rgba(0, 0, 0, 0.25));
 }
 .shelf-unit[data-structure="hanging"]::before { left: 14px; }
 .shelf-unit[data-structure="hanging"]::after { right: 14px; }
 .shelf-unit[data-structure="pipe"]::before,
 .shelf-unit[data-structure="pipe"]::after {
-  width: 10px;
+  width: 11px;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 40%, rgba(0, 0, 0, 0.3)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent 35%, rgba(0, 0, 0, 0.4)),
     var(--hardware);
   border-radius: 2px;
+  filter: drop-shadow(4px 3px 3px rgba(0, 0, 0, 0.3));
 }
 .shelf-unit[data-structure="pipe"]::before { left: 12px; }
 .shelf-unit[data-structure="pipe"]::after { right: 12px; }
-/* Flanges where pipes meet the wall */
-.unit-cap {
-  display: none;
-}
+.unit-cap { display: none; }
 .shelf-unit[data-structure="pipe"] .unit-cap,
 .shelf-unit[data-structure="hanging"] .unit-cap {
   display: block;
@@ -414,10 +595,10 @@
   content: "";
   position: absolute;
   top: 0;
-  width: 22px;
+  width: 23px;
   height: 7px;
   border-radius: 2px;
-  background: var(--hardware);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.3)), var(--hardware);
 }
 .shelf-unit[data-structure="pipe"] .unit-cap::before { left: 6px; }
 .shelf-unit[data-structure="pipe"] .unit-cap::after { right: 6px; }
@@ -434,6 +615,12 @@
 .shelf-unit[data-structure="hanging"] .unit-cap::before { left: 10px; }
 .shelf-unit[data-structure="hanging"] .unit-cap::after { right: 10px; }
 
+/* ───── things on the shelf cast shadows ───── */
+/* Light comes from the window on the left, so shadows fall to the right onto the back panel. */
+.shelf-item-shadow {
+  filter: drop-shadow(5px -1px 4px rgba(0, 0, 0, 0.28)) drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.25));
+}
+
 /* ───── book spines ───── */
 .spine {
   position: relative;
@@ -443,14 +630,22 @@
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  border-radius: 2px 2px 1px 1px;
-  padding: 10% 0 8%;
-  box-shadow:
-    inset 2px 0 0 rgba(255, 255, 255, 0.2),
-    inset -3px 0 4px rgba(0, 0, 0, 0.18),
-    0 4px 6px -3px rgba(0, 0, 0, 0.4);
+  border-radius: 3px 3px 2px 2px / 2px 2px 2px 2px;
+  padding: 11% 0 8%;
+}
+/* Rounded spine catching the light, cloth texture, a sliver of pages at the head */
+.spine::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(255, 255, 255, 0.22) 16%, rgba(255, 255, 255, 0.06) 38%, transparent 55%, rgba(0, 0, 0, 0.12) 80%, rgba(0, 0, 0, 0.38) 100%),
+    var(--tex-cloth);
 }
 .spine-title {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -458,26 +653,60 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-/* ═════════════ the room corner: window, lamp, rug ═════════════ */
-.room-stage {
-  isolation: isolate;
+/* Face-out covers: page block peeking out on the right, slight board thickness */
+.cover-3d {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.cover-3d::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 2px;
+  right: -4px;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+  background: repeating-linear-gradient(180deg, #f7f1e3 0 1px, #e3dac6 1px 2px);
+  box-shadow: inset 1px 0 1px rgba(0, 0, 0, 0.2);
+}
+.cover-3d > .cover-face {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 2px 3px 3px 2px;
+}
+.cover-3d > .cover-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.22) 3%, transparent 8%, transparent 70%, rgba(0, 0, 0, 0.1)),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18), transparent 35%),
+    var(--tex-cloth);
 }
 
-/* Warm pool of light from the lamp (top right), much stronger at night. */
+/* ═════════════ the room corner: window, lamp, light ═════════════ */
+.room-stage { isolation: isolate; }
+
+/* Warm pool of light from the lamp, much stronger at night. */
 .lamp-glow {
   opacity: 0;
   transition: opacity 600ms ease;
-  background: radial-gradient(closest-side, rgba(255, 210, 140, 0.34), rgba(255, 210, 140, 0.12) 55%, transparent);
   inset: auto -120px 40px auto !important;
   width: 560px;
   height: 640px;
+  background: radial-gradient(closest-side, rgba(255, 210, 140, 0.34), rgba(255, 210, 140, 0.12) 55%, transparent);
 }
 .room-stage[data-lamp="on"] .lamp-glow { opacity: 1; }
-.dark .lamp-glow {
-  background: radial-gradient(closest-side, rgba(255, 196, 110, 0.26), rgba(255, 196, 110, 0.08) 55%, transparent);
-}
+.dark .lamp-glow { background: radial-gradient(closest-side, rgba(255, 196, 110, 0.28), rgba(255, 196, 110, 0.09) 55%, transparent); }
 @media (max-width: 1023px) {
   .lamp-glow {
     inset: -60px -60px auto auto !important;
@@ -485,43 +714,92 @@
     height: 320px;
   }
 }
-.floor-lamp .lamp-cone { mix-blend-mode: screen; }
 
-/* Window */
-.room-window { --curtain-w: 26%; }
+/* Daylight streaming in from the window across the wall and the bookcase */
+.window-beam {
+  position: absolute;
+  inset: -40px 0 0 0;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(105deg, transparent 0 12%, rgba(255, 249, 230, 0.2) 22%, rgba(255, 249, 230, 0.06) 42%, transparent 60%);
+  mix-blend-mode: soft-light;
+}
+.dark .window-beam { display: none; }
+
+/* Window: deep frame, a view outside, reflections on the glass, sheer curtains */
+.room-window { --curtain-w: 28%; }
 .window-rod {
   position: absolute;
-  left: -8%;
-  right: -8%;
-  top: -10px;
-  height: 5px;
+  left: -10%;
+  right: -10%;
+  top: -12px;
+  height: 6px;
   border-radius: 3px;
-  background: var(--lamp-metal);
   z-index: 3;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.3)), var(--lamp-metal);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.25);
 }
+.window-rod::before,
+.window-rod::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.6), transparent 50%), var(--lamp-metal);
+}
+.window-rod::before { left: -6px; }
+.window-rod::after { right: -6px; }
 .window-frame {
   position: absolute;
-  inset: 0 0 10px;
-  border: 8px solid var(--window-frame);
-  border-radius: 3px;
-  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  inset: 0 0 12px;
+  border: 10px solid var(--window-frame);
+  border-radius: 2px;
   overflow: hidden;
+  background: var(--window-frame);
+  box-shadow:
+    0 14px 28px -16px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+/* The reveal: wall thickness inside the frame, shaded at the top and right */
+.window-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: inset 0 10px 12px -8px rgba(0, 0, 0, 0.35), inset -8px 0 10px -8px rgba(0, 0, 0, 0.25);
 }
 .window-sky {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #bcdcf2 0%, #dcedf8 60%, #eef6f2 100%);
+  background: linear-gradient(180deg, #a9d1ef 0%, #cfe6f7 55%, #e9f3ee 100%);
 }
-.dark .window-sky { background: linear-gradient(180deg, #121a2e 0%, #24324f 70%, #34405c 100%); }
+.dark .window-sky { background: linear-gradient(180deg, #0f1729 0%, #1f2c48 70%, #2e3a57 100%); }
+/* Distant hills and a tree line */
+.window-view {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 48%;
+  background:
+    radial-gradient(ellipse 40% 55% at 80% 100%, #5d8a5a 98%, transparent),
+    radial-gradient(ellipse 30% 45% at 55% 100%, #6f9b68 98%, transparent),
+    radial-gradient(ellipse 60% 40% at 20% 100%, #82ab79 98%, transparent),
+    radial-gradient(ellipse 70% 30% at 70% 100%, #a8c6a4 98%, transparent),
+    linear-gradient(180deg, transparent 55%, #9fbf98 55%);
+  filter: saturate(0.85);
+}
+.dark .window-view { filter: brightness(0.25) saturate(0.4); }
 .window-sun {
   position: absolute;
-  right: 16%;
+  right: 18%;
   top: 14%;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #fff6d8;
-  box-shadow: 0 0 30px 12px rgba(255, 244, 200, 0.8);
+  background: #fff8e0;
+  box-shadow: 0 0 34px 16px rgba(255, 246, 210, 0.85);
 }
 .window-moon,
 .window-stars { display: none; }
@@ -536,6 +814,7 @@
   height: 22px;
   border-radius: 50%;
   box-shadow: -6px 4px 0 0 #f4ecd2;
+  filter: drop-shadow(0 0 6px rgba(244, 236, 210, 0.6));
 }
 .dark .window-stars {
   display: block;
@@ -543,43 +822,55 @@
   inset: 0;
   background-image:
     radial-gradient(1px 1px at 20% 20%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 40% 60%, #fff 99%, transparent),
-    radial-gradient(1.5px 1.5px at 70% 40%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 30% 80%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 85% 70%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 55% 15%, #fff 99%, transparent);
-  opacity: 0.8;
+    radial-gradient(1px 1px at 40% 50%, #fff 99%, transparent),
+    radial-gradient(1.5px 1.5px at 70% 35%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 30% 40%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 85% 45%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 55% 12%, #fff 99%, transparent);
+  opacity: 0.85;
 }
 .window-cloud {
   position: absolute;
   width: 46px;
-  height: 14px;
+  height: 13px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 12px -7px 0 2px rgba(255, 255, 255, 0.9), 26px 0 0 0 rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 12px -7px 0 2px rgba(255, 255, 255, 0.92), 26px 0 0 0 rgba(255, 255, 255, 0.92);
+  filter: blur(0.6px);
 }
-/* A leafy branch reaching in from the corner */
 .window-branch {
   position: absolute;
-  left: -10%;
-  bottom: -6%;
-  width: 70%;
-  height: 45%;
+  left: -12%;
+  top: -8%;
+  width: 62%;
+  height: 46%;
   background:
-    radial-gradient(ellipse 14% 22% at 20% 40%, #7fa86f 98%, transparent),
-    radial-gradient(ellipse 16% 20% at 38% 58%, #6a955d 98%, transparent),
-    radial-gradient(ellipse 13% 18% at 55% 72%, #8db57c 98%, transparent),
-    radial-gradient(ellipse 18% 24% at 12% 75%, #5f8a55 98%, transparent),
-    radial-gradient(ellipse 12% 16% at 70% 88%, #7fa86f 98%, transparent);
-  opacity: 0.9;
+    radial-gradient(ellipse 14% 22% at 20% 40%, #6e9a60 98%, transparent),
+    radial-gradient(ellipse 16% 20% at 38% 28%, #5c8852 98%, transparent),
+    radial-gradient(ellipse 13% 18% at 55% 18%, #7fa86f 98%, transparent),
+    radial-gradient(ellipse 18% 24% at 12% 15%, #527c4a 98%, transparent),
+    radial-gradient(ellipse 12% 16% at 70% 8%, #6e9a60 98%, transparent);
+  filter: blur(0.4px);
 }
-.dark .window-branch { filter: brightness(0.35) saturate(0.6); }
+.dark .window-branch { filter: brightness(0.25) saturate(0.5); }
+/* Glass: two diagonal reflections */
+.window-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(125deg, transparent 0 30%, rgba(255, 255, 255, 0.28) 34%, transparent 40%),
+    linear-gradient(125deg, transparent 0 46%, rgba(255, 255, 255, 0.14) 48%, transparent 53%);
+}
 .window-mullions {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background:
-    linear-gradient(90deg, transparent calc(50% - 3px), var(--window-frame) calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
-    linear-gradient(180deg, transparent calc(45% - 3px), var(--window-frame) calc(45% - 3px) calc(45% + 3px), transparent calc(45% + 3px));
+    linear-gradient(90deg, transparent calc(50% - 4px), var(--window-frame) calc(50% - 4px) calc(50% + 4px), transparent calc(50% + 4px)),
+    linear-gradient(180deg, transparent calc(45% - 4px), var(--window-frame) calc(45% - 4px) calc(45% + 4px), transparent calc(45% + 4px));
+  filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.25));
 }
 .window-mullions--wide {
   background:
@@ -592,51 +883,39 @@
 }
 .window-sill {
   position: absolute;
-  left: -6%;
-  right: -6%;
+  left: -7%;
+  right: -7%;
   bottom: 0;
-  height: 12px;
+  height: 14px;
   border-radius: 2px;
-  background: var(--window-frame);
-  box-shadow: 0 6px 8px -4px rgba(0, 0, 0, 0.3);
+  background:
+    var(--tex-paint),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 2px, transparent 2px, rgba(0, 0, 0, 0.15)),
+    var(--window-frame);
+  box-shadow: 0 8px 10px -5px rgba(0, 0, 0, 0.35);
 }
+/* Sheer curtains: uneven folds, a little translucent, gathered under the rod */
 .curtain {
   position: absolute;
-  top: -8px;
-  bottom: -26px;
+  top: -10px;
+  bottom: -40px;
   width: var(--curtain-w);
   z-index: 2;
+  opacity: 0.94;
   background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 6px, rgba(0, 0, 0, 0.07) 6px 12px),
+    var(--tex-cloth),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 5px, rgba(0, 0, 0, 0.1) 9px, rgba(255, 255, 255, 0.18) 13px, rgba(0, 0, 0, 0.14) 19px, rgba(255, 255, 255, 0.28) 24px),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 12%),
     var(--curtain);
-  box-shadow: 0 8px 16px -10px rgba(0, 0, 0, 0.35);
+  filter: drop-shadow(4px 8px 8px rgba(0, 0, 0, 0.18));
 }
-.curtain-left { left: -10%; border-radius: 0 0 40% 0 / 0 0 12% 0; }
-.curtain-right { right: -10%; border-radius: 0 0 0 40% / 0 0 0 12%; }
+.curtain-left { left: -12%; border-radius: 0 0 30% 10% / 0 0 6% 4%; }
+.curtain-right { right: -12%; border-radius: 0 0 10% 30% / 0 0 4% 6%; }
 [data-style="industrial"] .curtain { display: none; }
 [data-style="cottage"] .curtain {
   background:
     radial-gradient(circle at 6px 6px, rgba(214, 120, 135, 0.5) 2px, transparent 2.6px) 0 0 / 16px 16px,
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0 6px, rgba(0, 0, 0, 0.05) 6px 12px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 5px, rgba(0, 0, 0, 0.1) 9px, rgba(255, 255, 255, 0.18) 13px, rgba(0, 0, 0, 0.14) 19px, rgba(255, 255, 255, 0.28) 24px),
     var(--curtain);
 }
-.dark .curtain { filter: brightness(0.55); }
-
-/* Rug on the floor, seen in perspective */
-.room-rug {
-  position: absolute;
-  left: 50%;
-  top: 18px;
-  width: min(72%, 780px);
-  height: 44px;
-  transform: translateX(-50%);
-  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
-  background:
-    linear-gradient(90deg, var(--rug-2) 0 4%, transparent 4% 96%, var(--rug-2) 96%),
-    linear-gradient(180deg, var(--rug-2) 0 12%, transparent 12% 88%, var(--rug-2) 88%),
-    repeating-linear-gradient(60deg, transparent 0 14px, color-mix(in srgb, var(--rug-2) 55%, transparent) 14px 16px),
-    repeating-linear-gradient(-60deg, transparent 0 14px, color-mix(in srgb, var(--rug-2) 55%, transparent) 14px 16px),
-    var(--rug);
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
-}
-.dark .room-rug { filter: brightness(0.5); }
+.dark .curtain { filter: brightness(0.5); }
