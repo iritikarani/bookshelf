@@ -22,8 +22,8 @@ export function Header({ stats, tab, onTab, actions, subtitle }: { stats: Stats;
     <header className="mx-auto w-full max-w-6xl px-4 pt-5 md:px-8 md:pt-8">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-serif text-3xl leading-none tracking-tight md:text-4xl">
-            Ex Libris<span className="text-accent">.</span>
+          <h1 className="whitespace-nowrap font-serif text-[26px] leading-none tracking-tight sm:text-3xl md:text-4xl">
+            Cosmic Space<span className="text-accent">.</span>
           </h1>
           {subtitle && <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>}
         </div>

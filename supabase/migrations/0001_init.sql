@@ -1,4 +1,4 @@
--- Ex Libris schema: profiles, shelves, books, cover storage, public sharing.
+-- Cosmic Space schema: profiles, shelves, books, cover storage, public sharing.
 -- Run in the Supabase SQL editor (or `supabase db push`).
 
 create extension if not exists "pgcrypto";

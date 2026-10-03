@@ -159,7 +159,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
         )}
       </div>
       <div className="mt-5 flex justify-center">
-        <a className={`btn-primary px-6 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="ex-libris-shelf.png" aria-disabled={!png}>
+        <a className={`btn-primary px-6 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="cosmic-space-shelf.png" aria-disabled={!png}>
           <DownloadIcon width={16} height={16} /> Download image
         </a>
       </div>
@@ -168,7 +168,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
           <div ref={nodeRef} data-style={aesthetic.id} className="room flex flex-col px-[80px] pb-[90px] pt-[110px] text-ink" style={vars}>
-            <p className="font-mono text-[26px] tracking-[6px] text-accent">EX LIBRIS</p>
+            <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
             <h1 className="mt-[18px] font-serif text-[100px] leading-none">{owner ? `${owner}'s shelf` : "My bookshelf"}</h1>
             <div className="mt-[40px] flex gap-[56px] font-mono">
               {[
@@ -195,7 +195,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
             </div>
 
             <p className="mt-[50px] font-mono text-[22px] tracking-[2px] text-ink-soft">
-              {aesthetic.name} · {stats.booksRead} finished · made with Ex Libris
+              {aesthetic.name} · {stats.booksRead} finished · made with Cosmic Space
             </p>
           </div>
         </div>

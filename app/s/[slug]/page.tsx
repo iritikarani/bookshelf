@@ -6,6 +6,6 @@ export default async function PublicShelfPage({ params }: { params: Promise<{ sl
 }
 
 export const metadata = {
-  title: "A shelf on Ex Libris",
+  title: "A shelf on Cosmic Space",
   robots: { index: false },
 };

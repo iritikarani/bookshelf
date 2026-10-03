@@ -283,7 +283,7 @@ function ExampleNote() {
 function Splash() {
   return (
     <div className="flex min-h-dvh items-center justify-center">
-      <p className="animate-pulse font-serif text-3xl">Ex Libris</p>
+      <p className="animate-pulse font-serif text-3xl">Cosmic Space</p>
     </div>
   );
 }

@@ -44,7 +44,7 @@ export function AuthScreen() {
 
       <div className="w-full max-w-sm">
         <h1 className="font-serif text-5xl leading-none">
-          Ex Libris<span className="text-accent">.</span>
+          Cosmic Space<span className="text-accent">.</span>
         </h1>
         <p className="mt-3 text-ink-soft">A private shelf for the books you've finished, and a journal entry for each one.</p>
 
