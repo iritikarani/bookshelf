@@ -225,7 +225,17 @@ export function mergeResults(ol: SearchResult[], google: SearchResult[]): Search
  * Search both catalogues. Any box can be left empty: a title, an author's name or a publisher
  * on its own lists matching books, and filling more boxes narrows the results.
  */
-export async function searchBooks(title: string, author: string, signal: AbortSignal, publisher = ""): Promise<SearchResult[]> {
+/** Recent searches, so typing back to an earlier query (or retyping it) is instant. */
+const searchCache = new Map<string, SearchResult[]>();
+
+export async function searchBooks(
+  title: string,
+  author: string,
+  signal: AbortSignal,
+  publisher = "",
+  /** Called with the first results as soon as either catalogue answers, before the other has. */
+  onPartial?: (results: SearchResult[]) => void,
+): Promise<SearchResult[]> {
   let t = title.trim();
   let a = author.trim();
   const p = publisher.trim();
@@ -243,15 +253,36 @@ export async function searchBooks(title: string, author: string, signal: AbortSi
     : a
       ? `intitle:${t} inauthor:${a}`
       : t;
+  const cacheKey = [t, a, p].join("|").toLowerCase();
+  const hit = searchCache.get(cacheKey);
+  if (hit) return hit;
+
+  let olDone: SearchResult[] | null = null;
+  let googleDone: SearchResult[] | null = null;
+  const early = () => {
+    if (signal.aborted || !onPartial) return;
+    const partial = mergeResults(olDone ?? [], googleDone ?? []);
+    if (partial.length) onPartial(partial);
+  };
   const [ol, google] = await Promise.all([
-    searchOpenLibrary(t, a, signal, false, p).catch(() => [] as SearchResult[]),
-    searchGoogle(gq, signal).catch(() => [] as SearchResult[]),
+    searchOpenLibrary(t, a, signal, false, p)
+      .catch(() => [] as SearchResult[])
+      .then((r) => ((olDone = r), googleDone === null && early(), r)),
+    searchGoogle(gq, signal)
+      .catch(() => [] as SearchResult[])
+      .then((r) => ((googleDone = r), olDone === null && early(), r)),
   ]);
   let merged = mergeResults(ol, google);
   // Few or no matches usually means a typo: try again, forgiving one wrong letter per word.
   if (merged.length < 3 && !p && !signal.aborted) {
+    // Show what we have while the forgiving search runs.
+    if (merged.length) onPartial?.(merged);
     const loose = await searchOpenLibrary(a ? `${t} ${a}` : t, "", signal, true).catch(() => [] as SearchResult[]);
     merged = mergeResults(merged, loose);
+  }
+  if (!signal.aborted && merged.length) {
+    searchCache.set(cacheKey, merged);
+    if (searchCache.size > 60) searchCache.delete(searchCache.keys().next().value!);
   }
   return merged;
 }

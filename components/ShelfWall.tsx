@@ -24,7 +24,7 @@ import { BookCover } from "./BookCover";
 import { BookSpine, spineSize } from "./BookSpine";
 import { DecorArt, decorSize, decorSpec } from "./Decor";
 import { MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
-import { StarDisplay } from "./StarRating";
+import { StarDisplay, formatRating } from "./StarRating";
 
 interface Insertion {
   shelfId: string;
@@ -378,7 +378,7 @@ function Slot({
   const isBook = item.type === "book";
   const decorOnly = !isBook && (readOnly || !onOpenDecor);
   const label = isBook
-    ? `${item.book.title}${item.book.author ? ` by ${item.book.author}` : ""}${item.book.status === "read" && item.book.rating ? `, rated ${item.book.rating} of 5` : ""}${item.book.favourite ? ", favourite" : ""}${item.book.status === "reading" ? ", reading now" : item.book.status === "to_read" ? ", to read" : ""}. Open journal entry.`
+    ? `${item.book.title}${item.book.author ? ` by ${item.book.author}` : ""}${item.book.status === "read" && item.book.rating ? `, rated ${formatRating(item.book.rating)} of 5` : ""}${item.book.favourite ? ", favourite" : ""}${item.book.status === "reading" ? ", reading now" : item.book.status === "to_read" ? ", to read" : ""}. Open journal entry.`
     : `${decorSpec(item.decor.kind).name}. Arrange.`;
 
   return (

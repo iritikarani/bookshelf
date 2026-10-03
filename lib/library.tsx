@@ -48,6 +48,26 @@ interface LibraryContextValue {
   setUsername(username: string): Promise<void>;
 }
 
+const CACHE_PREFIX = "exlibris:cache:";
+
+function readCache(userId: string): LibraryData | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + userId);
+    const d = raw ? (JSON.parse(raw) as LibraryData) : null;
+    return d?.profile && Array.isArray(d.shelves) && Array.isArray(d.books) ? { ...d, decor: d.decor ?? [] } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(userId: string, data: LibraryData) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + userId, JSON.stringify(data));
+  } catch {
+    /* storage full or blocked: the next visit just loads from the server */
+  }
+}
+
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 const byOrder = (a: { position: number; created_at: string }, b: { position: number; created_at: string }) =>
@@ -121,7 +141,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async (u: AuthUser) => {
-    setLoading(true);
+    // Show the shelf as it was last time straight away, then swap in the fresh copy when it arrives.
+    const cached = !dataRef.current && store.mode === "supabase" ? readCache(u.id) : null;
+    if (cached) setData(cached);
+    else setLoading(true);
     try {
       setData(await store.load(u));
     } catch (e) {
@@ -135,6 +158,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (user) reload(user);
     else setData(null);
   }, [user, reload]);
+
+  // Keep this visit's copy for the next one (accounts only; guest shelves already live in this browser).
+  useEffect(() => {
+    if (!data || !user || store.mode !== "supabase") return;
+    const t = window.setTimeout(() => writeCache(user.id, data), 400);
+    return () => window.clearTimeout(t);
+  }, [data, user]);
 
   const fail = (e: unknown, fallback: string) => setError(e instanceof Error ? e.message : fallback);
 

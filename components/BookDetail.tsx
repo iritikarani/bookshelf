@@ -53,7 +53,7 @@ export function BookDetail(props: BookDetailProps) {
           <div className="flex gap-5 md:flex-col md:items-center md:text-center">
             <div className="w-28 shrink-0 md:w-40">
               <div className="aspect-[2/3] overflow-hidden rounded-[3px] shadow-[0_14px_26px_-10px_rgba(0,0,0,0.55)]">
-                <BookCover book={book} />
+                <BookCover book={book} size="L" />
               </div>
             </div>
             <div className="min-w-0 md:mt-1">

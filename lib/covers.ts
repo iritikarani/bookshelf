@@ -62,7 +62,7 @@ export const olCoverByIsbn = (isbn: string, size: "S" | "M" | "L" = "L") =>
   `https://covers.openlibrary.org/b/isbn/${isbn}-${size}.jpg?default=false`;
 
 /** Resolve whether an image URL actually yields a real cover (not a 1×1 placeholder). */
-export function probeImage(url: string, timeoutMs = 6000): Promise<boolean> {
+export function probeImage(url: string, timeoutMs = 4000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new Image();
     const timer = setTimeout(() => resolve(false), timeoutMs);
@@ -78,7 +78,37 @@ export function probeImage(url: string, timeoutMs = 6000): Promise<boolean> {
   });
 }
 
-const colorCache = new Map<string, string | null>();
+/**
+ * The same Open Library cover at another size. Shelves draw covers ~90px wide, so the medium
+ * image (~15 KB) looks the same as the large one (~100 KB) and loads far faster.
+ */
+export function sizedCover(url: string, size: "S" | "M" | "L"): string {
+  return url.startsWith("https://covers.openlibrary.org/") ? url.replace(/-[SML]\.jpg/, `-${size}.jpg`) : url;
+}
+
+const COLOR_KEY = "exlibris:coverColors";
+// Remembered between visits, so spines get their colours instantly instead of re-downloading covers.
+const colorCache = new Map<string, string | null>(
+  (() => {
+    try {
+      return typeof window === "undefined" ? [] : (JSON.parse(localStorage.getItem(COLOR_KEY) ?? "[]") as [string, string][]);
+    } catch {
+      return [];
+    }
+  })(),
+);
+let saveTimer: number | undefined;
+function rememberColor(url: string, hex: string | null) {
+  colorCache.set(url, hex);
+  if (hex === null || typeof window === "undefined") return;
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => {
+    try {
+      const entries = [...colorCache].filter((e): e is [string, string] => e[1] !== null).slice(-600);
+      localStorage.setItem(COLOR_KEY, JSON.stringify(entries));
+    } catch {}
+  }, 500);
+}
 
 /** Average colour of a cover image, or null when the image can't be read (e.g. CORS). */
 export function averageImageColor(url: string): Promise<string | null> {
@@ -100,17 +130,18 @@ export function averageImageColor(url: string): Promise<string | null> {
           r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
         }
         const hex = "#" + [r, g, b].map((v) => Math.round(v / n).toString(16).padStart(2, "0")).join("");
-        colorCache.set(url, hex);
+        rememberColor(url, hex);
         resolve(hex);
       } catch {
-        colorCache.set(url, null);
+        rememberColor(url, null);
         resolve(null);
       }
     };
     img.onerror = () => {
-      colorCache.set(url, null);
+      rememberColor(url, null);
       resolve(null);
     };
-    img.src = url;
+    // A small copy is plenty for an average colour.
+    img.src = sizedCover(url, "S");
   });
 }
