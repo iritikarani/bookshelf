@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { coverColorOf, coverImageOf, textColorFor } from "@/lib/covers";
+import { coverColorOf, coverImageOf, sizedCover, textColorFor } from "@/lib/covers";
 import type { Book } from "@/lib/types";
 
 type CoverBook = Pick<Book, "title" | "author" | "cover_url" | "uploaded_cover" | "cover_color">;
@@ -27,8 +27,10 @@ export function GeneratedCover({ title, author, color, className = "", style }: 
   );
 }
 
-export function BookCover({ book, className = "", sizes }: { book: CoverBook; className?: string; sizes?: string }) {
-  const src = coverImageOf(book);
+/** size: "M" for shelves and lists (fast); "L" where the cover is shown big. */
+export function BookCover({ book, className = "", sizes, size = "M" }: { book: CoverBook; className?: string; sizes?: string; size?: "M" | "L" }) {
+  const full = coverImageOf(book);
+  const src = full && sizedCover(full, size);
   const [failed, setFailed] = useState<string | null>(null);
   const alt = `Cover of ${book.title}${book.author ? ` by ${book.author}` : ""}`;
 

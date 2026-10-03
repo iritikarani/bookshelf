@@ -120,7 +120,11 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
     setSearching(true);
     const t = window.setTimeout(async () => {
       try {
-        const r = await searchBooks(title, author, ctrl.signal, publisher);
+        const r = await searchBooks(title, author, ctrl.signal, publisher, (partial) => {
+          // Show what's arrived so far; the full list replaces it moments later.
+          setResults(partial);
+          setShowResults(true);
+        });
         if (!ctrl.signal.aborted) {
           setResults(r);
           setHighlight(-1);
@@ -129,7 +133,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       } finally {
         if (!ctrl.signal.aborted) setSearching(false);
       }
-    }, 350);
+    }, 250);
     return () => {
       ctrl.abort();
       window.clearTimeout(t);
@@ -156,13 +160,30 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         if (d && token === pickToken.current) setDescription((cur) => cur || d);
       });
     }
+    // Show each cover the moment it loads (best candidates first) instead of waiting for all of them.
     const candidates = r.covers.slice(0, 8);
-    const ok = await Promise.all(candidates.map((u) => probeImage(u)));
+    const ok: (boolean | undefined)[] = candidates.map(() => undefined);
+    const update = () => {
+      if (token !== pickToken.current) return;
+      const valid = candidates.filter((_, i) => ok[i]).slice(0, 4);
+      setCovers(valid);
+      // Pick the best one once nothing better-ranked is still loading.
+      const firstOk = ok.findIndex((v) => v === true);
+      const settled = firstOk >= 0 && ok.slice(0, firstOk).every((v) => v === false);
+      if (settled) setChoice((c) => (c.kind === "upload" || (c.kind === "url" && valid.includes(c.url)) ? c : { kind: "url", url: candidates[firstOk] }));
+    };
+    await Promise.all(
+      candidates.map((u, i) =>
+        probeImage(u).then((good) => {
+          ok[i] = good;
+          update();
+        }),
+      ),
+    );
     if (token !== pickToken.current) return;
-    const valid = candidates.filter((_, i) => ok[i]).slice(0, 4);
-    setCovers(valid);
     setProbing(false);
-    setChoice((c) => (c.kind === "upload" ? c : valid[0] ? { kind: "url", url: valid[0] } : { kind: "generated" }));
+    const valid = candidates.filter((_, i) => ok[i]).slice(0, 4);
+    setChoice((c) => (c.kind === "upload" ? c : c.kind === "url" && valid.includes(c.url) ? c : valid[0] ? { kind: "url", url: valid[0] } : { kind: "generated" }));
   }
 
 

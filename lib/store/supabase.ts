@@ -64,8 +64,17 @@ export const supabaseStore: Store = {
 
   async load(user) {
     const sb = getSupabase();
-    let profile = check(await sb.from("profiles").select("*").eq("id", user.id).maybeSingle()) as Profile | null;
-    let shelves = check(await sb.from("shelves").select("*").order("position")) as Shelf[];
+    // All four at once: one round trip of waiting instead of four.
+    const [p, s, b, d] = await Promise.all([
+      sb.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      sb.from("shelves").select("*").order("position"),
+      sb.from("books").select("*").order("position"),
+      sb.from("decor").select("*").order("position"),
+    ]);
+    let profile = check(p) as Profile | null;
+    let shelves = check(s) as Shelf[];
+    const books = check(b) as Book[];
+    const decor = check(d) as Decor[];
     // The signup trigger normally creates these; this covers accounts made before the trigger existed.
     if (!profile) {
       profile = check(await sb.from("profiles").insert({ id: user.id }).select().single()) as Profile;
@@ -75,8 +84,6 @@ export const supabaseStore: Store = {
         await sb.from("shelves").insert(DEFAULT_SHELVES.map((s) => ({ ...s, user_id: user.id }))).select(),
       ) as Shelf[];
     }
-    const books = check(await sb.from("books").select("*").order("position")) as Book[];
-    const decor = check(await sb.from("decor").select("*").order("position")) as Decor[];
     return { profile, shelves, books, decor };
   },
   async insertBook(userId, draft, position) {
