@@ -24,6 +24,11 @@
 
 [data-style] {
   --room-pattern: linear-gradient(transparent, transparent);
+  --time-wash: linear-gradient(transparent, transparent);
+  --sun: 255 249 230;
+  --lamp-hi: 255 243 207;
+  --lamp-lo: 255 210 140;
+  --lamp-level: 1;
   --board-base: var(--frame-base);
   --frame: var(--frame-base);
   --board: var(--board-base);
@@ -264,6 +269,7 @@
   background:
     var(--tex-plaster),
     var(--tex-plaster-soft),
+    var(--time-wash),
     radial-gradient(ellipse 70% 55% at 0% 0%, rgba(255, 252, 240, 0.45), transparent 70%),
     var(--room-pattern),
     var(--room-wall);
@@ -272,6 +278,7 @@
 .dark .room {
   background:
     var(--tex-plaster),
+    var(--time-wash),
     var(--room-pattern),
     color-mix(in srgb, var(--room-wall) 14%, #181a18);
   background-attachment: fixed;
@@ -403,7 +410,7 @@
   width: 34%;
   height: 392px;
   transform: skewX(-28deg);
-  background: linear-gradient(180deg, rgba(255, 248, 225, 0.4), rgba(255, 248, 225, 0.05));
+  background: linear-gradient(180deg, rgb(var(--sun) / 0.4), rgb(var(--sun) / 0.05));
   filter: blur(10px);
   mix-blend-mode: soft-light;
 }
@@ -776,10 +783,11 @@
   inset: auto -120px 40px auto !important;
   width: 560px;
   height: 640px;
-  background: radial-gradient(closest-side, rgba(255, 210, 140, 0.34), rgba(255, 210, 140, 0.12) 55%, transparent);
+  background: radial-gradient(closest-side, rgb(var(--lamp-lo) / calc(0.34 * var(--lamp-level))), rgb(var(--lamp-lo) / calc(0.12 * var(--lamp-level))) 55%, transparent);
 }
 .room-stage[data-lamp="on"] .lamp-glow { opacity: 1; }
-.dark .lamp-glow { background: radial-gradient(closest-side, rgba(255, 196, 110, 0.28), rgba(255, 196, 110, 0.09) 55%, transparent); }
+.dark .lamp-glow,
+[data-time="night"] .lamp-glow { background: radial-gradient(closest-side, rgb(var(--lamp-lo) / calc(0.3 * var(--lamp-level))), rgb(var(--lamp-lo) / calc(0.1 * var(--lamp-level))) 55%, transparent); }
 @media (max-width: 1023px) {
   .lamp-glow {
     inset: -60px -60px auto auto !important;
@@ -794,7 +802,7 @@
   inset: -40px 0 0 0;
   pointer-events: none;
   z-index: 3;
-  background: linear-gradient(105deg, transparent 0 12%, rgba(255, 249, 230, 0.2) 22%, rgba(255, 249, 230, 0.06) 42%, transparent 60%);
+  background: linear-gradient(105deg, transparent 0 12%, rgb(var(--sun) / 0.2) 22%, rgb(var(--sun) / 0.06) 42%, transparent 60%);
   mix-blend-mode: soft-light;
 }
 .dark .window-beam { display: none; }
@@ -938,3 +946,169 @@
 .room[data-curtains="none"] .curtain { display: none; }
 [data-style][data-curtains="on"] .curtain { display: block; }
 .room[data-rug="none"] .mini-rug { display: none; }
+
+/* ───── lighting (Lighting tab in the room editor, see lib/room.ts) ───── */
+
+/* Time of day: the view outside follows the room's time, whatever the screen mode. */
+[data-time="night"] .window-view-day { display: none; }
+[data-time="night"] .window-view-night { display: inline; }
+.dark [data-time="morning"] .window-view-day,
+.dark [data-time="day"] .window-view-day,
+.dark [data-time="sunset"] .window-view-day { display: inline; }
+.dark [data-time="morning"] .window-view-night,
+.dark [data-time="day"] .window-view-night,
+.dark [data-time="sunset"] .window-view-night { display: none; }
+@media (min-width: 1024px) {
+  .dark [data-time="morning"] .window-beam,
+  .dark [data-time="day"] .window-beam,
+  .dark [data-time="sunset"] .window-beam { display: block; }
+}
+/* Night in the room: the same dim room as the screen's dark mode */
+[data-time="night"] .floor-sun,
+[data-time="night"] .window-beam { display: none; }
+[data-time="night"] .floor-plane { filter: brightness(0.45); }
+[data-time="night"] .curtain { filter: brightness(0.5); }
+
+/* The sky tint over the view: dawn gold, sunset orange and violet */
+.window-tint,
+.window-weather {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+[data-time="morning"] .window-tint {
+  background: linear-gradient(180deg, rgba(255, 196, 176, 0.38), rgba(255, 222, 170, 0.3) 55%, rgba(255, 236, 210, 0.12));
+}
+[data-time="sunset"] .window-tint {
+  background: linear-gradient(180deg, rgba(92, 64, 150, 0.55), rgba(236, 104, 96, 0.5) 42%, rgba(255, 164, 84, 0.55) 66%, rgba(110, 60, 92, 0.45));
+  mix-blend-mode: multiply;
+}
+
+/* Weather outside the window */
+[data-weather="cloudy"] .window-weather,
+[data-weather="rain"] .window-weather,
+[data-weather="snow"] .window-weather {
+  background:
+    radial-gradient(ellipse 40% 16% at 22% 14%, rgba(255, 255, 255, 0.75), transparent 70%),
+    radial-gradient(ellipse 46% 18% at 72% 22%, rgba(245, 247, 250, 0.7), transparent 70%),
+    radial-gradient(ellipse 34% 12% at 48% 6%, rgba(255, 255, 255, 0.6), transparent 70%),
+    linear-gradient(rgba(160, 168, 182, 0.42), rgba(160, 168, 182, 0.3));
+}
+.dark .window-weather,
+[data-time="night"] .window-weather { opacity: 0.45; }
+.dark [data-time="morning"] .window-weather,
+.dark [data-time="day"] .window-weather,
+.dark [data-time="sunset"] .window-weather { opacity: 1; }
+[data-weather="rain"] .window-weather::before,
+[data-weather="snow"] .window-weather::before,
+[data-weather="snow"] .window-weather::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+[data-weather="rain"] .window-weather::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Cg stroke='rgba(255,255,255,0.65)' stroke-width='1.2' stroke-linecap='round'%3E%3Cpath d='M6 2l-3 12M30 18l-3 12M18 38l-3 12M42 44l-3 12'/%3E%3C/g%3E%3C/svg%3E");
+  animation: weather-fall 0.7s linear infinite;
+  --fall: 64px;
+}
+[data-weather="snow"] .window-weather::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='white'%3E%3Ccircle cx='8' cy='10' r='1.8'/%3E%3Ccircle cx='38' cy='24' r='1.4'/%3E%3Ccircle cx='22' cy='46' r='2'/%3E%3Ccircle cx='52' cy='52' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  animation: weather-fall 6s linear infinite;
+  --fall: 60px;
+}
+[data-weather="snow"] .window-weather::after {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Cg fill='white' opacity='0.8'%3E%3Ccircle cx='20' cy='14' r='1.2'/%3E%3Ccircle cx='64' cy='40' r='1.6'/%3E%3Ccircle cx='40' cy='70' r='1'/%3E%3C/g%3E%3C/svg%3E");
+  animation: weather-fall 9s linear infinite;
+  --fall: 84px;
+}
+@keyframes weather-fall {
+  from { background-position: 0 0; }
+  to { background-position: 0 var(--fall); }
+}
+/* A little snow settles on the sill */
+[data-weather="snow"] .window-sill::before {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: -3px;
+  height: 5px;
+  border-radius: 4px 4px 1px 1px;
+  background: #fbfcff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+
+/* Fairy lights strung across the top of the wall */
+.fairy-lights {
+  display: none;
+  position: absolute;
+  left: -16px;
+  right: -16px;
+  top: -18px;
+  height: 34px;
+  z-index: 4;
+  pointer-events: none;
+  --bulb-1: #ffd27a;
+  --bulb-2: #ffe7b0;
+}
+[data-fairy] .fairy-lights { display: block; }
+[data-fairy="pink"] .fairy-lights { --bulb-1: #ff9fbb; --bulb-2: #ffd3df; }
+.fairy-wire {
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='34'%3E%3Cpath d='M0 4 Q60 34 120 4' fill='none' stroke='rgba(60,50,40,0.55)' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x;
+}
+.fairy-bulbs {
+  position: absolute;
+  inset: 0;
+  /* bulbs sit on the wire: x 30/60/90 of each 120px swag */
+  background:
+    radial-gradient(circle at 30px 15px, var(--bulb-1) 0 3.2px, transparent 4px) 0 0 / 120px 34px repeat-x,
+    radial-gradient(circle at 90px 15px, var(--bulb-1) 0 3.2px, transparent 4px) 0 0 / 120px 34px repeat-x;
+  filter: drop-shadow(0 0 4px var(--bulb-1)) drop-shadow(0 0 9px var(--bulb-1));
+}
+.fairy-bulbs--b {
+  background: radial-gradient(circle at 60px 19.5px, var(--bulb-2) 0 3.2px, transparent 4px) 0 0 / 120px 34px repeat-x;
+  filter: drop-shadow(0 0 4px var(--bulb-2)) drop-shadow(0 0 9px var(--bulb-2));
+  animation: twinkle 2.6s ease-in-out infinite;
+}
+.fairy-bulbs--a { animation: twinkle 3.4s ease-in-out -1.2s infinite; }
+[data-fairy="colour"] .fairy-bulbs--a {
+  background:
+    radial-gradient(circle at 30px 15px, #ff8a8a 0 3.2px, transparent 4px) 0 0 / 120px 34px repeat-x,
+    radial-gradient(circle at 90px 15px, #8ab8ff 0 3.2px, transparent 4px) 0 0 / 120px 34px repeat-x;
+  filter: drop-shadow(0 0 5px rgba(255, 220, 160, 0.9));
+}
+[data-fairy="colour"] .fairy-bulbs--b {
+  background:
+    radial-gradient(circle at 60px 19.5px, #ffd36e 0 3.2px, transparent 4px) 0 0 / 240px 34px repeat-x,
+    radial-gradient(circle at 180px 19.5px, #8fd6a0 0 3.2px, transparent 4px) 0 0 / 240px 34px repeat-x;
+  filter: drop-shadow(0 0 5px rgba(255, 220, 160, 0.9));
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.share-art .fairy-lights { left: -80px; right: -80px; }
+/* room for the garland above the window and the bookcase arrows */
+[data-fairy] .room-stage { padding-top: 26px; }
+
+.lamp-cone { opacity: min(1, var(--lamp-level)); }
+
+/* The lamp in the editor preview */
+.mini-lamp {
+  position: absolute;
+  right: -30px;
+  top: -40px;
+  width: 140px;
+  height: 140px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(var(--lamp-lo) / calc(0.55 * var(--lamp-level))), rgb(var(--lamp-lo) / calc(0.18 * var(--lamp-level))) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window-weather::before,
+  .window-weather::after,
+  .fairy-bulbs { animation: none !important; }
+}

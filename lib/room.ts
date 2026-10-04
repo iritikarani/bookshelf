@@ -15,7 +15,24 @@ export interface RoomSettings {
   finish?: string;
   /** Shelves in each bookcase before a new one starts. */
   perCase?: 2 | 3 | 4;
+  // ── lighting (kept when you switch room style) ──
+  /** Colour of the lamp's light. */
+  lampTone?: string;
+  /** 1 dim · 2 cosy (default) · 3 bright */
+  lampLevel?: 1 | 2 | 3;
+  /** Time of day in the room. Unset follows the screen's light or dark mode. */
+  time?: TimeChoice;
+  /** What's happening outside the window. */
+  weather?: string;
+  /** A string of fairy lights across the wall. */
+  fairy?: string;
 }
+
+export type TimeOfDay = "morning" | "day" | "sunset" | "night";
+export type TimeChoice = TimeOfDay | "auto";
+
+/** The room's look; "Back to the style's look" clears these and keeps the rest. */
+export const LOOK_KEYS = ["wall", "pattern", "floor", "rug", "curtains", "structure", "finish"] as const;
 
 interface Swatch {
   id: string;
@@ -113,6 +130,55 @@ export const STRUCTURES: { id: Structure; name: string; blurb: string }[] = [
   { id: "pipe", name: "Iron pipe", blurb: "Reclaimed boards on black pipes" },
 ];
 
+export const LAMP_TONES: (Swatch & { hi: string; lo: string })[] = [
+  { id: "candle", name: "Candlelight", color: "#ffb35c", hi: "255 196 120", lo: "255 150 60" },
+  { id: "warm", name: "Warm", color: "#ffd98a", hi: "255 243 207", lo: "255 210 140" },
+  { id: "soft", name: "Soft white", color: "#fff1d6", hi: "255 250 238", lo: "255 236 205" },
+  { id: "cool", name: "Cool daylight", color: "#dbe8ff", hi: "240 246 255", lo: "200 220 255" },
+];
+
+export const LAMP_LEVELS: { id: 1 | 2 | 3; name: string }[] = [
+  { id: 1, name: "Dim" },
+  { id: 2, name: "Cosy" },
+  { id: 3, name: "Bright" },
+];
+
+export const TIMES: { id: TimeChoice; name: string; icon: string; blurb: string }[] = [
+  { id: "auto", name: "Real time", icon: "🕰️", blurb: "Follows the clock" },
+  { id: "morning", name: "Morning", icon: "🌅", blurb: "Soft golden light" },
+  { id: "day", name: "Daytime", icon: "☀️", blurb: "Bright and clear" },
+  { id: "sunset", name: "Sunset", icon: "🌇", blurb: "Orange and pink sky" },
+  { id: "night", name: "Night", icon: "🌙", blurb: "Moonlight and lamplight" },
+];
+
+export const WEATHERS: { id: string; name: string; icon: string }[] = [
+  { id: "clear", name: "Clear", icon: "🌤️" },
+  { id: "cloudy", name: "Cloudy", icon: "☁️" },
+  { id: "rain", name: "Rain", icon: "🌧️" },
+  { id: "snow", name: "Snow", icon: "❄️" },
+];
+
+export const FAIRY_LIGHTS: Swatch[] = [
+  { id: "warm", name: "Warm gold", color: "#ffd27a" },
+  { id: "pink", name: "Pink", color: "#ffb3c7" },
+  { id: "colour", name: "Colourful", color: "conic-gradient(#ff8a8a 0 25%, #ffd36e 0 50%, #8fd6a0 0 75%, #8ab8ff 0)" },
+];
+
+/** The time of day a clock reading falls in. */
+export function timeAt(date: Date): TimeOfDay {
+  const h = date.getHours() + date.getMinutes() / 60;
+  if (h >= 5 && h < 10) return "morning";
+  if (h >= 10 && h < 17) return "day";
+  if (h >= 17 && h < 19.5) return "sunset";
+  return "night";
+}
+
+/** The room's time of day right now, or undefined to follow the screen mode. */
+export function timeOf(room?: RoomSettings | null, now: Date = new Date()): TimeOfDay | undefined {
+  if (!room?.time) return undefined;
+  return room.time === "auto" ? timeAt(now) : room.time;
+}
+
 const find = <T extends { id: string }>(list: T[], id?: string) => (id ? list.find((x) => x.id === id) : undefined);
 
 const LIGHT_INK = { "--ink": "47 42 40", "--ink-soft": "86 79 74", "--paper": "255 253 249", "--line": "226 218 207", "--wall": "245 241 234", colorScheme: "light" };
@@ -120,10 +186,21 @@ const DARK_INK = { "--ink": "238 233 218", "--ink-soft": "192 188 177", "--paper
 
 export const structureOf = (aesthetic: Aesthetic, room?: RoomSettings | null): Structure => room?.structure ?? aesthetic.structure;
 export const perCaseOf = (room?: RoomSettings | null) => room?.perCase ?? 3;
-export const hasRoomChanges = (room?: RoomSettings | null) => Boolean(room && Object.values(room).some((v) => v !== undefined));
+/** Whether the room's look differs from its style (lighting and layout don't count). */
+export const hasRoomChanges = (room?: RoomSettings | null) => Boolean(room && LOOK_KEYS.some((k) => room[k] !== undefined));
+export const hasLightingChanges = (room?: RoomSettings | null) => Boolean(room && (room.lampTone || room.lampLevel || room.time || room.weather || room.fairy));
+
+const NIGHT_WASH = "linear-gradient(rgba(16, 19, 34, 0.8), rgba(16, 19, 34, 0.8))";
+const WASHES: Record<TimeOfDay, string> = {
+  morning: "linear-gradient(100deg, rgba(255, 214, 170, 0.22), rgba(255, 236, 214, 0.06) 60%, transparent)",
+  day: "linear-gradient(transparent, transparent)",
+  sunset: "linear-gradient(100deg, rgba(255, 140, 80, 0.26), rgba(236, 120, 140, 0.12) 55%, rgba(120, 90, 160, 0.1))",
+  night: NIGHT_WASH,
+};
+const SUN: Record<TimeOfDay, string> = { morning: "255 228 186", day: "255 249 230", sunset: "255 160 100", night: "190 205 255" };
 
 /** The room's choices as CSS variables, to put on the element that carries data-style. */
-export function roomStyle(room?: RoomSettings | null): CSSProperties {
+export function roomStyle(room?: RoomSettings | null, now?: Date): CSSProperties {
   if (!room) return {};
   const vars: Record<string, string> = {};
   const wall = find(WALLS, room.wall);
@@ -155,12 +232,37 @@ export function roomStyle(room?: RoomSettings | null): CSSProperties {
     vars["--cell-ink"] = finish.dark ? "#f1ede6" : "#2f2a28";
     vars["--grain"] = finish.grain ? (finish.dark ? "rgba(255, 255, 255, 0.03)" : "rgba(90, 60, 30, 0.12)") : "transparent";
   }
+  const tone = find(LAMP_TONES, room.lampTone);
+  if (tone) {
+    vars["--lamp-hi"] = tone.hi;
+    vars["--lamp-lo"] = tone.lo;
+  }
+  if (room.lampLevel) vars["--lamp-level"] = String([0.45, 1, 1.55][room.lampLevel - 1]);
+  const time = timeOf(room, now);
+  if (time) {
+    vars["--time-wash"] = WASHES[time];
+    vars["--sun"] = SUN[time];
+  }
+  if (time === "night") {
+    // Night in the room: like the screen's dark mode, whatever the wall.
+    Object.assign(vars, DARK_INK);
+    vars["--frame"] = "color-mix(in srgb, var(--frame-base) 78%, #1a1c1a)";
+    vars["--board"] = "color-mix(in srgb, var(--board-base) 78%, #1a1c1a)";
+    vars["--back"] = "color-mix(in srgb, var(--frame-base) 14%, #1c1e1c)";
+    vars["--cell-ink"] = "rgb(238 233 218)";
+    vars["--floor"] = `color-mix(in srgb, ${floor?.color ?? "#8a6a4a"} 40%, #161816)`;
+    vars["--skirting"] = "#262926";
+  }
   return vars as CSSProperties;
 }
 
 /** data- attributes that switch parts of the room on or off. */
-export function roomAttrs(room?: RoomSettings | null): Record<string, string> {
+export function roomAttrs(room?: RoomSettings | null, now?: Date): Record<string, string> {
   const a: Record<string, string> = {};
+  const time = timeOf(room, now);
+  if (time) a["data-time"] = time;
+  if (room?.weather && room.weather !== "clear") a["data-weather"] = room.weather;
+  if (room?.fairy && room.fairy !== "none") a["data-fairy"] = room.fairy;
   if (room?.rug) a["data-rug"] = room.rug === "none" ? "none" : "on";
   if (room?.curtains) a["data-curtains"] = room.curtains === "none" ? "none" : "on";
   return a;

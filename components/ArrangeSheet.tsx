@@ -3,17 +3,38 @@
 import { useEffect, useState } from "react";
 import { useLibrary } from "@/lib/library";
 import { REWARDS, finishedCount, isUnlocked, nextReward, rewardFor } from "@/lib/rewards";
-import { CURTAINS, FINISHES, FLOORS, PATTERNS, RUGS, STRUCTURES, WALLS, hasRoomChanges, perCaseOf, roomAttrs, roomStyle, structureOf, type RoomSettings } from "@/lib/room";
+import {
+  CURTAINS,
+  FAIRY_LIGHTS,
+  FINISHES,
+  FLOORS,
+  LAMP_LEVELS,
+  LAMP_TONES,
+  LOOK_KEYS,
+  PATTERNS,
+  RUGS,
+  STRUCTURES,
+  TIMES,
+  WALLS,
+  WEATHERS,
+  hasLightingChanges,
+  hasRoomChanges,
+  perCaseOf,
+  roomAttrs,
+  roomStyle,
+  structureOf,
+  type RoomSettings,
+} from "@/lib/room";
 import { AESTHETICS, aestheticOf, type Aesthetic } from "@/lib/themes";
 import type { DecorKind } from "@/lib/types";
 import { DECOR, DecorArt } from "./Decor";
-import { RoomWindow } from "./RoomScene";
+import { FairyLights, RoomWindow, useLamp } from "./RoomScene";
 import { Sheet } from "./Sheet";
 
 const SPINES = ["#f2c4c0", "#c8cbf0", "#f3e3a2", "#bfe3cf", "#bfd8ee", "#ecc5dc", "#e6dccb"];
 
 /** A tiny version of the room: wall, shelf structure, a few spines and a plant (and the floor, when asked). */
-export function StylePreview({ a, room, withFloor = false, tall = false }: { a: Aesthetic; room?: RoomSettings | null; withFloor?: boolean; tall?: boolean }) {
+export function StylePreview({ a, room, withFloor = false, tall = false, lampOn = false }: { a: Aesthetic; room?: RoomSettings | null; withFloor?: boolean; tall?: boolean; lampOn?: boolean }) {
   const structure = structureOf(a, room);
   const row = (offset: number) => (
     <div className="shelf-cell flex h-[30px] items-end gap-[2px] !px-2" aria-hidden>
@@ -32,7 +53,13 @@ export function StylePreview({ a, room, withFloor = false, tall = false }: { a: 
       className={`room relative flex items-end overflow-hidden rounded-lg px-4 pt-3 ${tall ? "h-[190px] justify-end pr-[8%]" : "h-[118px] justify-center"} ${withFloor ? "pb-[34px]" : ""}`}
       style={{ ...roomStyle(room), backgroundAttachment: "scroll" }}
     >
-      {tall && <RoomWindow compact className="absolute left-[7%] top-5 h-14 w-[24%]" />}
+      {tall && (
+        <div className="absolute left-[7%] top-6 h-14 w-[26%]">
+          <RoomWindow compact className="h-full w-full" />
+        </div>
+      )}
+      {tall && <FairyLights className="!top-0" />}
+      {tall && lampOn && <div aria-hidden className="mini-lamp" />}
       <div className={`shelf-unit relative z-[1] w-full max-w-[150px] ${structure === "case" ? "" : "mb-2"}`} data-structure={structure} style={structure === "case" ? { padding: "0 6px" } : { paddingTop: 12 }}>
         <div className="unit-cap" />
         {structure === "case" && <div className="case-top" style={{ height: 7, margin: "0 -6px" }} />}
@@ -85,12 +112,13 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   const pick = (patch: Partial<RoomSettings>) => setRoom(patch);
+  const [lampOn, toggleLamp] = useLamp();
 
   return (
     <Sheet open={open} onClose={onClose} title="Decorate your room" wide>
       {/* live preview + tabs stay in view while you scroll the options */}
       <div className="sticky -top-1 z-10 -mx-5 bg-paper px-5 pb-3 pt-1">
-        <StylePreview a={current} room={room} withFloor tall />
+        <StylePreview a={current} room={room} withFloor tall lampOn={lampOn} />
         <div className="mt-3 grid grid-cols-4 gap-1 rounded-full bg-ink/5 p-1" role="tablist" aria-label="Editor sections">
           {TABS.map((t) => (
             <button
@@ -148,7 +176,7 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
           <SwatchRow label="Curtains" options={CURTAINS} value={room?.curtains} onPick={(curtains) => pick({ curtains })} />
 
           {hasRoomChanges(room) && (
-            <button type="button" className="btn-ghost" onClick={() => setRoom(room?.perCase ? { wall: undefined, pattern: undefined, floor: undefined, rug: undefined, curtains: undefined, structure: undefined, finish: undefined } : null)}>
+            <button type="button" className="btn-ghost" onClick={() => setRoom(Object.fromEntries(LOOK_KEYS.map((k) => [k, undefined])))}>
               ↺ Back to the {current.name} look
             </button>
           )}
@@ -295,13 +323,62 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
       )}
 
       {tab === "lighting" && (
-        <div className="pt-2" role="tabpanel" aria-label="Lighting">
-          <div className="rounded-2xl bg-wall/60 p-5 text-center ring-1 ring-line/60">
-            <p className="text-3xl" aria-hidden>🌅</p>
-            <p className="mt-2 font-serif text-xl">Lighting is coming next</p>
-            <p className="mt-1 text-ink-soft">Lamp warmth, morning, sunset and night light, and rain or snow outside the window.</p>
-            <p className="mt-3 text-sm text-ink-soft">For now, tap the lamp in your room to switch it on or off.</p>
-          </div>
+        <div className="space-y-6 pt-2" role="tabpanel" aria-label="Lighting">
+          <fieldset>
+            <legend className="label">Time of day</legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Time of day">
+              <TimeCard icon="🖥️" name="Match my screen" blurb="Night when your phone is dark" checked={!room?.time} onPick={() => pick({ time: undefined })} />
+              {TIMES.map((t) => (
+                <TimeCard key={t.id} icon={t.icon} name={t.name} blurb={t.blurb} checked={room?.time === t.id} onPick={() => pick({ time: t.id })} />
+              ))}
+            </div>
+          </fieldset>
+
+          <PillRow label="Outside the window" options={WEATHERS} value={room?.weather ?? "clear"} onPick={(id) => pick({ weather: id === "clear" ? undefined : id })} />
+
+          <fieldset>
+            <legend className="label">Reading lamp</legend>
+            <div className="flex gap-2" role="radiogroup" aria-label="Reading lamp">
+              {[true, false].map((on) => (
+                <button
+                  key={String(on)}
+                  type="button"
+                  role="radio"
+                  aria-checked={lampOn === on}
+                  onClick={() => lampOn !== on && toggleLamp()}
+                  className={`rounded-xl border px-4 py-2 text-sm ${lampOn === on ? "border-accent bg-accent/10" : "border-line text-ink-soft"}`}
+                >
+                  {on ? "💡 On" : "Off"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-sm text-ink-soft">You can also tap the lamp in your room.</p>
+          </fieldset>
+
+          <PillRow
+            label="Lamp colour"
+            options={LAMP_TONES.map((t) => ({ id: t.id, name: t.name, swatch: t.color }))}
+            value={room?.lampTone ?? "warm"}
+            onPick={(id) => pick({ lampTone: id === "warm" ? undefined : id })}
+          />
+          <PillRow
+            label="Lamp brightness"
+            options={LAMP_LEVELS.map((l) => ({ id: String(l.id), name: l.name }))}
+            value={String(room?.lampLevel ?? 2)}
+            onPick={(id) => pick({ lampLevel: id === "2" ? undefined : (Number(id) as 1 | 3) })}
+          />
+          <PillRow
+            label="Fairy lights"
+            options={[{ id: "none", name: "None" }, ...FAIRY_LIGHTS.map((f) => ({ id: f.id, name: f.name, swatch: f.color }))]}
+            value={room?.fairy ?? "none"}
+            onPick={(id) => pick({ fairy: id === "none" ? undefined : id })}
+          />
+
+          {hasLightingChanges(room) && (
+            <button type="button" className="btn-ghost" onClick={() => setRoom({ time: undefined, weather: undefined, lampTone: undefined, lampLevel: undefined, fairy: undefined })}>
+              ↺ Back to normal lighting
+            </button>
+          )}
         </div>
       )}
     </Sheet>
@@ -342,6 +419,49 @@ function SwatchRow({ label, options, value, onPick }: { label: string; options: 
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/** Text choices, one always picked; a dot of colour when the option has one. */
+function PillRow({ label, options, value, onPick }: { label: string; options: { id: string; name: string; icon?: string; swatch?: string }[]; value: string; onPick: (id: string) => void }) {
+  return (
+    <fieldset>
+      <legend className="label">{label}</legend>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={value === o.id}
+            onClick={() => onPick(o.id)}
+            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${value === o.id ? "border-accent bg-accent/10" : "border-line"}`}
+          >
+            {o.icon && <span aria-hidden>{o.icon}</span>}
+            {o.swatch && <span aria-hidden className="h-4 w-4 rounded-full ring-1 ring-ink/15" style={{ background: o.swatch }} />}
+            {o.name}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function TimeCard({ icon, name, blurb, checked, onPick }: { icon: string; name: string; blurb: string; checked: boolean; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      onClick={onPick}
+      className={`rounded-xl border p-3 text-left transition ${checked ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "border-line hover:border-ink-soft"}`}
+    >
+      <span className="text-xl" aria-hidden>
+        {icon}
+      </span>
+      <span className="mt-1 block text-sm font-medium">{name}</span>
+      <span className="block text-xs text-ink-soft">{blurb}</span>
+    </button>
   );
 }
 

@@ -9,6 +9,7 @@ import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { finishedCount, newlyUnlocked } from "@/lib/rewards";
 import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
+import { useRoomClock } from "@/lib/useClock";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
@@ -43,6 +44,7 @@ function AppInner() {
   const lib = useLibrary();
   const { user, authReady, loading, profile, shelves, books, itemsByShelf } = lib;
   const [tab, setTab] = useTab();
+  useRoomClock(profile?.room);
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
