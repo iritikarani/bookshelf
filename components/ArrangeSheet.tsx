@@ -11,7 +11,7 @@ import { Sheet } from "./Sheet";
 const SPINES = ["#f2c4c0", "#c8cbf0", "#f3e3a2", "#bfe3cf", "#bfd8ee", "#ecc5dc", "#e6dccb"];
 
 /** A tiny version of the room: wall, shelf structure, a few spines and a plant. */
-function StylePreview({ a }: { a: Aesthetic }) {
+export function StylePreview({ a }: { a: Aesthetic }) {
   const row = (offset: number) => (
     <div className="shelf-cell flex h-[30px] items-end gap-[2px] !px-2" aria-hidden>
       {[0, 1, 2, 3].map((i) => (
