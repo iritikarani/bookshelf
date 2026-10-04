@@ -156,7 +156,8 @@ export function BookSpine({ book }: { book: SpineBook }) {
   const base = kind === "leather" ? mixHex(palette.base, "#1d120c", 0.42) : palette.base;
   const ink = kind === "leather" ? gold : textColorFor(base);
 
-  const style: TextStyle = kind === "leather" ? "caps" : kind === "paperback" && variant % 3 === 1 ? "spaced" : "serif";
+  // Every title in normal letters, the same on every book (old books keep their gold lettering).
+  const style: TextStyle = "serif";
   const measured = useFontsMeasured();
 
   // Fit the title: the room along the spine for it, and how long its longest line is.

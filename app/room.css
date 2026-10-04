@@ -1500,3 +1500,4 @@
     repeating-linear-gradient(180deg, transparent 0 25px, rgba(120, 140, 170, 0.18) 25px 26px) 0 10px,
     linear-gradient(180deg, #fffaf0, #fbf3e3);
 }
+.spine--leather .spine-title { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
