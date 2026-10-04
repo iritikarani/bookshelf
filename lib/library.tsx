@@ -76,7 +76,7 @@ function writeCache(userId: string, data: LibraryData) {
 /** What survives a change of room style: the bookcase layout and the lighting. */
 function keepLayout(room: RoomSettings | null | undefined): RoomSettings | null {
   if (!room) return null;
-  const kept: RoomSettings = { perCase: room.perCase, lampTone: room.lampTone, lampLevel: room.lampLevel, time: room.time, weather: room.weather, fairy: room.fairy };
+  const kept: RoomSettings = { perCase: room.perCase, lampTone: room.lampTone, lampLevel: room.lampLevel, time: room.time, weather: room.weather, fairy: room.fairy, seasonal: room.seasonal };
   for (const k of Object.keys(kept) as (keyof RoomSettings)[]) if (kept[k] === undefined) delete kept[k];
   return Object.keys(kept).length ? kept : null;
 }

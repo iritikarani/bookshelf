@@ -29,12 +29,14 @@ import { AESTHETICS, aestheticOf, type Aesthetic } from "@/lib/themes";
 import type { DecorKind } from "@/lib/types";
 import { DECOR, DecorArt } from "./Decor";
 import { FairyLights, RoomWindow, useLamp } from "./RoomScene";
+import { useSeason } from "@/lib/useClock";
+import { SEASONS, nextFestival } from "@/lib/seasons";
 import { Sheet } from "./Sheet";
 
 const SPINES = ["#f2c4c0", "#c8cbf0", "#f3e3a2", "#bfe3cf", "#bfd8ee", "#ecc5dc", "#e6dccb"];
 
 /** A tiny version of the room: wall, shelf structure, a few spines and a plant (and the floor, when asked). */
-export function StylePreview({ a, room, withFloor = false, tall = false, lampOn = false }: { a: Aesthetic; room?: RoomSettings | null; withFloor?: boolean; tall?: boolean; lampOn?: boolean }) {
+export function StylePreview({ a, room, withFloor = false, tall = false, lampOn = false, season }: { a: Aesthetic; room?: RoomSettings | null; withFloor?: boolean; tall?: boolean; lampOn?: boolean; season?: string | null }) {
   const structure = structureOf(a, room);
   const row = (offset: number) => (
     <div className="shelf-cell flex h-[30px] items-end gap-[2px] !px-2" aria-hidden>
@@ -49,7 +51,7 @@ export function StylePreview({ a, room, withFloor = false, tall = false, lampOn 
   return (
     <div
       data-style={a.id}
-      {...roomAttrs(room)}
+      {...roomAttrs(room, undefined, season)}
       className={`room relative flex items-end overflow-hidden rounded-lg px-4 pt-3 ${tall ? "h-[190px] justify-end pr-[8%]" : "h-[118px] justify-center"} ${withFloor ? "pb-[34px]" : ""}`}
       style={{ ...roomStyle(room), backgroundAttachment: "scroll" }}
     >
@@ -113,12 +115,14 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
 
   const pick = (patch: Partial<RoomSettings>) => setRoom(patch);
   const [lampOn, toggleLamp] = useLamp();
+  const season = useSeason(room);
+  const coming = nextFestival(new Date());
 
   return (
     <Sheet open={open} onClose={onClose} title="Decorate your room" wide>
       {/* live preview + tabs stay in view while you scroll the options */}
       <div className="sticky -top-1 z-10 -mx-5 bg-paper px-5 pb-3 pt-1">
-        <StylePreview a={current} room={room} withFloor tall lampOn={lampOn} />
+        <StylePreview a={current} room={room} withFloor tall lampOn={lampOn} season={season} />
         <div className="mt-3 grid grid-cols-4 gap-1 rounded-full bg-ink/5 p-1" role="tablist" aria-label="Editor sections">
           {TABS.map((t) => (
             <button
@@ -367,6 +371,39 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
             value={String(room?.lampLevel ?? 2)}
             onPick={(id) => pick({ lampLevel: id === "2" ? undefined : (Number(id) as 1 | 3) })}
           />
+          <fieldset>
+            <legend className="label">Seasonal touches</legend>
+            <div className="flex gap-2" role="radiogroup" aria-label="Seasonal touches">
+              {[true, false].map((on) => (
+                <button
+                  key={String(on)}
+                  type="button"
+                  role="radio"
+                  aria-checked={(room?.seasonal !== "off") === on}
+                  onClick={() => pick({ seasonal: on ? undefined : "off" })}
+                  className={`rounded-xl border px-4 py-2 text-sm ${(room?.seasonal !== "off") === on ? "border-accent bg-accent/10" : "border-line text-ink-soft"}`}
+                >
+                  {on ? "On" : "Off"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-sm text-ink-soft">
+              Little touches around the window that change by themselves: autumn leaves, Diwali diyas, a Christmas wreath, winter frost, Holi colours, spring blossom.
+              {room?.seasonal !== "off" && season && (
+                <>
+                  {" "}
+                  Right now: <span aria-hidden>{SEASONS[season].icon}</span> {SEASONS[season].name}.
+                </>
+              )}
+              {room?.seasonal !== "off" && coming && coming.season !== season && (
+                <>
+                  {" "}
+                  Coming up: <span aria-hidden>{SEASONS[coming.season].icon}</span> {SEASONS[coming.season].name} from {coming.date.toLocaleDateString(undefined, { day: "numeric", month: "long" })}.
+                </>
+              )}
+            </p>
+          </fieldset>
+
           <PillRow
             label="Fairy lights"
             options={[{ id: "none", name: "None" }, ...FAIRY_LIGHTS.map((f) => ({ id: f.id, name: f.name, swatch: f.color }))]}
@@ -375,7 +412,7 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
           />
 
           {hasLightingChanges(room) && (
-            <button type="button" className="btn-ghost" onClick={() => setRoom({ time: undefined, weather: undefined, lampTone: undefined, lampLevel: undefined, fairy: undefined })}>
+            <button type="button" className="btn-ghost" onClick={() => setRoom({ time: undefined, weather: undefined, lampTone: undefined, lampLevel: undefined, fairy: undefined, seasonal: undefined })}>
               ↺ Back to normal lighting
             </button>
           )}

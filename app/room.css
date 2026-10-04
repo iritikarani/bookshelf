@@ -1112,3 +1112,125 @@
   .window-weather::after,
   .fairy-bulbs { animation: none !important; }
 }
+
+/* ───── seasonal touches around the window (lib/seasons.ts, SeasonTouches in RoomScene) ───── */
+.season-outside,
+.season-frost,
+.season-toran,
+.season-diyas,
+.season-wreath { display: none; pointer-events: none; }
+
+/* things drifting past outside */
+.season-outside {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  animation: season-drift var(--drift-time, 10s) linear infinite;
+}
+[data-season="autumn"] .season-outside {
+  display: block;
+  --drift-time: 11s;
+  --dx: 40px;
+  --dy: 90px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cpath d='M12 14 q5 -6 10 0 q-5 6 -10 0z' fill='%23d9822b' transform='rotate(25 17 14)'/%3E%3Cpath d='M58 40 q5 -6 10 0 q-5 6 -10 0z' fill='%23b5462b' transform='rotate(-30 63 40)'/%3E%3Cpath d='M30 70 q4 -5 8 0 q-4 5 -8 0z' fill='%23e3a83b' transform='rotate(60 34 70)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130'%3E%3Cpath d='M80 20 q4 -5 8 0 q-4 5 -8 0z' fill='%23c9662a' transform='rotate(-50 84 20)'/%3E%3Cpath d='M20 100 q5 -6 10 0 q-5 6 -10 0z' fill='%23a8552f' transform='rotate(15 25 100)'/%3E%3C/svg%3E") 37px 23px;
+}
+[data-season="spring"] .season-outside {
+  display: block;
+  --drift-time: 13s;
+  --dx: 50px;
+  --dy: 80px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='%23f6b7c8'%3E%3Cellipse cx='10' cy='12' rx='3' ry='1.8' transform='rotate(30 10 12)'/%3E%3Cellipse cx='52' cy='34' rx='2.6' ry='1.6' transform='rotate(-20 52 34)'/%3E%3Cellipse cx='30' cy='64' rx='3' ry='1.8' fill='%23fbd3de' transform='rotate(50 30 64)'/%3E%3C/g%3E%3C/svg%3E");
+}
+[data-season="christmas"] .season-outside,
+[data-season="winter"] .season-outside {
+  display: block;
+  --drift-time: 9s;
+  --dx: 10px;
+  --dy: 70px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Cg fill='white' opacity='0.85'%3E%3Ccircle cx='10' cy='12' r='1.4'/%3E%3Ccircle cx='45' cy='30' r='1.1'/%3E%3Ccircle cx='26' cy='56' r='1.6'/%3E%3C/g%3E%3C/svg%3E");
+}
+[data-season="holi"] .season-outside {
+  display: block;
+  --drift-time: 16s;
+  --dx: 60px;
+  --dy: -60px;
+  background:
+    radial-gradient(circle at 18px 22px, rgba(240, 80, 150, 0.6), transparent 11px) 0 0 / 96px 84px,
+    radial-gradient(circle at 60px 34px, rgba(250, 196, 50, 0.62), transparent 13px) 0 0 / 96px 84px,
+    radial-gradient(circle at 34px 64px, rgba(70, 170, 230, 0.55), transparent 12px) 0 0 / 96px 84px,
+    radial-gradient(circle at 46px 14px, rgba(110, 196, 80, 0.52), transparent 10px) 0 0 / 70px 110px,
+    radial-gradient(circle at 12px 80px, rgba(170, 90, 220, 0.5), transparent 12px) 0 0 / 70px 110px;
+  filter: blur(1px);
+}
+@keyframes season-drift {
+  from { background-position: 0 0; }
+  to { background-position: var(--dx) var(--dy); }
+}
+
+/* frost creeping in from the corners of the glass */
+[data-season="winter"] .season-frost,
+[data-season="christmas"] .season-frost {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    radial-gradient(ellipse 40% 42% at 0 100%, rgba(255, 255, 255, 0.85), transparent 72%),
+    radial-gradient(ellipse 36% 38% at 100% 100%, rgba(255, 255, 255, 0.8), transparent 72%),
+    radial-gradient(ellipse 28% 28% at 100% 0, rgba(255, 255, 255, 0.6), transparent 72%),
+    radial-gradient(ellipse 26% 26% at 0 0, rgba(255, 255, 255, 0.55), transparent 72%);
+}
+
+/* Diwali: a marigold toran across the top of the window, and diyas on the sill */
+[data-season="diwali"] .season-toran {
+  display: block;
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  top: -10px;
+  height: 24px;
+  z-index: 5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='24'%3E%3Cpath d='M0 3 Q18 14 36 3' fill='none' stroke='%237a3b12' stroke-width='0.8'/%3E%3Cpath d='M18 10 Q21.5 15.5 18 22 Q14.5 15.5 18 10z' fill='%234f8a3c'/%3E%3Cpath d='M18 11 V21' stroke='%23366b2a' stroke-width='0.5'/%3E%3Cg stroke='%23c2621b' stroke-width='0.6'%3E%3Ccircle cx='0' cy='3' r='3.2' fill='%23f6b93b'/%3E%3Ccircle cx='9' cy='7.1' r='3.2' fill='%23f28c28'/%3E%3Ccircle cx='18' cy='8.5' r='3.2' fill='%23f6b93b'/%3E%3Ccircle cx='27' cy='7.1' r='3.2' fill='%23f28c28'/%3E%3Ccircle cx='36' cy='3' r='3.2' fill='%23f6b93b'/%3E%3C/g%3E%3C/svg%3E") repeat-x;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+}
+[data-season="diwali"] .season-diyas {
+  display: flex;
+  justify-content: space-around;
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 11px;
+  z-index: 4;
+}
+.diya { width: 18px; height: 16px; overflow: visible; }
+.room-window:has(.window-mullions--wide) .diya { width: 13px; height: 12px; }
+.room-window:has(.window-mullions--wide) .season-wreath { width: 30px; top: 8%; }
+.diya-flame { transform-box: fill-box; transform-origin: bottom; animation: diya-flicker 1.6s ease-in-out infinite alternate; }
+.diya-glow { animation: diya-glow 2.2s ease-in-out infinite alternate; }
+@keyframes diya-flicker {
+  from { transform: scale(1, 1) rotate(-2deg); }
+  to { transform: scale(0.92, 1.08) rotate(2deg); }
+}
+@keyframes diya-glow {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+/* Christmas: a wreath hung on the window */
+[data-season="christmas"] .season-wreath {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  width: min(18%, 48px);
+  transform: translateX(-50%);
+  z-index: 4;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.25));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-outside,
+  .diya-flame,
+  .diya-glow { animation: none !important; }
+}

@@ -9,7 +9,7 @@ import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { finishedCount, newlyUnlocked } from "@/lib/rewards";
 import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
-import { useRoomClock } from "@/lib/useClock";
+import { useRoomClock, useSeason } from "@/lib/useClock";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
@@ -45,6 +45,7 @@ function AppInner() {
   const { user, authReady, loading, profile, shelves, books, itemsByShelf } = lib;
   const [tab, setTab] = useTab();
   useRoomClock(profile?.room);
+  const season = useSeason(profile?.room);
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -140,7 +141,7 @@ function AppInner() {
   };
 
   return (
-    <div data-style={aesthetic.id} {...roomAttrs(profile?.room)} style={roomStyle(profile?.room)} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
+    <div data-style={aesthetic.id} {...roomAttrs(profile?.room, undefined, season)} style={roomStyle(profile?.room)} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2">
         Skip to shelves
       </a>
