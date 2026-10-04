@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { coverImageOf } from "@/lib/covers";
 import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
+import { shareFiles, shareMessage } from "@/lib/shareMessage";
 import { averageRating, hasLine } from "@/lib/stats";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { BookCover } from "./BookCover";
@@ -398,8 +399,7 @@ export function WrappedSheet({
     setBusy(true);
     try {
       const files = await Promise.all(slides.map(async (_, i) => new File([await (await fetch(await render(i))).blob()], fileName(i), { type: "image/png" })));
-      if (navigator.canShare?.({ files })) await navigator.share({ files, title: `My ${shownYear} in books` });
-      else await download(true);
+      if ((await shareFiles(files, shareMessage({ publicUrl }), `My ${shownYear} in books`)) === "unsupported") await download(true);
     } catch {
       /* closed the share sheet */
     } finally {

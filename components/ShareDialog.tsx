@@ -3,6 +3,7 @@
 import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { coverImageOf, heightFactor } from "@/lib/covers";
+import { shareFiles, shareMessage } from "@/lib/shareMessage";
 import { summary } from "@/lib/stats";
 import { useSeason } from "@/lib/useClock";
 import { perCaseOf, roomAttrs, roomStyle, structureOf, type RoomSettings } from "@/lib/room";
@@ -260,8 +261,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
             onClick={async () => {
               try {
                 const file = await pngFile();
-                if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "My bookshelf", url: publicUrl ?? undefined });
-                else if (publicUrl) await navigator.share({ title: "My bookshelf", url: publicUrl });
+                await shareFiles([file], shareMessage({ publicUrl }), "My bookshelf");
               } catch {
                 /* closed the share sheet */
               }
