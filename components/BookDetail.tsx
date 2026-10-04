@@ -87,8 +87,8 @@ export function BookDetail(props: BookDetailProps) {
               </>
             ) : (
               <>
-                <p className="font-serif text-lg" style={{ color: book.status === "reading" ? MARKS.reading.color : MARKS.to_read.color }}>
-                  {book.status === "reading" ? "📖 Reading it now" : "🔖 Not read yet"}
+                <p className="font-serif text-lg" style={{ color: MARKS[book.status === "read" ? "to_read" : book.status].color }}>
+                  {book.status === "reading" ? "📖 Reading it now" : book.status === "dnf" ? "⏸ Didn’t finish" : "🔖 Want to read"}
                 </p>
                 {book.status === "reading" && (
                   <ReadingProgress book={book} color={MARKS.reading.color} onSave={canEdit && onProgress ? (patch) => onProgress(book, patch) : undefined} />
@@ -115,7 +115,7 @@ export function BookDetail(props: BookDetailProps) {
           className="relative flex flex-col border-t border-line bg-paper px-6 pb-8 pt-8 md:border-l md:border-t-0 md:px-9 md:shadow-[inset_28px_0_30px_-26px_rgba(0,0,0,0.22)]"
           style={{ backgroundImage: "repeating-linear-gradient(180deg, transparent 0 31px, rgb(var(--line) / 0.55) 31px 32px)", backgroundPositionY: "18px" }}
         >
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-ink-soft">My journal</p>
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink-soft">My journal</p>
 
           {book.what_i_liked?.trim() && (
             <section className="mt-5">
@@ -180,7 +180,7 @@ export function BookDetail(props: BookDetailProps) {
                     <ChevronRight />
                   </button>
                 </div>
-                <p className="mt-1 font-mono text-[11px] text-ink-soft">
+                <p className="mt-1 font-mono text-xs text-ink-soft">
                   Spot {index + 1} of {shelfSize} on {shelf?.name}
                 </p>
               </fieldset>
@@ -238,15 +238,15 @@ export function BookDetail(props: BookDetailProps) {
 }
 
 function Bookplate({ owner, date, status }: { owner?: string | null; date: string | null; status: ReadStatus }) {
-  const line = date ? `Read ${formatDate(date)}` : status === "reading" ? "Reading now" : status === "to_read" ? "To be read" : "Read";
+  const line = date ? `Read ${formatDate(date)}` : status === "reading" ? "Reading now" : status === "to_read" ? "To be read" : status === "dnf" ? "Set aside" : "Read";
   return (
     <div className="flex justify-center" aria-label={`Ex libris${owner ? ` ${owner}` : ""}, ${line}`} role="img">
       <div className="-rotate-2 rounded-sm border-2 border-accent/70 p-1 text-accent opacity-90">
         <div className="flex min-w-[200px] flex-col items-center border border-dashed border-accent/60 px-6 py-3">
-          <span className="text-[10px] tracking-[0.4em]">✦ ✦ ✦</span>
+          <span className="text-[11px] tracking-[0.4em]">✦ ✦ ✦</span>
           <span className="font-serif text-2xl tracking-[0.25em]">EX LIBRIS</span>
           {owner && <span className="mt-0.5 font-serif text-sm italic">{owner}</span>}
-          <span className="mt-1 font-mono text-[11px] uppercase tracking-widest">{line}</span>
+          <span className="mt-1 font-mono text-xs uppercase tracking-widest">{line}</span>
         </div>
       </div>
     </div>

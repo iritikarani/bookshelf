@@ -5,8 +5,9 @@ import type { Book, ReadStatus } from "@/lib/types";
 /** Marks: a favourite heart plus where the book is in your reading life. */
 export const MARKS = {
   favourite: { label: "Favourite", short: "Favourite", icon: "❤", color: "#d6455f" },
-  reading: { label: "Reading now", short: "Reading", icon: "📖", color: "#e0a031" },
-  to_read: { label: "To read", short: "To read", icon: "🔖", color: "#4f86c9" },
+  reading: { label: "Reading", short: "Reading", icon: "📖", color: "#e0a031" },
+  to_read: { label: "Want to read", short: "Want to read", icon: "🔖", color: "#4f86c9" },
+  dnf: { label: "Didn’t finish", short: "DNF", icon: "⏸", color: "#8a7f74" },
 } as const;
 
 export type MarkFilter = "all" | "favourite" | "reading" | "to_read";
@@ -62,6 +63,7 @@ export function MarkChips({ book, className = "" }: { book: Pick<Book, "favourit
   if (book.favourite) chips.push({ key: "favourite", ...MARKS.favourite });
   if (book.status === "reading") chips.push({ key: "reading", ...MARKS.reading });
   if (book.status === "to_read") chips.push({ key: "to_read", ...MARKS.to_read });
+  if (book.status === "dnf") chips.push({ key: "dnf", ...MARKS.dnf });
   if (!chips.length) return null;
   return (
     <span className={`inline-flex flex-wrap gap-1.5 ${className}`}>
@@ -75,7 +77,7 @@ export function MarkChips({ book, className = "" }: { book: Pick<Book, "favourit
   );
 }
 
-/** Editor for marks: a favourite toggle and a read / reading / to-read choice. */
+/** Editor for marks: a favourite toggle and a want to read / reading / finished / DNF choice. */
 export function MarkPicker({
   favourite,
   status,
@@ -88,9 +90,10 @@ export function MarkPicker({
   onStatus: (s: ReadStatus) => void;
 }) {
   const statuses: { id: ReadStatus; label: string; icon: string; color?: string }[] = [
-    { id: "read", label: "Read it", icon: "✓" },
-    { id: "reading", label: MARKS.reading.label, icon: MARKS.reading.icon, color: MARKS.reading.color },
     { id: "to_read", label: MARKS.to_read.label, icon: MARKS.to_read.icon, color: MARKS.to_read.color },
+    { id: "reading", label: MARKS.reading.label, icon: MARKS.reading.icon, color: MARKS.reading.color },
+    { id: "read", label: "Finished", icon: "✓" },
+    { id: "dnf", label: "DNF", icon: MARKS.dnf.icon, color: MARKS.dnf.color },
   ];
   return (
     <div className="flex flex-wrap items-center gap-2">

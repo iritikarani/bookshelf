@@ -21,7 +21,7 @@ export function summary(books: Book[]) {
   return {
     booksRead: read.length,
     avgRating: averageRating(read),
-    linesKept: books.filter(hasLine).length,
+    quotesSaved: books.filter(hasLine).length,
     toRead: toRead.length,
   };
 }

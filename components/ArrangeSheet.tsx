@@ -103,7 +103,7 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
                   <DecorArt kind={d.kind} />
                 </span>
               </span>
-              <span className="text-[11px] leading-tight text-ink-soft">{d.name}</span>
+              <span className="text-xs leading-tight text-ink-soft">{d.name}</span>
             </button>
           ))}
         </div>

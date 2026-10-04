@@ -78,12 +78,13 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   const [genre, setGenre] = useState(editing?.genre ?? "");
   const [description, setDescription] = useState(editing?.short_description ?? "");
   const [shelfId, setShelfId] = useState(editing?.shelf_id ?? defaultShelfId ?? shelves[0]?.id ?? "");
-  const [dateFinished, setDateFinished] = useState(editing?.date_finished ?? todayISO());
+  // Never filled in for you: a new book might not have been read yet.
+  const [dateFinished, setDateFinished] = useState(editing?.date_finished ?? "");
   const [rating, setRating] = useState(editing?.rating ?? 0);
   const [liked, setLiked] = useState(editing?.what_i_liked ?? "");
   const [line, setLine] = useState(editing?.favourite_line ?? "");
   const [display, setDisplay] = useState<BookDisplay>(editing?.display ?? "spine");
-  const [status, setStatus] = useState<ReadStatus>(editing?.status ?? "read");
+  const [status, setStatus] = useState<ReadStatus>(editing?.status ?? "to_read");
   const [favourite, setFavourite] = useState(editing?.favourite ?? false);
 
   const [covers, setCovers] = useState<string[]>(editing?.cover_url ? [editing.cover_url] : []);
@@ -97,22 +98,26 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         : { kind: "generated" },
   );
 
+  // Adding starts with one search box; picking a result (or "add by hand") opens the short form.
+  const [stage, setStage] = useState<"find" | "form">(editing ? "form" : "find");
+  const [manual, setManual] = useState(Boolean(editing));
+  const [query, setQuery] = useState("");
+  const [showPublisher, setShowPublisher] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [highlight, setHighlight] = useState(-1);
-  const [touched, setTouched] = useState(false); // only search after the user types
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(Boolean(editing));
+  const [moreOpen, setMoreOpen] = useState(Boolean(editing));
   const pickToken = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const finished = status === "read";
 
-  // Debounced search across Google Books + Open Library.
+  const searchable = query.trim().length >= 2 || publisher.trim().length >= 2;
+
+  // Debounced search across Google Books + Open Library: a title, an author or an ISBN.
   useEffect(() => {
-    if (!touched || (title.trim().length < 2 && author.trim().length < 2 && publisher.trim().length < 2)) {
+    if (stage !== "find" || !searchable) {
       setResults([]);
       setSearching(false);
       return;
@@ -121,16 +126,9 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
     setSearching(true);
     const t = window.setTimeout(async () => {
       try {
-        const r = await searchBooks(title, author, ctrl.signal, publisher, (partial) => {
-          // Show what's arrived so far; the full list replaces it moments later.
-          setResults(partial);
-          setShowResults(true);
-        });
-        if (!ctrl.signal.aborted) {
-          setResults(r);
-          setHighlight(-1);
-          setShowResults(true);
-        }
+        // Show what's arrived so far; the full list replaces it moments later.
+        const r = await searchBooks(query, "", ctrl.signal, publisher, (partial) => setResults(partial));
+        if (!ctrl.signal.aborted) setResults(r);
       } finally {
         if (!ctrl.signal.aborted) setSearching(false);
       }
@@ -139,12 +137,12 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       ctrl.abort();
       window.clearTimeout(t);
     };
-  }, [title, author, publisher, touched]);
+  }, [query, publisher, stage, searchable]);
 
   async function pick(r: SearchResult) {
     const token = ++pickToken.current;
-    setShowResults(false);
-    setTouched(false);
+    setStage("form");
+    setManual(false);
     setTitle(r.title);
     setAuthor(r.author);
     setYear(r.year?.toString() ?? "");
@@ -277,217 +275,199 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   }, [covers, choice]);
 
   const previewBook = { title: title || "Untitled", author, cover_color: swatch, cover_url: null, uploaded_cover: null };
-  const activeDescendant = highlight >= 0 ? `${listId}-opt-${highlight}` : undefined;
 
-  return (
-    <form onSubmit={submit} className="space-y-6 pt-1" noValidate>
-      {/* ── Search ── */}
-      <div className="relative">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="label" htmlFor="ab-title">Title</label>
-            <div className="relative">
-              <input
-                id="ab-title"
-                data-autofocus
-                className="field pr-9"
-                value={title}
-                autoComplete="off"
-                placeholder="e.g. Jane Eyre"
-                role="combobox"
-                aria-expanded={showResults && results.length > 0}
-                aria-controls={listId}
-                aria-autocomplete="list"
-                aria-activedescendant={activeDescendant}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  setTouched(true);
-                }}
-                onFocus={() => results.length && setShowResults(true)}
-                onKeyDown={(e) => {
-                  if (!showResults || !results.length) return;
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHighlight((h) => (h + 1) % results.length);
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHighlight((h) => (h <= 0 ? results.length - 1 : h - 1));
-                  } else if (e.key === "Enter" && highlight >= 0) {
-                    e.preventDefault();
-                    pick(results[highlight]);
-                  } else if (e.key === "Escape") {
-                    e.stopPropagation();
-                    e.nativeEvent.stopImmediatePropagation();
-                    setShowResults(false);
-                  }
-                }}
-              />
-              <SearchIcon className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft ${searching ? "animate-pulse" : ""}`} width={16} height={16} />
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="ab-author">Author</label>
-            <input
-              id="ab-author"
-              className="field"
-              value={author}
-              autoComplete="off"
-              placeholder="e.g. Charlotte Brontë"
-              onChange={(e) => {
-                setAuthor(e.target.value);
-                setTouched(true);
-              }}
-            />
-          </div>
-          {!editing && (
-            <div className="sm:col-span-2">
-              <label className="label" htmlFor="ab-publisher">
-                Publisher <span className="font-normal normal-case tracking-normal text-ink-soft">(optional)</span>
-              </label>
-              <input
-                id="ab-publisher"
-                className="field"
-                value={publisher}
-                autoComplete="off"
-                list={`${listId}-publishers`}
-                placeholder="e.g. Rupa Publications, Rajkamal Prakashan"
-                onChange={(e) => {
-                  setPublisher(e.target.value);
-                  setTouched(true);
-                }}
-              />
-              <datalist id={`${listId}-publishers`}>
-                {INDIAN_PUBLISHERS.map((p) => (
-                  <option key={p} value={p} />
-                ))}
-              </datalist>
-            </div>
-          )}
+  if (stage === "find") {
+    return (
+      <div className="space-y-4 pt-1">
+        <div className="relative">
+          <SearchIcon className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft ${searching ? "animate-pulse" : ""}`} width={20} height={20} />
+          <input
+            data-autofocus
+            type="search"
+            className="field rounded-full py-3.5 pl-12 text-base"
+            placeholder="Search title, author or ISBN…"
+            aria-label="Search title, author or ISBN"
+            autoComplete="off"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && results[0] && pick(results[0])}
+          />
         </div>
-        <p className="mt-1.5 text-xs text-ink-soft" aria-live="polite">
-          {searching ? "Searching Open Library and Google Books…" : touched && (title.trim().length >= 2 || author.trim().length >= 2 || publisher.trim().length >= 2) && !results.length ? "No matches. You can still add it by hand." : "Type a title, an author or a publisher; pick a match to fill in the details."}
+        {showPublisher ? (
+          <div>
+            <label className="label" htmlFor="ab-publisher">Publisher</label>
+            <input
+              id="ab-publisher"
+              className="field"
+              value={publisher}
+              autoComplete="off"
+              list={`${listId}-publishers`}
+              placeholder="e.g. Rupa Publications, Rajkamal Prakashan"
+              onChange={(e) => setPublisher(e.target.value)}
+            />
+            <datalist id={`${listId}-publishers`}>
+              {INDIAN_PUBLISHERS.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+          </div>
+        ) : null}
+        <p className="px-1 text-sm text-ink-soft" aria-live="polite">
+          {searching && !results.length
+            ? "Searching…"
+            : searchable && !searching && !results.length
+              ? "No matches yet. Try fewer words, the author’s name, or the ISBN."
+              : !searchable
+                ? "Tap a result to add it. The cover and details fill in for you."
+                : ""}
         </p>
 
-        {showResults && results.length > 0 && (
-          <ul
-            id={listId}
-            role="listbox"
-            aria-label="Matching books"
-            className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-paper p-1 shadow-xl"
-          >
-            {results.map((r, i) => (
-              <li
-                key={r.key}
-                id={`${listId}-opt-${i}`}
-                role="option"
-                aria-selected={i === highlight}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(r)}
-                onMouseEnter={() => setHighlight(i)}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg p-2 ${i === highlight ? "bg-accent/10" : ""}`}
-              >
-                <div className="h-14 w-10 shrink-0 overflow-hidden rounded-sm bg-ink/10">
-                  {r.thumbnail ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.thumbnail} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-                  ) : (
-                    <GeneratedCover title={r.title} author="" color={defaultCoverColor(r.title)} />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{r.title}</p>
-                  <p className="truncate text-sm text-ink-soft">
-                    {r.author || "Unknown author"}
-                    {r.year && <span className="font-mono"> · {r.year}</span>}
-                  </p>
-                </div>
+        {results.length > 0 && (
+          <ul className="divide-y divide-line/70 overflow-hidden rounded-2xl ring-1 ring-line/70" aria-label="Matching books">
+            {results.map((r) => (
+              <li key={r.key}>
+                <button type="button" onClick={() => pick(r)} className="flex w-full items-center gap-3.5 p-3 text-left transition hover:bg-accent/5 active:bg-accent/10">
+                  <div className="h-[72px] w-12 shrink-0 overflow-hidden rounded-sm bg-ink/10 shadow">
+                    {r.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.thumbnail} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+                    ) : (
+                      <GeneratedCover title={r.title} author="" color={defaultCoverColor(r.title)} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 font-medium leading-snug">{r.title}</p>
+                    <p className="truncate text-sm text-ink-soft">
+                      {r.author || "Unknown author"}
+                      {r.year && <span className="font-mono"> · {r.year}</span>}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink">Add</span>
+                </button>
               </li>
             ))}
           </ul>
         )}
-      </div>
 
-      {/* ── Cover ── */}
-      <fieldset>
-        <legend className="label">Cover</legend>
-        <div className="-mx-1 flex gap-3 overflow-x-auto px-1.5 pb-2 pt-1.5 no-scrollbar" role="radiogroup" aria-label="Choose a cover">
-          {probing &&
-            [0, 1, 2].map((i) => <div key={i} className="h-[108px] w-[72px] shrink-0 animate-pulse rounded bg-ink/10" aria-hidden />)}
-          {coverOptions.map((url, i) => (
-            <CoverOption key={url} selected={choice.kind === "url" && choice.url === url} label={`Edition cover ${i + 1}`} onSelect={() => setChoice({ kind: "url", url })}>
-              <BookCover book={{ ...previewBook, cover_url: url }} />
-            </CoverOption>
-          ))}
-          <CoverOption selected={choice.kind === "generated"} label="Designed cover" onSelect={() => setChoice({ kind: "generated" })}>
-            <GeneratedCover title={title || "Your book"} author={author} color={swatch} />
-          </CoverOption>
-          {choice.kind === "upload" && (
-            <CoverOption selected label="Your photo" onSelect={() => {}}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={choice.dataUrl} alt="" className="h-full w-full object-cover" />
-            </CoverOption>
-          )}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-line pt-4 text-sm">
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
-            className="flex h-[108px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-line text-center text-[11px] text-ink-soft hover:border-accent hover:text-accent"
+            className="font-medium text-accent underline-offset-2 hover:underline"
+            onClick={() => {
+              setTitle(query.trim());
+              setManual(true);
+              setStage("form");
+            }}
           >
-            <UploadIcon width={18} height={18} />
-            Upload photo
+            Can’t find it? Add it by hand
           </button>
-          <input ref={fileRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} onChange={(e) => onUpload(e.target.files?.[0])} aria-label="Upload a photo of the cover" />
+          {!showPublisher && (
+            <button type="button" className="text-ink-soft underline-offset-2 hover:text-ink hover:underline" onClick={() => setShowPublisher(true)}>
+              Search by publisher
+            </button>
+          )}
         </div>
-        {choice.kind === "generated" && (
-          <div className="mt-2">
-            <p className="mb-1.5 text-xs text-ink-soft">{!probing && !coverOptions.length && title ? "No cover found, so we designed one. Pick a colour:" : "Cover colour:"}</p>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cover colour">
-              {COVER_SWATCHES.map((s) => (
-                <button
-                  key={s.hex}
-                  type="button"
-                  role="radio"
-                  aria-checked={swatch === s.hex}
-                  aria-label={s.name}
-                  title={s.name}
-                  onClick={() => setSwatch(s.hex)}
-                  className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${swatch === s.hex ? "border-ink ring-2 ring-accent ring-offset-2 ring-offset-paper" : "border-ink/10"}`}
-                  style={{ backgroundColor: s.hex }}
-                />
-              ))}
-            </div>
-          </div>
+      </div>
+    );
+  }
+
+  const coverPicker = (
+    <fieldset>
+      <legend className="label">Cover</legend>
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1.5 pb-2 pt-1.5 no-scrollbar" role="radiogroup" aria-label="Choose a cover">
+        {probing && [0, 1, 2].map((i) => <div key={i} className="h-[108px] w-[72px] shrink-0 animate-pulse rounded bg-ink/10" aria-hidden />)}
+        {coverOptions.map((url, i) => (
+          <CoverOption key={url} selected={choice.kind === "url" && choice.url === url} label={`Edition cover ${i + 1}`} onSelect={() => setChoice({ kind: "url", url })}>
+            <BookCover book={{ ...previewBook, cover_url: url }} />
+          </CoverOption>
+        ))}
+        <CoverOption selected={choice.kind === "generated"} label="Designed cover" onSelect={() => setChoice({ kind: "generated" })}>
+          <GeneratedCover title={title || "Your book"} author={author} color={swatch} />
+        </CoverOption>
+        {choice.kind === "upload" && (
+          <CoverOption selected label="Your photo" onSelect={() => {}}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={choice.dataUrl} alt="" className="h-full w-full object-cover" />
+          </CoverOption>
         )}
-      </fieldset>
-
-      {/* ── Book details (auto-filled, editable) ── */}
-      <details open={detailsOpen} onToggle={(e) => setDetailsOpen(e.currentTarget.open)} className="rounded-xl border border-line px-4 py-3">
-        <summary className="cursor-pointer select-none text-sm font-medium">
-          Book details{" "}
-          <span className="font-mono text-xs font-normal text-ink-soft">{[year, pages && `${pages}p`, genre].filter(Boolean).join(" · ")}</span>
-        </summary>
-        <div className="mt-3 grid grid-cols-3 gap-3">
-          <div>
-            <label className="label" htmlFor="ab-year">Year</label>
-            <input id="ab-year" className="field font-mono" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value.replace(/[^0-9-]/g, ""))} />
-          </div>
-          <div>
-            <label className="label" htmlFor="ab-pages">Pages</label>
-            <input id="ab-pages" className="field font-mono" inputMode="numeric" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} />
-          </div>
-          <div>
-            <label className="label" htmlFor="ab-genre">Genre</label>
-            <input id="ab-genre" className="field" value={genre} onChange={(e) => setGenre(e.target.value)} />
-          </div>
-          <div className="col-span-3">
-            <label className="label" htmlFor="ab-desc">About the book</label>
-            <textarea id="ab-desc" rows={2} className="field resize-y" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex h-[108px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-line text-center text-xs text-ink-soft hover:border-accent hover:text-accent"
+        >
+          <UploadIcon width={18} height={18} />
+          Upload photo
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} onChange={(e) => onUpload(e.target.files?.[0])} aria-label="Upload a photo of the cover" />
+      </div>
+      {choice.kind === "generated" && (
+        <div className="mt-2">
+          <p className="mb-1.5 text-sm text-ink-soft">{!probing && !coverOptions.length && title && !manual ? "No cover found, so we designed one. Pick a colour:" : "Cover colour:"}</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cover colour">
+            {COVER_SWATCHES.map((sw) => (
+              <button
+                key={sw.hex}
+                type="button"
+                role="radio"
+                aria-checked={swatch === sw.hex}
+                aria-label={sw.name}
+                title={sw.name}
+                onClick={() => setSwatch(sw.hex)}
+                className={`h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 ${swatch === sw.hex ? "border-ink ring-2 ring-accent ring-offset-2 ring-offset-paper" : "border-ink/10"}`}
+                style={{ backgroundColor: sw.hex }}
+              />
+            ))}
           </div>
         </div>
-      </details>
+      )}
+    </fieldset>
+  );
 
-      {/* ── Journal ── */}
+  const shownCover =
+    choice.kind === "upload" ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={choice.dataUrl} alt="" className="h-full w-full object-cover" />
+    ) : choice.kind === "url" ? (
+      <BookCover book={{ ...previewBook, cover_url: choice.url }} />
+    ) : probing ? (
+      <div className="h-full w-full animate-pulse bg-ink/10" />
+    ) : (
+      <GeneratedCover title={title || "Your book"} author={author} color={swatch} />
+    );
+
+  return (
+    <form onSubmit={submit} className="space-y-6 pt-1" noValidate>
+      {/* ── The book ── */}
+      {manual ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="ab-title">Title</label>
+            <input id="ab-title" data-autofocus className="field" value={title} autoComplete="off" placeholder="e.g. Jane Eyre" onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <label className="label" htmlFor="ab-author">Author</label>
+            <input id="ab-author" className="field" value={author} autoComplete="off" placeholder="e.g. Charlotte Brontë" onChange={(e) => setAuthor(e.target.value)} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-4">
+          <div className="h-[120px] w-20 shrink-0 overflow-hidden rounded-[3px] shadow-[0_10px_20px_-8px_rgba(0,0,0,0.5)]">{shownCover}</div>
+          <div className="min-w-0">
+            <p className="font-serif text-2xl leading-tight">{title}</p>
+            {author && <p className="mt-0.5 text-ink-soft">{author}</p>}
+            <p className="mt-1 font-mono text-xs text-ink-soft">{[year, pages && `${pages} pages`].filter(Boolean).join(" · ")}</p>
+            {!editing && (
+              <button type="button" className="mt-2 text-sm font-medium text-accent underline-offset-2 hover:underline" onClick={() => setStage("find")}>
+                Not this one? Search again
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── The essentials ── */}
       <div>
-        <span className="label">Marks</span>
+        <span className="label">Where is it in your reading?</span>
         <MarkPicker favourite={favourite} status={status} onFavourite={setFavourite} onStatus={setStatus} />
       </div>
 
@@ -495,8 +475,8 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         <div>
           <label className="label" htmlFor="ab-shelf">Shelf</label>
           <select id="ab-shelf" className="field" value={shelfId} onChange={(e) => setShelfId(e.target.value)}>
-            {shelves.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+            {shelves.map((sh) => (
+              <option key={sh.id} value={sh.id}>{sh.name}</option>
             ))}
           </select>
         </div>
@@ -512,28 +492,13 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         )}
         {finished && (
           <div>
-            <label className="label" htmlFor="ab-date">Date finished</label>
-            <input id="ab-date" type="date" className="field font-mono" value={dateFinished} max={todayISO()} onChange={(e) => setDateFinished(e.target.value)} />
+            <label className="label" htmlFor="ab-date">Date finished <span className="font-normal normal-case tracking-normal text-ink-soft">(optional)</span></label>
+            <div className="flex items-center gap-2">
+              <input id="ab-date" type="date" className="field font-mono" value={dateFinished} max={todayISO()} onChange={(e) => setDateFinished(e.target.value)} />
+              <button type="button" className="btn-ghost shrink-0 px-3" onClick={() => setDateFinished(todayISO())}>Today</button>
+            </div>
           </div>
         )}
-      </div>
-
-      <div>
-        <span className="label" id="ab-display">Stand it on the shelf</span>
-        <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-labelledby="ab-display">
-          {(["spine", "cover"] as BookDisplay[]).map((d) => (
-            <button
-              key={d}
-              type="button"
-              role="radio"
-              aria-checked={display === d}
-              onClick={() => setDisplay(d)}
-              className={`rounded-full px-3.5 py-1.5 text-sm ${display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
-            >
-              {d === "spine" ? "Spine out" : "Cover facing out"}
-            </button>
-          ))}
-        </div>
       </div>
 
       {finished && (
@@ -543,21 +508,68 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         </div>
       )}
 
-      <div>
-        <label className="label" htmlFor="ab-liked">{status === "to_read" ? "Why I want to read it" : status === "reading" ? "What I'm enjoying so far" : "What I liked"}</label>
-        <textarea
-          id="ab-liked"
-          rows={3}
-          className="field resize-y"
-          placeholder={status === "to_read" ? "Who recommended it, what drew you in…" : "The part, character or moment that stayed with you"}
-          value={liked}
-          onChange={(e) => setLiked(e.target.value)}
-        />
-      </div>
-      <div>
-        <label className="label" htmlFor="ab-line">Favourite line</label>
-        <textarea id="ab-line" rows={2} className="field resize-y font-serif text-lg" placeholder="A sentence worth keeping" value={line} onChange={(e) => setLine(e.target.value)} />
-      </div>
+      {/* ── Everything else, optional ── */}
+      <details open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)} className="rounded-xl border border-line px-4 py-3">
+        <summary className="cursor-pointer select-none py-1 font-medium">
+          {editing ? "Cover, notes and details" : "Add notes, cover and details"} <span className="font-normal text-ink-soft">(optional)</span>
+        </summary>
+        <div className="mt-4 space-y-6">
+          <div>
+            <label className="label" htmlFor="ab-liked">{status === "to_read" ? "Why I want to read it" : status === "reading" ? "What I'm enjoying so far" : "What I liked"}</label>
+            <textarea
+              id="ab-liked"
+              rows={3}
+              className="field resize-y"
+              placeholder={status === "to_read" ? "Who recommended it, what drew you in…" : "The part, character or moment that stayed with you"}
+              value={liked}
+              onChange={(e) => setLiked(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="ab-line">Favourite line</label>
+            <textarea id="ab-line" rows={2} className="field resize-y font-serif text-lg" placeholder="A sentence worth keeping" value={line} onChange={(e) => setLine(e.target.value)} />
+          </div>
+
+          {coverPicker}
+
+          <div>
+            <span className="label" id="ab-display">Stand it on the shelf</span>
+            <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-labelledby="ab-display">
+              {(["spine", "cover"] as BookDisplay[]).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="radio"
+                  aria-checked={display === d}
+                  onClick={() => setDisplay(d)}
+                  className={`rounded-full px-4 py-2 text-sm ${display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+                >
+                  {d === "spine" ? "Spine out" : "Cover facing out"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="label" htmlFor="ab-year">Year</label>
+              <input id="ab-year" className="field font-mono" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value.replace(/[^0-9-]/g, ""))} />
+            </div>
+            <div>
+              <label className="label" htmlFor="ab-pages">Pages</label>
+              <input id="ab-pages" className="field font-mono" inputMode="numeric" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} />
+            </div>
+            <div>
+              <label className="label" htmlFor="ab-genre">Genre</label>
+              <input id="ab-genre" className="field" value={genre} onChange={(e) => setGenre(e.target.value)} />
+            </div>
+            <div className="col-span-3">
+              <label className="label" htmlFor="ab-desc">About the book</label>
+              <textarea id="ab-desc" rows={2} className="field resize-y" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+          </div>
+        </div>
+      </details>
 
       {formError && (
         <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
@@ -566,7 +578,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       <div className="sticky -bottom-6 -mx-5 -mb-6 flex justify-end gap-2 border-t border-line bg-paper px-5 py-3">
         <button type="button" className="btn-ghost" onClick={() => onDone(null)}>Cancel</button>
         <button type="submit" className="btn-primary px-6" disabled={saving || !title.trim()}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Put it on the shelf"}
+          {saving ? "Saving…" : editing ? "Save changes" : "Add to shelf"}
         </button>
       </div>
     </form>

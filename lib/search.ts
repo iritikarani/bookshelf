@@ -245,6 +245,16 @@ export async function searchBooks(
   // Only the author typed (no publisher): list their books as free text.
   if (!t && a && !p) [t, a] = [a, ""];
 
+  // An ISBN (10 or 13 digits, dashes and spaces allowed) finds that exact edition.
+  const isbn = !a && !p ? t.replace(/[\s-]/g, "") : "";
+  if (/^(97[89])?\d{9}[\dXx]$/.test(isbn)) {
+    const [ol, google] = await Promise.all([
+      searchOpenLibrary(`isbn:${isbn}`, "", signal).catch(() => [] as SearchResult[]),
+      searchGoogle(`isbn:${isbn}`, signal).catch(() => [] as SearchResult[]),
+    ]);
+    return mergeResults(ol, google);
+  }
+
   const quote = (x: string) => `"${x.replace(/"/g, "")}"`;
   // With more than one box filled, search fields precisely; with only a title (or only an
   // author), treat it as free text so it matches titles and author names alike.

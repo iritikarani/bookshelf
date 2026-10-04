@@ -13,7 +13,7 @@ import type { PublicShelf } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
 import { ShelfSkeleton } from "./App";
 import { BookDetail } from "./BookDetail";
-import { Header } from "./Header";
+import { Header, shelfSummary } from "./Header";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { RoomScene } from "./RoomScene";
@@ -75,11 +75,12 @@ export function PublicShelfView({ slug }: { slug: string }) {
   return (
     <div data-style={aesthetic.id} className="room min-h-dvh pb-16">
       <Header
+        title={data ? `${name ? `${name}’s` : "A reader’s"} bookshelf` : " "}
+        summary={data ? shelfSummary(books) : " "}
         stats={summary(books)}
         tab={tab}
         onTab={setTab}
-        subtitle={data ? `${name ? `${name}'s` : "A reader's"} shelf · read-only` : " "}
-        actions={<Link href="/login/" className="btn-ghost text-xs">Make your own</Link>}
+        actions={<Link href="/login/" className="btn-ghost text-sm">Make your own</Link>}
       />
       <main className="mx-auto w-full max-w-6xl px-4 pt-6 md:px-8 md:pt-8">
         {data === undefined ? (
