@@ -30,6 +30,7 @@ import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { GuestbookSheet } from "./Guestbook";
 import { Settings } from "./Settings";
+import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
 import { ShelfWall } from "./ShelfWall";
 
@@ -82,6 +83,7 @@ function AppInner() {
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [wrappedOpen, setWrappedOpen] = useState(false);
 
   // Guest book: notes friends left on the public shelf. Before the guest book's database table
   // exists (or offline) it simply stays empty.
@@ -203,6 +205,7 @@ function AppInner() {
                 { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => setArrangeOpen(true) },
                 { label: "Edit shelves", icon: <ShelvesIcon width={18} height={18} />, onSelect: () => setShelvesOpen(true) },
                 { label: "Share shelf", icon: <ShareIcon width={18} height={18} />, onSelect: () => setShareOpen(true), disabled: books.length === 0 },
+                { label: "Your year, wrapped", icon: <span className="inline-block w-[18px] text-center" aria-hidden>✨</span>, onSelect: () => setWrappedOpen(true) },
                 { label: newNotes ? `Guest book · ${newNotes} new` : "Guest book", icon: <MailIcon width={18} height={18} />, onSelect: openGuestbook },
                 { label: "Settings", icon: <GearIcon width={18} height={18} />, onSelect: () => setSettingsOpen(true) },
               ]}
@@ -261,7 +264,7 @@ function AppInner() {
         ) : (
           <>
             {showExamples && <ExampleNote />}
-            <ReadingYear shelves={viewShelves} books={viewBooks} onOpen={(b) => setOpenId(b.id)} />
+            <ReadingYear shelves={viewShelves} books={viewBooks} onOpen={(b) => setOpenId(b.id)} onWrapped={showExamples ? undefined : () => setWrappedOpen(true)} />
           </>
         )}
       </main>
@@ -349,6 +352,16 @@ function AppInner() {
         onClose={() => setShareOpen(false)}
         shelves={shelves}
         itemsByShelf={itemsByShelf}
+        books={books}
+        styleId={aesthetic.id}
+        room={profile?.room}
+        owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
+        publicUrl={store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null}
+      />
+
+      <WrappedSheet
+        open={wrappedOpen}
+        onClose={() => setWrappedOpen(false)}
         books={books}
         styleId={aesthetic.id}
         room={profile?.room}

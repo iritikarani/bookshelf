@@ -7,7 +7,7 @@ import type { Book, Shelf } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { StarDisplay } from "./StarRating";
 
-export function ReadingYear({ shelves, books, onOpen }: { shelves: Shelf[]; books: Book[]; onOpen: (b: Book) => void }) {
+export function ReadingYear({ shelves, books, onOpen, onWrapped }: { shelves: Shelf[]; books: Book[]; onOpen: (b: Book) => void; onWrapped?: () => void }) {
   const { read } = splitByReadState(books);
   const years = useMemo(() => {
     const ys = new Set<number>([new Date().getFullYear()]);
@@ -45,6 +45,21 @@ export function ReadingYear({ shelves, books, onOpen }: { shelves: Shelf[]; book
           </select>
         </label>
       </div>
+
+      {onWrapped && inYear.length > 0 && (
+        <button type="button" onClick={onWrapped} className="flex w-full items-center gap-4 rounded-2xl bg-accent/10 p-4 text-left ring-1 ring-accent/25 transition hover:bg-accent/15">
+          <span className="text-3xl" aria-hidden>
+            ✨
+          </span>
+          <span className="flex-1">
+            <span className="block font-serif text-xl">Your {year}, wrapped</span>
+            <span className="block text-sm text-ink-soft">Story cards of your reading year to share on Instagram</span>
+          </span>
+          <span aria-hidden className="text-xl text-ink-soft">
+            ›
+          </span>
+        </button>
+      )}
 
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[

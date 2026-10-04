@@ -24,7 +24,7 @@ const COVER_W = 132;
 const SPINE_SCALE = 1.45;
 const ROW_BUDGET = 820; // usable px per shelf row
 
-async function toDataUrl(url: string): Promise<string | null> {
+export async function toDataUrl(url: string): Promise<string | null> {
   if (url.startsWith("data:")) return url;
   try {
     const res = await fetch(url, { mode: "cors" });
@@ -40,6 +40,12 @@ async function toDataUrl(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/** The address to show on images: the public shelf when there is one, otherwise the site. */
+export function shownLink(publicUrl?: string | null): string {
+  if (publicUrl) return publicUrl.replace(/^https?:\/\//, "");
+  return typeof window === "undefined" ? "" : window.location.host;
 }
 
 const textureCache = new Map<string, Promise<string | null>>();
@@ -83,7 +89,7 @@ async function flatten(bg: string): Promise<string> {
  * The room's wood grain, plaster and paint are SVG noise filters. html-to-image can't draw SVG
  * filters (they come out solid black), so swap every one for a PNG of itself before rendering.
  */
-async function flattenTextures(root: HTMLElement) {
+export async function flattenTextures(root: HTMLElement) {
   const rules: string[] = [];
   const els = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
   await Promise.all(
@@ -344,8 +350,9 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
                   stacked
                 />
               </RoomScene>
-              <p className="absolute inset-x-0 bottom-[44px] text-center font-mono text-[22px] tracking-[2px] text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
+              <p className="absolute inset-x-0 bottom-[36px] text-center font-mono text-[22px] tracking-[2px] text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
                 {aesthetic.name} · {stats.booksRead} finished · made with Cosmic Space
+                {shownLink(publicUrl) && <span className="mt-1 block text-[20px] tracking-[1px]">{shownLink(publicUrl)}</span>}
               </p>
             </div>
           </div>
