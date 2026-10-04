@@ -8,7 +8,10 @@ export type ShelfStyle =
   | "midcentury"
   | "coastal"
   | "boho"
-  | "industrial";
+  | "industrial"
+  // reading rewards
+  | "starlit"
+  | "gilded";
 
 /** Where a book is in your reading life. Shown as a ribbon mark on the shelf. */
 /** "read" is Finished; "dnf" is Did not finish. */
@@ -34,7 +37,12 @@ export type DecorKind =
   | "typewriter"
   | "cat"
   | "quill"
-  | "fairyjar";
+  | "fairyjar"
+  // reading rewards
+  | "cactus"
+  | "monstera"
+  | "brasslamp"
+  | "goldenbook";
 
 export interface Decor {
   id: string;

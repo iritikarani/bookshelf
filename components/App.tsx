@@ -7,6 +7,7 @@ import { LibraryProvider, useLibrary } from "@/lib/library";
 import { siteUrl } from "@/lib/basePath";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
+import { finishedCount, newlyUnlocked } from "@/lib/rewards";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
@@ -50,6 +51,28 @@ function AppInner() {
     const t = window.setTimeout(() => setNotice(null), 6000);
     return () => window.clearTimeout(t);
   }, [notice]);
+  // Reading rewards: celebrate once when finishing books unlocks something new for the room.
+  const finished = finishedCount(lib.books);
+  useEffect(() => {
+    if (loading || !user || !lib.profile) return;
+    const key = `exlibris:rewardsSeen:${user.id}`;
+    let seen: number | null = null;
+    try {
+      const raw = localStorage.getItem(key);
+      seen = raw === null ? null : Number(raw);
+    } catch {}
+    // First visit after this feature: remember where the reader is, without a burst of old news.
+    if (seen !== null && finished > seen) {
+      const fresh = newlyUnlocked(seen, finished);
+      const top = fresh[fresh.length - 1];
+      if (top) setNotice(`${top.emoji} You unlocked ${top.type === "room" ? "a new room: " : ""}${top.name}! Find it in ••• → Decorate room.`);
+    }
+    if (seen === null || finished > seen) {
+      try {
+        localStorage.setItem(key, String(finished));
+      } catch {}
+    }
+  }, [finished, loading, user, lib.profile]);
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
