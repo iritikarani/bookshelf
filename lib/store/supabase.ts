@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Room, Shelf } from "../types";
 import type { Store } from "./types";
 import { siteUrl } from "../basePath";
 
@@ -76,12 +76,15 @@ export const supabaseStore: Store = {
   async load(user) {
     const sb = getSupabase();
     // All four at once: one round trip of waiting instead of four.
-    const [p, s, b, d] = await Promise.all([
+    const [p, s, b, d, r] = await Promise.all([
       sb.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       sb.from("shelves").select("*").order("position"),
       sb.from("books").select("*").order("position"),
       sb.from("decor").select("*").order("position"),
+      sb.from("rooms").select("*").order("position"),
     ]);
+    // Before migration 0011 there's no rooms table: everything is in the first room.
+    const rooms = r.error ? [] : ((r.data ?? []) as Room[]);
     let profile = check(p) as Profile | null;
     let shelves = check(s) as Shelf[];
     const books = check(b) as Book[];
@@ -95,7 +98,7 @@ export const supabaseStore: Store = {
         await sb.from("shelves").insert(DEFAULT_SHELVES.map((s) => ({ ...s, user_id: user.id }))).select(),
       ) as Shelf[];
     }
-    return { profile, shelves, books, decor };
+    return { profile, shelves, books, decor, rooms };
   },
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...withoutEmptyPage(draft), user_id: userId, position }).select().single()) as Book;
@@ -124,8 +127,20 @@ export const supabaseStore: Store = {
   async deleteDecor(id) {
     check(await getSupabase().from("decor").delete().eq("id", id));
   },
-  async insertShelf(userId, shelf) {
-    return check(await getSupabase().from("shelves").insert({ ...shelf, user_id: userId }).select().single()) as Shelf;
+  async insertShelf(userId, { room_id, ...shelf }) {
+    // Shelves in the first room leave room_id out, so this works before migration 0011 too.
+    return check(await getSupabase().from("shelves").insert({ ...shelf, ...(room_id ? { room_id } : {}), user_id: userId }).select().single()) as Shelf;
+  },
+  async insertRoom(userId, room) {
+    const { data, error } = await getSupabase().from("rooms").insert({ ...room, user_id: userId }).select().single();
+    if (error) throw new Error(/rooms|relation|schema cache/i.test(error.message) ? "Rooms need one Supabase step first (migration 0011)." : error.message);
+    return data as Room;
+  },
+  async updateRoom(id, patch) {
+    check(await getSupabase().from("rooms").update(patch).eq("id", id));
+  },
+  async deleteRoom(id) {
+    check(await getSupabase().from("rooms").delete().eq("id", id));
   },
   async updateShelves(updates) {
     const sb = getSupabase();

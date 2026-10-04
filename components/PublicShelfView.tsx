@@ -22,6 +22,8 @@ import { RoomScene } from "./RoomScene";
 import { siteUrl } from "@/lib/basePath";
 import { ShelfWall } from "./ShelfWall";
 import { SignGuestbook } from "./Guestbook";
+import { RoomTabs } from "./RoomSwitcher";
+import { FIRST_ROOM_NAME, type RoomEntry } from "@/lib/library";
 
 export function PublicShelfPage() {
   const slug = useSearchParams().get("u") ?? "";
@@ -35,8 +37,18 @@ export function PublicShelfView({ slug }: { slug: string }) {
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
   const [signOpen, setSignOpen] = useState(false);
-  useRoomClock(data?.profile.room);
-  const season = useSeason(data?.profile.room);
+  // Which room the visitor is looking at (null is the first room).
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const extra = useMemo(() => [...(data?.rooms ?? [])].sort((a, b) => a.position - b.position), [data]);
+  const activeRoom = extra.find((r) => r.id === roomId) ?? null;
+  // The look of the room being visited: an extra room's own, or the profile's.
+  const look = activeRoom ? activeRoom.room : data?.profile.room;
+  const roomTabs: RoomEntry[] = [
+    { id: null, name: data?.profile.room?.title?.trim() || FIRST_ROOM_NAME, shelf_style: data?.profile.shelf_style ?? "pastel" },
+    ...extra.map((r) => ({ id: r.id, name: r.name, shelf_style: r.shelf_style })),
+  ];
+  useRoomClock(look);
+  const season = useSeason(look);
 
   useEffect(() => {
     if (!slug) return setData(null);
@@ -49,10 +61,11 @@ export function PublicShelfView({ slug }: { slug: string }) {
       .catch(() => setFailed(true));
   }, [slug, attempt]);
 
-  const shelves = useMemo(() => [...(data?.shelves ?? [])].sort((a, b) => a.position - b.position), [data]);
+  const allShelves = useMemo(() => [...(data?.shelves ?? [])].sort((a, b) => a.position - b.position), [data]);
+  const shelves = useMemo(() => allShelves.filter((s) => (s.room_id ?? null) === (activeRoom?.id ?? null)), [allShelves, activeRoom]);
   const books = useMemo(() => data?.books ?? [], [data]);
-  const items = useMemo(() => groupItems(shelves, books, data?.decor ?? []), [shelves, books, data]);
-  const aesthetic = aestheticOf(data?.profile.shelf_style);
+  const items = useMemo(() => groupItems(allShelves, books, data?.decor ?? []), [allShelves, books, data]);
+  const aesthetic = aestheticOf(activeRoom ? activeRoom.shelf_style : data?.profile.shelf_style);
   const openBook = books.find((b) => b.id === openId) ?? null;
   const openList = openBook ? (items.get(openBook.shelf_id) ?? []) : [];
 
@@ -80,7 +93,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
 
   const name = data?.profile.display_name;
   return (
-    <div data-style={aesthetic.id} {...roomAttrs(data?.profile.room, undefined, season)} style={roomStyle(data?.profile.room)} className="room min-h-dvh pb-16">
+    <div data-style={aesthetic.id} {...roomAttrs(look, undefined, season)} style={roomStyle(look)} className="room min-h-dvh pb-16">
       <Header
         title={data ? `${name ? `${name}’s` : "A reader’s"} bookshelf` : " "}
         summary={data ? shelfSummary(books) : " "}
@@ -93,18 +106,21 @@ export function PublicShelfView({ slug }: { slug: string }) {
         {data === undefined ? (
           <ShelfSkeleton />
         ) : tab === "shelf" ? (
-          <RoomScene standing={structureOf(aesthetic, data?.profile.room) === "case"}>
-            <ShelfWall shelves={shelves} itemsByShelf={items} structure={structureOf(aesthetic, data?.profile.room)} perCase={perCaseOf(data?.profile.room)} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
-          </RoomScene>
+          <>
+            {extra.length > 0 && <RoomTabs rooms={roomTabs} active={activeRoom?.id ?? null} onPick={setRoomId} />}
+            <RoomScene standing={structureOf(aesthetic, look) === "case"}>
+              <ShelfWall shelves={shelves} itemsByShelf={items} structure={structureOf(aesthetic, look)} perCase={perCaseOf(look)} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
+            </RoomScene>
+          </>
         ) : tab === "quotes" ? (
-          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} look={{ styleId: aesthetic.id, room: data?.profile.room, publicUrl: typeof window === "undefined" ? null : siteUrl(`/s/?u=${encodeURIComponent(slug)}`), visitorOf: name ?? null }} />
+          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} look={{ styleId: aesthetic.id, room: look, publicUrl: typeof window === "undefined" ? null : siteUrl(`/s/?u=${encodeURIComponent(slug)}`), visitorOf: name ?? null }} />
         ) : (
-          <ReadingYear shelves={shelves} books={books} onOpen={(b) => setOpenId(b.id)} />
+          <ReadingYear shelves={allShelves} books={books} onOpen={(b) => setOpenId(b.id)} />
         )}
       </main>
       <BookDetail
         book={openBook}
-        shelves={shelves}
+        shelves={allShelves}
         index={openList.findIndex((b) => b.id === openId)}
         shelfSize={openList.length}
         ownerName={name}

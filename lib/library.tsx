@@ -5,14 +5,38 @@ import { store, type LibraryData, type PositionUpdate } from "./store";
 import { saveUsername } from "./store/supabase";
 import { DECOR } from "@/components/Decor";
 import type { RoomSettings } from "./room";
-import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Shelf, ShelfItem, ShelfStyle } from "./types";
+import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Room, Shelf, ShelfItem, ShelfStyle } from "./types";
+
+/** A room in the list: the first room (id null, the profile itself) or an extra one. */
+export interface RoomEntry {
+  id: string | null;
+  name: string;
+  shelf_style: ShelfStyle;
+}
+
+export const FIRST_ROOM_NAME = "My room";
+export const MAX_ROOMS = 8;
 
 interface LibraryContextValue {
   user: AuthUser | null;
   authReady: boolean;
   loading: boolean;
+  /** The profile, with the look (shelf_style, room) of the room you're in. */
   profile: Profile | null;
+  /** The shelves of the room you're in. */
   shelves: Shelf[];
+  /** Every shelf in every room. */
+  allShelves: Shelf[];
+  /** "Study · Top shelf" when there's more than one room, else the shelf's name. */
+  shelfLabel(shelf: Shelf): string;
+  rooms: RoomEntry[];
+  /** null is the first room. */
+  activeRoomId: string | null;
+  setActiveRoom(id: string | null): void;
+  addRoom(name: string, style: ShelfStyle): Promise<boolean>;
+  renameRoom(id: string | null, name: string): Promise<void>;
+  /** Only rooms without books can be removed (their empty shelves go too). */
+  deleteRoom(id: string): Promise<void>;
   books: Book[];
   decor: Decor[];
   /** Books only, per shelf, in shelf order. */
@@ -76,7 +100,7 @@ function writeCache(userId: string, data: LibraryData) {
 /** What survives a change of room style: the bookcase layout and the lighting. */
 function keepLayout(room: RoomSettings | null | undefined): RoomSettings | null {
   if (!room) return null;
-  const kept: RoomSettings = { perCase: room.perCase, lampTone: room.lampTone, lampLevel: room.lampLevel, time: room.time, weather: room.weather, fairy: room.fairy, seasonal: room.seasonal };
+  const kept: RoomSettings = { title: room.title, perCase: room.perCase, lampTone: room.lampTone, lampLevel: room.lampLevel, time: room.time, weather: room.weather, fairy: room.fairy, seasonal: room.seasonal };
   for (const k of Object.keys(kept) as (keyof RoomSettings)[]) if (kept[k] === undefined) delete kept[k];
   return Object.keys(kept).length ? kept : null;
 }
@@ -201,11 +225,53 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return userRef.current;
   };
 
-  const shelves = useMemo(() => [...(data?.shelves ?? [])].sort((a, b) => a.position - b.position), [data?.shelves]);
+  // ── rooms ──
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const activeKey = user ? `exlibris:activeRoom:${user.id}` : null;
+  useEffect(() => {
+    if (!activeKey) return;
+    try {
+      setActiveRoomId(localStorage.getItem(activeKey) || null);
+    } catch {}
+  }, [activeKey]);
+  const extraRooms = useMemo(() => [...(data?.rooms ?? [])].sort((a, b) => a.position - b.position), [data?.rooms]);
+  // A remembered room that no longer exists falls back to the first room.
+  const activeRoom: Room | null = (activeRoomId && extraRooms.find((r) => r.id === activeRoomId)) || null;
+  const activeId = activeRoom?.id ?? null;
+  const activeRef = useRef<string | null>(null);
+  activeRef.current = activeId;
+  const setActiveRoom = useCallback(
+    (id: string | null) => {
+      setActiveRoomId(id);
+      try {
+        if (activeKey) id ? localStorage.setItem(activeKey, id) : localStorage.removeItem(activeKey);
+      } catch {}
+    },
+    [activeKey],
+  );
+  const rooms: RoomEntry[] = useMemo(
+    () => [
+      { id: null, name: data?.profile.room?.title?.trim() || FIRST_ROOM_NAME, shelf_style: data?.profile.shelf_style ?? "pastel" },
+      ...extraRooms.map((r) => ({ id: r.id, name: r.name, shelf_style: r.shelf_style })),
+    ],
+    [data?.profile.room?.title, data?.profile.shelf_style, extraRooms],
+  );
+  const inRoom = (s: Shelf, id: string | null) => (s.room_id ?? null) === id;
+
+  const allShelves = useMemo(() => [...(data?.shelves ?? [])].sort((a, b) => a.position - b.position), [data?.shelves]);
+  const shelves = useMemo(() => allShelves.filter((s) => inRoom(s, activeId)), [allShelves, activeId]);
+  const shelfLabel = (s: Shelf) => {
+    if (rooms.length < 2) return s.name;
+    return `${rooms.find((r) => r.id === (s.room_id ?? null))?.name ?? FIRST_ROOM_NAME} · ${s.name}`;
+  };
+  const viewProfile = useMemo(
+    () => (data?.profile ? (activeRoom ? { ...data.profile, shelf_style: activeRoom.shelf_style, room: activeRoom.room } : data.profile) : null),
+    [data?.profile, activeRoom],
+  );
   const books = data?.books ?? [];
   const decor = data?.decor ?? [];
-  const booksByShelf = useMemo(() => groupByShelf(shelves, data?.books ?? []), [shelves, data?.books]);
-  const itemsByShelf = useMemo(() => groupItems(shelves, data?.books ?? [], data?.decor ?? []), [shelves, data?.books, data?.decor]);
+  const booksByShelf = useMemo(() => groupByShelf(allShelves, data?.books ?? []), [allShelves, data?.books]);
+  const itemsByShelf = useMemo(() => groupItems(allShelves, data?.books ?? [], data?.decor ?? []), [allShelves, data?.books, data?.decor]);
 
   const itemsNow = () => {
     const d = dataRef.current!;
@@ -337,7 +403,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const u = requireUser();
     const position = Math.max(-1, ...(dataRef.current?.shelves ?? []).map((s) => s.position)) + 1;
     try {
-      const shelf = await store.insertShelf(u.id, { name, position });
+      const shelf = await store.insertShelf(u.id, { name, position, room_id: activeRef.current });
       setData((d) => (d ? { ...d, shelves: [...d.shelves, shelf] } : d));
       // Callers may add a book to it straight away, before React re-renders.
       if (dataRef.current) dataRef.current = { ...dataRef.current, shelves: [...dataRef.current.shelves, shelf] };
@@ -363,10 +429,14 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const d = dataRef.current;
       if (!d) return;
       const sorted = [...d.shelves].sort((a, b) => a.position - b.position);
-      const i = sorted.findIndex((s) => s.id === id);
+      // Swap with the neighbouring shelf in the same room.
+      const room = sorted.find((s) => s.id === id)?.room_id ?? null;
+      const mine = sorted.filter((s) => (s.room_id ?? null) === room);
+      const i = mine.findIndex((s) => s.id === id);
       const j = i + dir;
-      if (i < 0 || j < 0 || j >= sorted.length) return;
-      [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+      if (i < 0 || j < 0 || j >= mine.length) return;
+      const [a, b] = [sorted.indexOf(mine[i]), sorted.indexOf(mine[j])];
+      [sorted[a], sorted[b]] = [sorted[b], sorted[a]];
       const renumbered = sorted.map((s, position) => ({ ...s, position }));
       const changed = renumbered.filter((s) => d.shelves.find((o) => o.id === s.id)?.position !== s.position);
       await run(
@@ -393,9 +463,26 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [run],
   );
 
+  /** Change the look of an extra room (the first room's look lives on the profile). */
+  const updateRoomRow = useCallback(
+    async (id: string, patch: Partial<Pick<Room, "name" | "shelf_style" | "room">>) => {
+      if (dataRef.current) dataRef.current = { ...dataRef.current, rooms: (dataRef.current.rooms ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) };
+      await run(
+        (cur) => ({ ...cur, rooms: (cur.rooms ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) }),
+        () => store.updateRoom(id, patch),
+      ).catch(() => {});
+    },
+    [run],
+  );
+
   const setShelfStyle = useCallback(
     async (shelf_style: ShelfStyle) => {
       const u = requireUser();
+      const roomId = activeRef.current;
+      if (roomId) {
+        const before = dataRef.current?.rooms?.find((r) => r.id === roomId)?.room;
+        return updateRoomRow(roomId, { shelf_style, room: keepLayout(before) });
+      }
       const before = dataRef.current?.profile.room;
       const room = keepLayout(before);
       if (dataRef.current) dataRef.current = { ...dataRef.current, profile: { ...dataRef.current.profile, shelf_style, room } };
@@ -419,6 +506,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         for (const k of Object.keys(merged) as (keyof RoomSettings)[]) if (merged[k] === undefined) delete merged[k];
         return merged;
       };
+      const roomId = activeRef.current;
+      if (roomId) return updateRoomRow(roomId, { room: next(dataRef.current?.rooms?.find((r) => r.id === roomId)?.room) });
       const room = next(dataRef.current?.profile.room);
       // Several quick picks in a row each build on the last, before React re-renders.
       if (dataRef.current) dataRef.current = { ...dataRef.current, profile: { ...dataRef.current.profile, room } };
@@ -429,7 +518,69 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         },
       ).catch(() => {});
     },
-    [run],
+    [run, updateRoomRow],
+  );
+
+  const addRoom = useCallback(
+    async (name: string, style: ShelfStyle) => {
+      const u = requireUser();
+      const d = dataRef.current;
+      if (!d) return false;
+      try {
+        const position = Math.max(0, ...(d.rooms ?? []).map((r) => r.position + 1));
+        const room = await store.insertRoom(u.id, { name: name.trim().slice(0, 40) || "New room", position, shelf_style: style });
+        const start = Math.max(-1, ...d.shelves.map((s) => s.position)) + 1;
+        const made: Shelf[] = [];
+        for (const [i, shelfName] of ["Top shelf", "Middle shelf", "Bottom shelf"].entries()) {
+          made.push(await store.insertShelf(u.id, { name: shelfName, position: start + i, room_id: room.id }));
+        }
+        setData((cur) => (cur ? { ...cur, rooms: [...(cur.rooms ?? []), room], shelves: [...cur.shelves, ...made] } : cur));
+        setActiveRoom(room.id);
+        return true;
+      } catch (e) {
+        fail(e, "Couldn't make that room.");
+        return false;
+      }
+    },
+    [setActiveRoom],
+  );
+
+  const renameRoom = useCallback(
+    async (id: string | null, name: string) => {
+      const clean = name.trim().slice(0, 40);
+      if (!clean) return;
+      if (id) return updateRoomRow(id, { name: clean });
+      const u = requireUser();
+      const room: RoomSettings = { ...(dataRef.current?.profile.room ?? {}), title: clean };
+      await run(
+        (cur) => ({ ...cur, profile: { ...cur.profile, room } }),
+        () => store.updateProfile(u.id, { room }).then(() => {}),
+      ).catch(() => {});
+    },
+    [run, updateRoomRow],
+  );
+
+  const deleteRoom = useCallback(
+    async (id: string) => {
+      const d = dataRef.current;
+      if (!d) return;
+      const gone = new Set(d.shelves.filter((s) => s.room_id === id).map((s) => s.id));
+      if (d.books.some((b) => gone.has(b.shelf_id))) {
+        setError("Only rooms without books can be removed. Move its books to another room first.");
+        return;
+      }
+      if (activeRef.current === id) setActiveRoom(null);
+      await run(
+        (cur) => ({
+          ...cur,
+          rooms: (cur.rooms ?? []).filter((r) => r.id !== id),
+          shelves: cur.shelves.filter((s) => !gone.has(s.id)),
+          decor: cur.decor.filter((x) => !gone.has(x.shelf_id)),
+        }),
+        () => store.deleteRoom(id),
+      ).catch(() => {});
+    },
+    [run, setActiveRoom],
   );
 
   const setPublic = useCallback(
@@ -455,8 +606,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     user,
     authReady,
     loading: loading || (Boolean(user) && !data),
-    profile: data?.profile ?? null,
+    profile: viewProfile,
     shelves,
+    allShelves,
+    shelfLabel,
+    rooms,
+    activeRoomId: activeId,
+    setActiveRoom,
+    addRoom,
+    renameRoom,
+    deleteRoom,
     books,
     decor,
     booksByShelf,

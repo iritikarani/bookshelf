@@ -60,6 +60,19 @@ export interface Shelf {
   user_id: string;
   name: string;
   position: number;
+  /** The room it stands in; empty for the first room (the profile's own). */
+  room_id?: string | null;
+}
+
+/** An extra room, with its own shelves and look. The first room is the profile itself. */
+export interface Room {
+  id: string;
+  user_id: string;
+  name: string;
+  position: number;
+  shelf_style: ShelfStyle;
+  room: RoomSettings | null;
+  created_at: string;
 }
 
 export interface Book {
@@ -105,6 +118,7 @@ export interface Profile {
 
 export interface PublicShelf {
   profile: { display_name: string | null; shelf_style: ShelfStyle; room?: RoomSettings | null };
+  rooms?: Room[];
   shelves: Shelf[];
   books: Book[];
   decor: Decor[];

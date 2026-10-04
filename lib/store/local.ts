@@ -1,4 +1,4 @@
-import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Room, Shelf } from "../types";
 import type { LibraryData, Store } from "./types";
 
 const KEY = "exlibris:local:v3";
@@ -129,6 +129,26 @@ export const localStore: Store = {
     mutate((d) => d.shelves.push(s));
     return s;
   },
+  async insertRoom(userId, room) {
+    const r: Room = { ...room, room: null, id: uid(), user_id: userId, created_at: new Date().toISOString() };
+    mutate((d) => (d.rooms = [...(d.rooms ?? []), r]));
+    return r;
+  },
+  async updateRoom(id, patch) {
+    mutate((d) => {
+      const r = d.rooms?.find((x) => x.id === id);
+      if (r) Object.assign(r, patch);
+    });
+  },
+  async deleteRoom(id) {
+    mutate((d) => {
+      const gone = new Set(d.shelves.filter((s) => s.room_id === id).map((s) => s.id));
+      d.rooms = (d.rooms ?? []).filter((r) => r.id !== id);
+      d.shelves = d.shelves.filter((s) => !gone.has(s.id));
+      d.books = d.books.filter((b) => !gone.has(b.shelf_id));
+      d.decor = d.decor.filter((x) => !gone.has(x.shelf_id));
+    });
+  },
   async updateShelves(updates) {
     mutate((d) => {
       for (const u of updates) {
@@ -158,6 +178,7 @@ export const localStore: Store = {
     if (d.profile.public_slug !== slug || !d.profile.is_public) return null;
     return {
       profile: { display_name: d.profile.display_name, shelf_style: d.profile.shelf_style, room: d.profile.room ?? null },
+      rooms: d.rooms ?? [],
       shelves: d.shelves,
       books: d.books,
       decor: d.decor,
