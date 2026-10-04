@@ -8,6 +8,7 @@ import { siteUrl } from "@/lib/basePath";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { finishedCount, newlyUnlocked } from "@/lib/rewards";
+import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
@@ -80,6 +81,7 @@ function AppInner() {
   const [arrangeOpen, setArrangeOpen] = useState(false);
   const [decorId, setDecorId] = useState<string | null>(null);
   const aesthetic = aestheticOf(profile?.shelf_style);
+  const structure = structureOf(aesthetic, profile?.room);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
   // Accounts made with Google have no username yet: ask once per visit.
@@ -136,7 +138,7 @@ function AppInner() {
   };
 
   return (
-    <div data-style={aesthetic.id} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
+    <div data-style={aesthetic.id} {...roomAttrs(profile?.room)} style={roomStyle(profile?.room)} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2">
         Skip to shelves
       </a>
@@ -177,12 +179,12 @@ function AppInner() {
               </div>
             )}
             <MarkFilterBar value={filter} onChange={setFilter} books={viewBooks} />
-            <RoomScene standing={aesthetic.structure === "case"}>
+            <RoomScene standing={structure === "case"}>
               {showExamples ? (
                 <ShelfWall
                   shelves={[EXAMPLE_SHELF]}
                   itemsByShelf={exampleMap}
-                  structure={aesthetic.structure}
+                  structure={structure}
                   onOpenBook={(b) => setOpenId(b.id)}
                   filter={filter}
                   floor={false}
@@ -192,9 +194,10 @@ function AppInner() {
                 <ShelfWall
                   shelves={shelves}
                   itemsByShelf={itemsByShelf}
-                  structure={aesthetic.structure}
+                  structure={structure}
                   onOpenBook={(b) => setOpenId(b.id)}
                   onOpenDecor={(d) => setDecorId(d.id)}
+                  perCase={perCaseOf(profile?.room)}
                   onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
                   justAddedId={lib.justAddedId}
                   filter={filter}
@@ -290,6 +293,7 @@ function AppInner() {
         itemsByShelf={itemsByShelf}
         books={books}
         styleId={aesthetic.id}
+        room={profile?.room}
         owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
         publicUrl={store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null}
       />

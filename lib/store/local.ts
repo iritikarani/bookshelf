@@ -143,7 +143,7 @@ export const localStore: Store = {
     const d = read();
     if (d.profile.public_slug !== slug || !d.profile.is_public) return null;
     return {
-      profile: { display_name: d.profile.display_name, shelf_style: d.profile.shelf_style },
+      profile: { display_name: d.profile.display_name, shelf_style: d.profile.shelf_style, room: d.profile.room ?? null },
       shelves: d.shelves,
       books: d.books,
       decor: d.decor,
