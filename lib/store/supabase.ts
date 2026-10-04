@@ -21,6 +21,17 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
+/**
+ * Leave current_page out unless it has a value, so saving books keeps working on databases that
+ * haven't run migration 0005 yet (only recording a page needs the new column).
+ */
+function withoutEmptyPage<T extends { current_page?: number | null }>(row: T): T {
+  if (row.current_page != null || !("current_page" in row)) return row;
+  const rest = { ...row };
+  delete rest.current_page;
+  return rest;
+}
+
 const DEFAULT_SHELVES = [
   { name: "Top shelf", position: 0 },
   { name: "Middle shelf", position: 1 },
@@ -87,10 +98,12 @@ export const supabaseStore: Store = {
     return { profile, shelves, books, decor };
   },
   async insertBook(userId, draft, position) {
-    return check(await getSupabase().from("books").insert({ ...draft, user_id: userId, position }).select().single()) as Book;
+    return check(await getSupabase().from("books").insert({ ...withoutEmptyPage(draft), user_id: userId, position }).select().single()) as Book;
   },
   async updateBook(id, patch) {
-    return check(await getSupabase().from("books").update(patch).eq("id", id).select().single()) as Book;
+    // A progress update ({current_page, pages}) may clear the page; full edits drop an empty one.
+    const isProgress = Object.keys(patch).every((k) => k === "current_page" || k === "pages");
+    return check(await getSupabase().from("books").update(isProgress ? patch : withoutEmptyPage(patch)).eq("id", id).select().single()) as Book;
   },
   async updatePositions(updates) {
     const sb = getSupabase();

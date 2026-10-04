@@ -197,6 +197,7 @@ function AppInner() {
         onDisplay={(b, display) => lib.updateBook(b.id, { display })}
         onMarks={(b, patch) => lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch)}
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
+        onProgress={(b, patch) => lib.updateBook(b.id, patch)}
         onRemove={(b) => lib.removeBook(b.id)}
       />
 

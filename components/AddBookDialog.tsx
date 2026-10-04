@@ -74,6 +74,7 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
   const [publisher, setPublisher] = useState("");
   const [year, setYear] = useState(editing?.year_published?.toString() ?? "");
   const [pages, setPages] = useState(editing?.pages?.toString() ?? "");
+  const [currentPage, setCurrentPage] = useState(editing?.current_page?.toString() ?? "");
   const [genre, setGenre] = useState(editing?.genre ?? "");
   const [description, setDescription] = useState(editing?.short_description ?? "");
   const [shelfId, setShelfId] = useState(editing?.shelf_id ?? defaultShelfId ?? shelves[0]?.id ?? "");
@@ -220,6 +221,8 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         favourite,
         year_published: toInt(year),
         pages: toInt(pages),
+        // Only books being read have a page; finishing or shelving for later clears it.
+        current_page: status === "reading" ? (toInt(currentPage) === null ? null : Math.min(toInt(currentPage)!, toInt(pages) ?? Infinity)) : null,
         genre: genre.trim() || null,
         short_description: description.trim() || null,
         rating: finished ? rating : 0,
@@ -497,6 +500,16 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
             ))}
           </select>
         </div>
+        {status === "reading" && (
+          <div>
+            <label className="label" htmlFor="ab-current">I’m on page</label>
+            <div className="flex items-center gap-2">
+              <input id="ab-current" className="field font-mono" inputMode="numeric" placeholder="e.g. 120" value={currentPage} onChange={(e) => setCurrentPage(e.target.value.replace(/\D/g, ""))} />
+              <span className="shrink-0 text-sm text-ink-soft">of</span>
+              <input aria-label="Total pages" className="field font-mono" inputMode="numeric" placeholder="pages" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} />
+            </div>
+          </div>
+        )}
         {finished && (
           <div>
             <label className="label" htmlFor="ab-date">Date finished</label>

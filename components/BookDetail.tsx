@@ -7,6 +7,7 @@ import { useCoverColor } from "@/lib/useCoverColor";
 import { BookCover } from "./BookCover";
 import { ChevronLeft, ChevronRight, PencilIcon, TrashIcon } from "./Icons";
 import { MARKS, MarkChips, MarkPicker } from "./Marks";
+import { ReadingProgress } from "./ReadingProgress";
 import { Sheet } from "./Sheet";
 import { StarDisplay, StarInput } from "./StarRating";
 
@@ -23,6 +24,7 @@ interface BookDetailProps {
   onDisplay?: (book: Book, display: BookDisplay) => void;
   onMarks?: (book: Book, patch: { favourite?: boolean; status?: ReadStatus }) => void;
   onRate?: (book: Book, rating: number) => void;
+  onProgress?: (book: Book, patch: { current_page: number | null; pages: number | null }) => void;
   onRemove?: (book: Book) => Promise<void>;
   ownerName?: string | null;
   readOnly?: boolean;
@@ -31,7 +33,7 @@ interface BookDetailProps {
 
 /** Opening a book: a two-page spread. Left page is the book itself, right page is your journal. */
 export function BookDetail(props: BookDetailProps) {
-  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onRemove, ownerName, readOnly, example } = props;
+  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onProgress, onRemove, ownerName, readOnly, example } = props;
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const color = useCoverColor(book);
@@ -84,9 +86,14 @@ export function BookDetail(props: BookDetailProps) {
                 )}
               </>
             ) : (
-              <p className="font-serif text-lg" style={{ color: book.status === "reading" ? MARKS.reading.color : MARKS.to_read.color }}>
-                {book.status === "reading" ? "📖 Reading it now" : "🔖 Not read yet"}
-              </p>
+              <>
+                <p className="font-serif text-lg" style={{ color: book.status === "reading" ? MARKS.reading.color : MARKS.to_read.color }}>
+                  {book.status === "reading" ? "📖 Reading it now" : "🔖 Not read yet"}
+                </p>
+                {book.status === "reading" && (
+                  <ReadingProgress book={book} color={MARKS.reading.color} onSave={canEdit && onProgress ? (patch) => onProgress(book, patch) : undefined} />
+                )}
+              </>
             )}
           </div>
 
