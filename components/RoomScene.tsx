@@ -43,6 +43,52 @@ export function FairyLights({ className = "" }: { className?: string }) {
   );
 }
 
+/** A clay diya with a flickering flame. */
+function Diya() {
+  return (
+    <svg viewBox="0 0 24 22" className="diya" aria-hidden>
+      <circle cx="12" cy="7" r="7" fill="rgba(255, 196, 90, 0.35)" className="diya-glow" />
+      <path d="M12 2 Q15.5 7 12 11 Q8.5 7 12 2 Z" fill="#ffb938" className="diya-flame" />
+      <path d="M12 5 Q13.6 8 12 10.4 Q10.4 8 12 5 Z" fill="#fff4c9" />
+      <path d="M1.5 12 H22.5 Q21 20 12 20.5 Q3 20 1.5 12 Z" fill="#b5562b" />
+      <path d="M1.5 12 H22.5 Q22 13.6 20.6 14.2 H3.4 Q2 13.6 1.5 12 Z" fill="#d9763f" />
+      <path d="M6 16.5 Q12 18.5 18 16.5" stroke="#f2c14e" strokeWidth="0.9" fill="none" />
+    </svg>
+  );
+}
+
+/**
+ * Seasonal touches around the window: a marigold toran and diyas for Diwali, a wreath at
+ * Christmas. Drawn always and shown by CSS for the room's data-season.
+ */
+function SeasonTouches() {
+  return (
+    <>
+      <div className="season-toran" aria-hidden />
+      <div className="season-diyas" aria-hidden>
+        <Diya />
+        <Diya />
+        <Diya />
+      </div>
+      <svg viewBox="0 0 40 44" className="season-wreath" aria-hidden>
+        <circle cx="20" cy="18" r="12" fill="none" stroke="#335c3b" strokeWidth="7" />
+        <circle cx="20" cy="18" r="12" fill="none" stroke="#4f8a4f" strokeWidth="4" strokeDasharray="3 2.4" />
+        {[
+          [9, 12],
+          [27, 8],
+          [31, 22],
+          [14, 28],
+          [22, 6.5],
+        ].map(([x, y]) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill="#c8323a" />
+        ))}
+        <path d="M20 30 L12 37 L13 28 Z M20 30 L28 37 L27 28 Z" fill="#c8323a" />
+        <circle cx="20" cy="30" r="2.6" fill="#a8262e" />
+      </svg>
+    </>
+  );
+}
+
 /** A window with curtains: daylight sky with a branch, or a night sky with the moon in dark mode. */
 export function RoomWindow({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
@@ -53,11 +99,14 @@ export function RoomWindow({ className = "", compact = false }: { className?: st
           <WindowView />
           <div className="window-tint" />
           <div className="window-weather" />
+          <div className="season-outside" />
         </div>
         <div className="window-glass" />
+        <div className="season-frost" />
         <div className={`window-mullions ${compact ? "window-mullions--wide" : ""}`} />
       </div>
       <div className="window-sill" />
+      <SeasonTouches />
       <div className="curtain curtain-left" />
       <div className="curtain curtain-right" />
     </div>

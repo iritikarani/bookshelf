@@ -4,6 +4,7 @@ import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { coverImageOf, heightFactor } from "@/lib/covers";
 import { summary } from "@/lib/stats";
+import { useSeason } from "@/lib/useClock";
 import { perCaseOf, roomAttrs, roomStyle, structureOf, type RoomSettings } from "@/lib/room";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, Shelf, ShelfItem, ShelfStyle } from "@/lib/types";
@@ -141,6 +142,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   const [png, setPng] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const aesthetic = aestheticOf(styleId);
+  const season = useSeason(room);
 
   // Up to 4 shelves that hold books (read shelves first), trimmed to what fits across the image.
   const picked = useMemo(() => {
@@ -303,7 +305,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       {/* Off-screen render target */}
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
-          <div ref={nodeRef} data-style={aesthetic.id} {...roomAttrs(room)} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={{ ...roomStyle(room), ...vars }}>
+          <div ref={nodeRef} data-style={aesthetic.id} {...roomAttrs(room, undefined, season)} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={{ ...roomStyle(room), ...vars }}>
             <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
             <h1 className="mt-[18px] font-serif text-[96px] leading-none">{owner ? `${owner}’s bookshelf` : "My bookshelf"}</h1>
             <p className="mt-[16px] font-mono text-[28px] text-ink-soft">

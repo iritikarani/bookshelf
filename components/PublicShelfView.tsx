@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { groupItems } from "@/lib/library";
 import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
-import { useRoomClock } from "@/lib/useClock";
+import { useRoomClock, useSeason } from "@/lib/useClock";
 import { aestheticOf } from "@/lib/themes";
 import { hasSupabase } from "@/lib/store";
 import { localStore } from "@/lib/store/local";
@@ -33,6 +33,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
   useRoomClock(data?.profile.room);
+  const season = useSeason(data?.profile.room);
 
   useEffect(() => {
     if (!slug) return setData(null);
@@ -76,7 +77,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
 
   const name = data?.profile.display_name;
   return (
-    <div data-style={aesthetic.id} {...roomAttrs(data?.profile.room)} style={roomStyle(data?.profile.room)} className="room min-h-dvh pb-16">
+    <div data-style={aesthetic.id} {...roomAttrs(data?.profile.room, undefined, season)} style={roomStyle(data?.profile.room)} className="room min-h-dvh pb-16">
       <Header
         title={data ? `${name ? `${name}’s` : "A reader’s"} bookshelf` : " "}
         summary={data ? shelfSummary(books) : " "}

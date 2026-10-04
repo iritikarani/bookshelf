@@ -26,6 +26,8 @@ export interface RoomSettings {
   weather?: string;
   /** A string of fairy lights across the wall. */
   fairy?: string;
+  /** Seasonal touches around the window (on unless "off"). */
+  seasonal?: "off";
 }
 
 export type TimeOfDay = "morning" | "day" | "sunset" | "night";
@@ -188,7 +190,7 @@ export const structureOf = (aesthetic: Aesthetic, room?: RoomSettings | null): S
 export const perCaseOf = (room?: RoomSettings | null) => room?.perCase ?? 3;
 /** Whether the room's look differs from its style (lighting and layout don't count). */
 export const hasRoomChanges = (room?: RoomSettings | null) => Boolean(room && LOOK_KEYS.some((k) => room[k] !== undefined));
-export const hasLightingChanges = (room?: RoomSettings | null) => Boolean(room && (room.lampTone || room.lampLevel || room.time || room.weather || room.fairy));
+export const hasLightingChanges = (room?: RoomSettings | null) => Boolean(room && (room.lampTone || room.lampLevel || room.time || room.weather || room.fairy || room.seasonal));
 
 const NIGHT_WASH = "linear-gradient(rgba(16, 19, 34, 0.8), rgba(16, 19, 34, 0.8))";
 const WASHES: Record<TimeOfDay, string> = {
@@ -257,8 +259,9 @@ export function roomStyle(room?: RoomSettings | null, now?: Date): CSSProperties
 }
 
 /** data- attributes that switch parts of the room on or off. */
-export function roomAttrs(room?: RoomSettings | null, now?: Date): Record<string, string> {
+export function roomAttrs(room?: RoomSettings | null, now?: Date, season?: string | null): Record<string, string> {
   const a: Record<string, string> = {};
+  if (season) a["data-season"] = season;
   const time = timeOf(room, now);
   if (time) a["data-time"] = time;
   if (room?.weather && room.weather !== "clear") a["data-weather"] = room.weather;
