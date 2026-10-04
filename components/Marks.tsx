@@ -35,9 +35,9 @@ export function Ribbons({ book }: { book: Pick<Book, "favourite" | "status" | "d
           aria-hidden
           className="pointer-events-none absolute -top-[3px] z-10 h-[36%] origin-top drop-shadow-[1px_1.5px_1px_rgba(0,0,0,0.35)]"
           style={{
-            width: cover ? 8 : 5,
-            // on a spine, a second ribbon hangs at the opposite edge so the title stays clear
-            ...(cover ? { right: `calc(16% + ${i * 11}px)` } : i % 2 ? { left: 3 } : { right: 3 }),
+            width: cover ? 8 : 4,
+            // on a spine, ribbons hang right at the edges so the title stays clear
+            ...(cover ? { right: `calc(16% + ${i * 11}px)` } : i % 2 ? { left: 1 } : { right: 1 }),
             transform: `rotate(${i % 2 ? -1.2 : 1.2}deg)`,
           }}
         >
