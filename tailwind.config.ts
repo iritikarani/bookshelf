@@ -7,6 +7,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         serif: ['"Gloock"', '"DM Serif Display"', "Georgia", "serif"],
+        // the typeface of the books themselves: spines and the year-wrapped cards
+        book: ['"Cormorant Garamond"', "Garamond", "Georgia", "serif"],
         sans: ['"Libre Franklin"', "system-ui", "sans-serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
       },

@@ -13,6 +13,7 @@ import { DownloadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 import { flattenTextures, shownLink, toDataUrl } from "./ShareDialog";
 import { StarDisplay } from "./StarRating";
+import { useCoverColor } from "@/lib/useCoverColor";
 
 const W = 1080;
 const H = 1920;
@@ -60,30 +61,50 @@ function yearStats(books: Book[], year: number) {
 }
 type Stats = ReturnType<typeof yearStats>;
 
-/** One 1080 × 1920 story card, in the colours of the reader's room. */
+/**
+ * One 1080 × 1920 story card, laid out like the title page of a fine book: the reader's room as
+ * the paper, a double rule framing the page, and everything set in one book typeface.
+ */
 function Card({ styleId, room, children, cardRef }: { styleId: ShelfStyle; room?: RoomSettings | null; children: ReactNode; cardRef?: (el: HTMLDivElement | null) => void }) {
   return (
     <div
       ref={cardRef}
       data-style={styleId}
       {...roomAttrs(room)}
-      className="wrapped-card room relative flex flex-col overflow-hidden text-ink"
-      style={{ ...roomStyle(room), width: W, height: H, padding: "120px 96px 96px", backgroundAttachment: "scroll" }}
+      className="wrapped-card room relative flex flex-col items-center overflow-hidden text-center font-book text-ink"
+      style={{ ...roomStyle(room), width: W, height: H, padding: "150px 120px 110px", backgroundAttachment: "scroll" }}
     >
-      {children}
+      {/* a soft pool of light and a double rule round the page */}
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 55% at 50% 38%, rgba(255,255,255,.4), transparent 70%), radial-gradient(ellipse 120% 90% at 50% 50%, transparent 60%, rgba(0,0,0,.12))" }} />
+      <div aria-hidden className="pointer-events-none absolute inset-[48px] rounded-[6px] border-[2px] border-ink/25" />
+      <div aria-hidden className="pointer-events-none absolute inset-[60px] rounded-[4px] border border-ink/15" />
+      <div className="relative flex w-full flex-1 flex-col items-center">{children}</div>
     </div>
   );
 }
 
-const Kicker = ({ children }: { children: ReactNode }) => <p className="font-sans text-[30px] uppercase tracking-[0.3em] text-ink-soft">{children}</p>;
-const Footer = ({ year, owner, link }: { year: number; owner?: string | null; link: string }) => (
-  <div className="mt-auto flex items-end justify-between gap-8 font-mono text-[24px] tracking-[2px] text-ink-soft">
-    <span>{owner ? `${owner}’s ${year} in books` : `My ${year} in books`}</span>
-    <span className="text-right">
-      Cosmic Space
-      {link && <span className="mt-2 block break-all text-[22px] tracking-[1px]">{link}</span>}
-    </span>
+/** A small typographic flourish: rule, diamond, rule. */
+const Ornament = ({ className = "" }: { className?: string }) => (
+  <div aria-hidden className={`flex items-center justify-center gap-5 text-ink/45 ${className}`}>
+    <span className="h-px w-[120px] bg-current" />
+    <span className="text-[28px] leading-none">◆</span>
+    <span className="h-px w-[120px] bg-current" />
   </div>
+);
+
+const Kicker = ({ children }: { children: ReactNode }) => <p className="text-[34px] font-semibold uppercase tracking-[0.42em] text-ink-soft">{children}</p>;
+
+const Footer = ({ year, link }: { year: number; link: string }) => (
+  <div className="relative mt-auto text-ink-soft">
+    <Ornament className="mb-8" />
+    <p className="text-[34px] font-semibold uppercase tracking-[0.3em]">Cosmic Space</p>
+    {link && <p className="mt-2 break-all text-[28px] italic tracking-[0.04em]">{link}</p>}
+    <p className="sr-only">{year}</p>
+  </div>
+);
+
+const Big = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
+  <p className={`font-medium leading-[0.9] [font-variant-numeric:lining-nums] ${className}`}>{children}</p>
 );
 
 /** A shelf of the year's books, standing on a board. */
@@ -92,20 +113,20 @@ function YearShelf({ books }: { books: Book[] }) {
   const shown: Book[] = [];
   for (const b of books) {
     const w = spineWidthPx(b.pages) * 1.9 + 4;
-    if (used + w > W - 2 * 96 - 40) break;
+    if (used + w > W - 2 * 120 - 40) break;
     used += w;
     shown.push(b);
   }
   return (
-    <div className="relative" style={{ "--cover-h": "300px", "--cover-w": "200px", "--spine-scale": 1.9 } as CSSProperties}>
-      <div className="flex items-end gap-[4px] px-5">
+    <div className="relative w-full" style={{ "--cover-h": "300px", "--cover-w": "200px", "--spine-scale": 1.9 } as CSSProperties}>
+      <div className="flex items-end justify-center gap-[4px] px-5">
         {shown.map((b) => (
-          <div key={b.id} className="shelf-item-shadow shrink-0" style={{ width: `calc(${spineWidthPx(b.pages)}px * 1.9)`, height: `calc(300px * ${(0.9 + Math.min(Math.max((b.pages ?? 280) - 80, 0), 820) / 820 * 0.12).toFixed(3)})` }}>
+          <div key={b.id} className="shelf-item-shadow shrink-0" style={{ width: `calc(${spineWidthPx(b.pages)}px * 1.9)`, height: `calc(300px * ${(0.9 + (Math.min(Math.max((b.pages ?? 280) - 80, 0), 820) / 820) * 0.12).toFixed(3)})` }}>
             <BookSpine book={b} />
           </div>
         ))}
       </div>
-      <div className="h-[26px] rounded-[4px]" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.25), transparent 30%, rgba(0,0,0,.25)), var(--board)", boxShadow: "0 18px 24px -12px rgba(0,0,0,.45)" }} />
+      <div className="h-[26px] rounded-[4px]" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.3), transparent 30%, rgba(0,0,0,.25)), var(--board)", boxShadow: "0 22px 26px -14px rgba(0,0,0,.5)" }} />
     </div>
   );
 }
@@ -114,13 +135,12 @@ function IntroCard({ s, year, owner }: { s: Stats; year: number; owner?: string 
   return (
     <>
       <Kicker>{owner ? `${owner}’s year in books` : "My year in books"}</Kicker>
-      <p className="mt-6 font-serif text-[150px] leading-none">{year}</p>
-      <div className="mt-24">
-        <p className="font-serif text-[300px] leading-[0.85]">{s.done.length}</p>
-        <p className="mt-6 font-serif text-[64px] leading-tight">{s.done.length === 1 ? "book finished" : "books finished"}</p>
-        {s.pages > 0 && <p className="mt-4 text-[40px] text-ink-soft">{s.pages.toLocaleString()} pages turned</p>}
-      </div>
-      <div className="mt-auto mb-16">
+      <Big className="mt-10 text-[170px] italic">{year}</Big>
+      <Ornament className="mt-14" />
+      <Big className="mt-16 text-[380px]">{s.done.length}</Big>
+      <p className="mt-6 text-[72px] font-medium italic leading-tight">{s.done.length === 1 ? "book finished" : "books finished"}</p>
+      {s.pages > 0 && <p className="mt-6 text-[40px] font-semibold uppercase tracking-[0.2em] text-ink-soft">{s.pages.toLocaleString()} pages turned</p>}
+      <div className="mt-auto mb-14 w-full">
         <YearShelf books={s.done} />
       </div>
     </>
@@ -133,53 +153,93 @@ function FavouriteCard({ s }: { s: Stats }) {
   return (
     <>
       <Kicker>{b.rating > 0 ? "Book of the year" : "A book to remember"}</Kicker>
-      <div className="flex flex-1 flex-col justify-center pb-16">
-      <div className="mx-auto w-[440px] overflow-hidden rounded-[6px] shadow-[0_40px_60px_-20px_rgba(0,0,0,.5)]" style={{ aspectRatio: "2 / 3" }}>
-        <BookCover book={b} size="L" />
-      </div>
-      <p className="mt-14 text-center font-serif text-[72px] leading-[1.05]">{b.title}</p>
-      {b.author && <p className="mt-4 text-center text-[38px] text-ink-soft">{b.author}</p>}
-      {b.rating > 0 && (
-        <div className="mt-8 flex justify-center">
-          <StarDisplay rating={b.rating} size={64} />
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-10">
+        <div className="relative">
+          {/* the cover glows in its own colour */}
+          <div aria-hidden className="absolute -inset-16 rounded-full opacity-60 blur-[50px]" style={{ background: "rgb(var(--accent) / .35)" }} />
+          <div className="relative w-[440px] overflow-hidden rounded-[6px] shadow-[0_50px_70px_-24px_rgba(0,0,0,.55)] ring-1 ring-black/10" style={{ aspectRatio: "2 / 3" }}>
+            <BookCover book={b} size="L" />
+          </div>
         </div>
-      )}
-      {quote && (
-        <blockquote className="mx-auto mt-12 max-w-[820px] text-center font-serif text-[44px] italic leading-snug">
-          “{quote.length > 160 ? `${quote.slice(0, 157)}…` : quote}”
-          {s.line && s.line.id !== b.id && <span className="mt-3 block text-[30px] not-italic text-ink-soft">— {s.line.title}</span>}
-        </blockquote>
-      )}
+        <p className="mt-16 text-[84px] font-semibold leading-[1.02]">{b.title}</p>
+        {b.author && <p className="mt-4 text-[40px] font-semibold uppercase tracking-[0.22em] text-ink-soft">{b.author}</p>}
+        {b.rating > 0 && (
+          <div className="mt-10 flex justify-center">
+            <StarDisplay rating={b.rating} size={60} />
+          </div>
+        )}
+        {quote && (
+          <blockquote className="mt-12 max-w-[800px] text-[50px] font-medium italic leading-[1.25]">
+            “{quote.length > 160 ? `${quote.slice(0, 157)}…` : quote}”
+            {s.line && s.line.id !== b.id && <span className="mt-4 block text-[32px] not-italic uppercase tracking-[0.2em] text-ink-soft">{s.line.title}</span>}
+          </blockquote>
+        )}
       </div>
     </>
   );
 }
 
+/** One finished book lying flat, in its own colour: the month chart is made of little piles. */
+function FlatBook({ book, i, height }: { book: Book; i: number; height: number }) {
+  const color = useCoverColor(book);
+  return (
+    <div
+      className="shrink-0 rounded-[4px] shadow-[0_3px_3px_rgba(0,0,0,.25)]"
+      style={{
+        height,
+        width: `${92 - ((i * 7) % 3) * 8}%`,
+        transform: `translateX(${((i * 5) % 3) - 1}px)`,
+        background: `linear-gradient(180deg, rgba(255,255,255,.3), transparent 35%, rgba(0,0,0,.18)), ${color}`,
+      }}
+    />
+  );
+}
+
 function MonthsCard({ s }: { s: Stats }) {
-  const max = Math.max(1, ...s.perMonth);
+  const byMonth = Array.from({ length: 12 }, (_, m) => s.done.filter((b) => monthOf(b.date_finished) === m));
+  // Books are as thick as the busiest month allows: a pile of 3 reaches most of the chart.
+  const most = Math.max(1, ...byMonth.map((l) => l.length));
+  const thick = Math.max(12, Math.min(110, Math.floor(520 / Math.max(most, 3)) - 6));
   return (
     <>
       <Kicker>Month by month</Kicker>
-      <div className="flex flex-1 flex-col justify-center pb-16">
-      {s.busiest !== null && (
-        <p className="mt-10 font-serif text-[88px] leading-[1.05]">
-          {MONTH_FULL[s.busiest]} was your biggest month: {s.perMonth[s.busiest]} {s.perMonth[s.busiest] === 1 ? "book" : "books"}.
-        </p>
-      )}
-      <div className="mt-16 flex h-[620px] items-end gap-[18px] rounded-[28px] bg-paper/70 px-10 pb-8 pt-10 shadow-[0_20px_40px_-24px_rgba(0,0,0,.35)]">
-        {s.perMonth.map((n, m) => (
-          <div key={m} className="flex h-full flex-1 flex-col items-center justify-end gap-4">
-            {n > 0 && <span className="font-mono text-[30px]">{n}</span>}
-            <div className="w-full rounded-t-[10px]" style={{ height: `${(n / max) * 420}px`, minHeight: 6, background: m === s.busiest ? "rgb(var(--accent))" : "rgb(var(--ink) / 0.22)" }} />
-            <span className="font-mono text-[26px] text-ink-soft">{MONTH_NAMES[m].slice(0, 1)}</span>
-          </div>
-        ))}
-      </div>
-      {s.longest && (
-        <p className="mt-14 text-[40px] leading-snug">
-          The longest: <span className="font-serif text-[46px]">{s.longest.title}</span>, {s.longest.pages?.toLocaleString()} pages.
-        </p>
-      )}
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-10">
+        {s.busiest !== null && (
+          <p className="text-[96px] font-semibold leading-[1.02]">
+            <span className="italic">{MONTH_FULL[s.busiest]}</span> was your
+            <br />
+            biggest month
+          </p>
+        )}
+        {s.busiest !== null && (
+          <p className="mt-6 text-[40px] font-semibold uppercase tracking-[0.2em] text-ink-soft">
+            {s.perMonth[s.busiest]} {s.perMonth[s.busiest] === 1 ? "book" : "books"} finished
+          </p>
+        )}
+        {/* each month a little pile of the books finished in it */}
+        <div className="mt-16 flex h-[560px] w-full items-end gap-[10px] border-b-[3px] border-ink/30 pb-2">
+          {byMonth.map((list, m) => (
+            <div key={m} className="flex h-full flex-1 flex-col-reverse items-center gap-[4px]">
+              {list.slice(0, 40).map((b, i) => (
+                <FlatBook key={b.id} book={b} i={i + m} height={thick} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex w-full gap-[10px]">
+          {MONTH_NAMES.map((name, m) => (
+            <span key={m} className={`flex-1 text-[28px] font-semibold uppercase ${m === s.busiest ? "text-ink" : "text-ink-soft"}`}>
+              {name.slice(0, 1)}
+            </span>
+          ))}
+        </div>
+        {s.longest && (
+          <p className="mt-16 text-[44px] leading-snug">
+            The longest, <span className="font-semibold italic">{s.longest.title}</span>,
+            <br />
+            at {s.longest.pages?.toLocaleString()} pages.
+          </p>
+        )}
       </div>
     </>
   );
@@ -202,27 +262,34 @@ function MoreCard({ s }: { s: Stats }) {
   return (
     <>
       <Kicker>And also</Kicker>
-      <div className="flex flex-1 flex-col justify-center pb-16">
-      {s.topAuthor ? (
-        <p className="mt-10 font-serif text-[84px] leading-[1.05]">
-          Your author of the year: {s.topAuthor.name}, {s.topAuthor.count} books.
-        </p>
-      ) : (
-        <p className="mt-10 font-serif text-[84px] leading-[1.05]">{s.done.length} stories, {s.pages ? `${s.pages.toLocaleString()} pages, ` : ""}one cosy shelf.</p>
-      )}
-      <dl className="mt-16 grid grid-cols-2 gap-8">
-        {tiles.map(([label, value]) => (
-          <div key={label} className="rounded-[28px] bg-paper/75 p-10 shadow-[0_20px_40px_-24px_rgba(0,0,0,.35)]">
-            <dd className="font-mono text-[96px] leading-none">{value}</dd>
-            <dt className="mt-4 text-[30px] uppercase tracking-[0.15em] text-ink-soft">{label}</dt>
-          </div>
-        ))}
-      </dl>
-      {s.reading[0] && (
-        <p className="mt-14 text-[40px] leading-snug">
-          Next chapter: <span className="font-serif text-[46px]">{s.reading[0].title}</span>
-        </p>
-      )}
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-10">
+        {s.topAuthor ? (
+          <>
+            <p className="text-[40px] font-semibold uppercase tracking-[0.22em] text-ink-soft">Author of the year</p>
+            <p className="mt-6 text-[110px] font-semibold italic leading-[1]">{s.topAuthor.name}</p>
+            <p className="mt-6 text-[44px]">{s.topAuthor.count} books, and counting</p>
+          </>
+        ) : (
+          <p className="text-[96px] font-semibold italic leading-[1.05]">
+            {s.done.length} {s.done.length === 1 ? "story" : "stories"},
+            <br />
+            one cosy shelf
+          </p>
+        )}
+        <Ornament className="my-16" />
+        <dl className="grid w-full grid-cols-2 gap-x-10 gap-y-16">
+          {tiles.map(([label, value]) => (
+            <div key={label}>
+              <dd className="text-[120px] font-medium leading-none [font-variant-numeric:lining-nums]">{value}</dd>
+              <dt className="mt-4 text-[30px] font-semibold uppercase tracking-[0.22em] text-ink-soft">{label}</dt>
+            </div>
+          ))}
+        </dl>
+        {s.reading[0] && (
+          <p className="mt-20 text-[44px] leading-snug">
+            Next chapter: <span className="font-semibold italic">{s.reading[0].title}</span>
+          </p>
+        )}
       </div>
     </>
   );
@@ -374,7 +441,7 @@ export function WrappedSheet({
               >
                 <Card styleId={styleId} room={room} cardRef={(el) => (cards.current[i] = el)}>
                   {sl.node}
-                  <Footer year={shownYear} owner={owner} link={shownLink(publicUrl)} />
+                  <Footer year={shownYear} link={shownLink(publicUrl)} />
                 </Card>
               </div>
             ))}

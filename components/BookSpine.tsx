@@ -74,14 +74,17 @@ export function spineSize(book: Pick<Book, "pages">): CSSProperties {
   };
 }
 
+// Every spine is set in one book typeface, Cormorant Garamond: titles in its semibold, some in
+// spaced capitals, old books in bold capitals, authors in small spaced capitals.
 type TextStyle = "serif" | "spaced" | "caps" | "authorCaps";
+const BOOK_FONT = '"Cormorant Garamond", Garamond, Georgia, serif';
 const FONTS: Record<TextStyle, string> = {
-  serif: '400 100px "Gloock", "DM Serif Display", Georgia, serif',
-  spaced: '500 100px "Libre Franklin", system-ui, sans-serif',
-  caps: '400 100px "Gloock", "DM Serif Display", Georgia, serif',
-  authorCaps: '400 100px "Libre Franklin", system-ui, sans-serif',
+  serif: `600 100px ${BOOK_FONT}`,
+  spaced: `600 100px ${BOOK_FONT}`,
+  caps: `700 100px ${BOOK_FONT}`,
+  authorCaps: `600 100px ${BOOK_FONT}`,
 };
-const TRACKING: Record<TextStyle, number> = { serif: 0, spaced: 0.16, caps: 0.08, authorCaps: 0.14 };
+const TRACKING: Record<TextStyle, number> = { serif: 0.01, spaced: 0.14, caps: 0.1, authorCaps: 0.16 };
 let measureCtx: CanvasRenderingContext2D | null = null;
 
 /**
@@ -97,7 +100,7 @@ function emWidth(text: string, style: TextStyle, measured: boolean): number {
       return measureCtx.measureText(t).width / 100 + t.length * TRACKING[style];
     }
   }
-  return t.length * (style === "serif" ? 0.52 : style === "spaced" ? 0.82 : 0.78);
+  return t.length * (style === "serif" ? 0.46 : style === "spaced" ? 0.8 : 0.78);
 }
 
 /** True once the web fonts have loaded, so spine text can be measured exactly. */
@@ -159,7 +162,7 @@ export function BookSpine({ book }: { book: SpineBook }) {
   // Fit the title: the room along the spine for it, and how long its longest line is.
   const hf = heightFactor(book.pages);
   const along = 129 * hf * (kind === "leather" ? 0.44 : kind === "hardback" ? 0.52 : 0.58);
-  const maxSize = style === "serif" ? 13 : 9;
+  const maxSize = style === "serif" ? 15 : 10;
   const fits = (lines: string[], across: number) => Math.min(across, along / Math.max(...lines.map((l) => emWidth(l, style, measured))), maxSize);
   let lines = titleLines(book.title, false);
   // A bookmark ribbon hangs at the spine's edge, so marked books keep their title narrower.
