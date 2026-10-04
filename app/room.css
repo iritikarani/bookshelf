@@ -1501,3 +1501,13 @@
     linear-gradient(180deg, #fffaf0, #fbf3e3);
 }
 .spine--leather .spine-title { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
+
+/* the little level meter on the room-sounds button */
+.sound-bar { height: 40%; animation: sound-bar 0.9s ease-in-out infinite alternate; }
+@keyframes sound-bar {
+  from { height: 25%; }
+  to { height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-bar { animation: none; height: 60%; }
+}

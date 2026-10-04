@@ -31,6 +31,7 @@ import { DECOR, DecorArt } from "./Decor";
 import { FairyLights, RoomWindow, useLamp } from "./RoomScene";
 import { useSeason } from "@/lib/useClock";
 import { SEASONS, nextFestival } from "@/lib/seasons";
+import { SOUNDS, soundFor, useRoomSound, type SoundKind } from "@/lib/sound";
 import { Sheet } from "./Sheet";
 
 const SPINES = ["#f2c4c0", "#c8cbf0", "#f3e3a2", "#bfe3cf", "#bfd8ee", "#ecc5dc", "#e6dccb"];
@@ -116,6 +117,7 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
   const pick = (patch: Partial<RoomSettings>) => setRoom(patch);
   const [lampOn, toggleLamp] = useLamp();
   const season = useSeason(room);
+  const sound = useRoomSound();
   const coming = nextFestival(new Date());
 
   return (
@@ -402,6 +404,38 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
                 </>
               )}
             </p>
+          </fieldset>
+
+          <fieldset>
+            <legend className="label">Room sounds</legend>
+            <div className="flex gap-2" role="radiogroup" aria-label="Room sounds">
+              {[true, false].map((on) => (
+                <button
+                  key={String(on)}
+                  type="button"
+                  role="radio"
+                  aria-checked={sound.on === on}
+                  onClick={() => {
+                    sound.save({ on });
+                    // switching on is a tap, so the sound can start straight away
+                    if (on) sound.play(soundFor(sound.kind, { weather: room?.weather, time: room?.time, season }), sound.volume);
+                  }}
+                  className={`rounded-xl border px-4 py-2 text-sm ${sound.on === on ? "border-accent bg-accent/10" : "border-line text-ink-soft"}`}
+                >
+                  {on ? "🔊 On" : "Off"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-sm text-ink-soft">Soft sounds while you’re in your room. A speaker button in the corner plays and pauses them. Only you hear them, on this device.</p>
+            {sound.on && (
+              <div className="mt-3 space-y-3">
+                <PillRow label="Sound" options={SOUNDS.map((x) => ({ id: x.id, name: x.name, icon: x.icon }))} value={sound.kind} onPick={(id) => sound.save({ kind: id as SoundKind })} />
+                <label className="flex items-center gap-3 text-sm">
+                  <span className="text-ink-soft">Volume</span>
+                  <input type="range" min={0.05} max={1} step={0.05} value={sound.volume} onChange={(e) => sound.save({ volume: Number(e.target.value) })} className="flex-1 accent-[rgb(var(--accent))]" aria-label="Room sounds volume" />
+                </label>
+              </div>
+            )}
           </fieldset>
 
           <PillRow

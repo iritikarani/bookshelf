@@ -30,6 +30,7 @@ import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { GuestbookSheet } from "./Guestbook";
 import { RoomSwitcher } from "./RoomSwitcher";
+import { SoundButton } from "./SoundButton";
 import { Settings } from "./Settings";
 import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
@@ -349,6 +350,8 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {!loading && <SoundButton room={profile?.room} season={season} />}
+
       <GuestbookSheet
         open={guestbookOpen}
         onClose={() => setGuestbookOpen(false)}
