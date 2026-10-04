@@ -1,6 +1,6 @@
 "use client";
 
-import { toPng } from "html-to-image";
+import { getFontEmbedCSS, toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { coverImageOf } from "@/lib/covers";
 import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
@@ -199,7 +199,7 @@ function MonthsCard({ s }: { s: Stats }) {
   const byMonth = Array.from({ length: 12 }, (_, m) => s.done.filter((b) => monthOf(b.date_finished) === m));
   // Books are as thick as the busiest month allows: a pile of 3 reaches most of the chart.
   const most = Math.max(1, ...byMonth.map((l) => l.length));
-  const thick = Math.max(12, Math.min(110, Math.floor(520 / Math.max(most, 3)) - 6));
+  const thick = Math.max(12, Math.min(150, Math.floor(520 / Math.max(most, 3)) - 6));
   return (
     <>
       <Kicker>Month by month</Kicker>
@@ -325,6 +325,7 @@ export function WrappedSheet({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const cards = useRef<(HTMLDivElement | null)[]>([]);
+  const fontCSS = useRef<Promise<string> | null>(null);
 
   const stats = useMemo(() => yearStats(books, shownYear), [books, shownYear]);
 
@@ -367,7 +368,9 @@ export function WrappedSheet({
     await document.fonts?.ready;
     await Promise.all(Array.from(el.querySelectorAll("img")).map((img) => (img.complete ? null : img.decode().catch(() => null))));
     await flattenTextures(el);
-    return toPng(el, { width: W, height: H, pixelRatio: 1 });
+    // Embed the web fonts once and reuse them for every card, so all four always match.
+    fontCSS.current ??= getFontEmbedCSS(el).catch(() => "");
+    return toPng(el, { width: W, height: H, pixelRatio: 1, fontEmbedCSS: await fontCSS.current });
   };
   const fileName = (i: number) => `${shownYear}-wrapped-${i + 1}-${slides[i].key}.png`;
   const flash = (m: string) => {
