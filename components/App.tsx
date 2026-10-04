@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
 import { siteUrl } from "@/lib/basePath";
@@ -22,6 +22,7 @@ import { UsernameDialog } from "./UsernameDialog";
 import { EditShelves } from "./EditShelves";
 import { Header, shelfSummary } from "./Header";
 import { MoreMenu } from "./MoreMenu";
+import { Onboarding } from "./Onboarding";
 import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
@@ -94,6 +95,31 @@ function AppInner() {
   const viewShelves = showExamples ? [EXAMPLE_SHELF, ...shelves] : shelves;
   const viewBooks = showExamples ? EXAMPLE_BOOKS : books;
   const stats = summary(books);
+  // Welcome onboarding: once, for a brand-new empty shelf, after the username question.
+  const welcomeKey = user ? `exlibris:welcomed:${user.id}` : null;
+  const [welcomed, setWelcomed] = useState(true);
+  useEffect(() => {
+    if (!welcomeKey) return;
+    try {
+      setWelcomed(localStorage.getItem(welcomeKey) === "1");
+    } catch {}
+  }, [welcomeKey]);
+  const finishWelcome = () => {
+    setWelcomed(true);
+    try {
+      if (welcomeKey) localStorage.setItem(welcomeKey, "1");
+    } catch {}
+  };
+  const needsUsername = store.mode === "supabase" && Boolean(profile) && !profile?.username && !usernameSkipped;
+  // Once it has started it stays open while the first books go on the shelf.
+  const welcomeStarted = useRef(false);
+  const showWelcome = !welcomed && !loading && Boolean(profile) && !needsUsername && (showExamples || welcomeStarted.current);
+  if (showWelcome) welcomeStarted.current = true;
+  // Readers who already have books never need the welcome.
+  useEffect(() => {
+    if (welcomeKey && !loading && !welcomed && !welcomeStarted.current && books.length > 0) finishWelcome();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [welcomeKey, loading, welcomed, books.length]);
   const ownerName = profile?.username ?? (store.mode === "supabase" ? profile?.display_name : null) ?? null;
 
   if (!authReady) return <Splash />;
@@ -241,6 +267,7 @@ function AppInner() {
           }
         }}
       />
+      {showWelcome && <Onboarding name={ownerName} onDone={finishWelcome} />}
       {store.mode === "supabase" && profile && !profile.username && !usernameSkipped && (
         <UsernameDialog open firstTime onClose={() => setUsernameSkipped(true)} />
       )}
