@@ -28,6 +28,8 @@ export interface RoomSettings {
   fairy?: string;
   /** Seasonal touches around the window (on unless "off"). */
   seasonal?: "off";
+  /** The first room's name (other rooms keep theirs on the room row). */
+  title?: string;
 }
 
 export type TimeOfDay = "morning" | "day" | "sunset" | "night";

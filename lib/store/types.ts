@@ -1,10 +1,12 @@
-import type { AuthUser, Book, BookDraft, Decor, DecorKind, GuestNote, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, BookDraft, Decor, DecorKind, GuestNote, Profile, PublicShelf, Room, Shelf } from "../types";
 
 export interface LibraryData {
   profile: Profile;
   shelves: Shelf[];
   books: Book[];
   decor: Decor[];
+  /** Extra rooms (empty before migration 0011). */
+  rooms?: Room[];
 }
 
 export interface PositionUpdate {
@@ -30,7 +32,10 @@ export interface Store {
   deleteBook(id: string): Promise<void>;
   insertDecor(userId: string, decor: { shelf_id: string; kind: DecorKind; position: number }): Promise<Decor>;
   deleteDecor(id: string): Promise<void>;
-  insertShelf(userId: string, shelf: Pick<Shelf, "name" | "position">): Promise<Shelf>;
+  insertShelf(userId: string, shelf: Pick<Shelf, "name" | "position" | "room_id">): Promise<Shelf>;
+  insertRoom(userId: string, room: Pick<Room, "name" | "position" | "shelf_style">): Promise<Room>;
+  updateRoom(id: string, patch: Partial<Pick<Room, "name" | "position" | "shelf_style" | "room">>): Promise<void>;
+  deleteRoom(id: string): Promise<void>;
   updateShelves(updates: (Pick<Shelf, "id"> & Partial<Pick<Shelf, "name" | "position">>)[]): Promise<void>;
   deleteShelf(id: string): Promise<void>;
   updateProfile(userId: string, patch: Partial<Pick<Profile, "shelf_style" | "is_public" | "room">>): Promise<Profile>;

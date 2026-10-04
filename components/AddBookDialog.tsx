@@ -66,7 +66,7 @@ function nextShelfNames(shelves: Shelf[], count: number): string[] {
 }
 
 function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null, note?: string | null) => void }) {
-  const { profile, shelves, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
+  const { profile, shelves, allShelves, shelfLabel: roomShelfLabel, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -477,8 +477,9 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
         <div>
           <label className="label" htmlFor="ab-shelf">Shelf</label>
           <select id="ab-shelf" className="field" value={shelfId} onChange={(e) => setShelfId(e.target.value)}>
-            {shelves.map((sh) => (
-              <option key={sh.id} value={sh.id}>{sh.name}</option>
+            {/* editing can move a book to another room; a new book goes into the room you're in */}
+            {(editing ? allShelves : shelves).map((sh) => (
+              <option key={sh.id} value={sh.id}>{editing ? roomShelfLabel(sh) : sh.name}</option>
             ))}
           </select>
         </div>

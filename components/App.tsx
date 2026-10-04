@@ -29,6 +29,7 @@ import { BrushIcon, GearIcon, MailIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon 
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { GuestbookSheet } from "./Guestbook";
+import { RoomSwitcher } from "./RoomSwitcher";
 import { Settings } from "./Settings";
 import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
@@ -141,8 +142,16 @@ function AppInner() {
   const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
   const exampleMap = useMemo(() => new Map<string, ShelfItem[]>([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]]), []);
   // Quote wall & reading year show the examples too until the first real book arrives.
-  const viewShelves = showExamples ? [EXAMPLE_SHELF, ...shelves] : shelves;
+  const viewShelves = showExamples ? [EXAMPLE_SHELF, ...lib.allShelves] : lib.allShelves;
   const viewBooks = showExamples ? EXAMPLE_BOOKS : books;
+  // The books in the room you're in (the shelf tab's filter counts these).
+  const roomBooks = useMemo(() => {
+    if (showExamples) return EXAMPLE_BOOKS;
+    const here = new Set(shelves.map((s) => s.id));
+    return books.filter((b) => here.has(b.shelf_id));
+  }, [showExamples, shelves, books]);
+  // Every shelf, labelled with its room, so a book can move to another room.
+  const labelledShelves = useMemo(() => lib.allShelves.map((s) => ({ ...s, name: lib.shelfLabel(s) })), [lib]);
   const stats = summary(books);
   // Welcome onboarding: once, for a brand-new empty shelf, after the username question.
   const welcomeKey = user ? `exlibris:welcomed:${user.id}` : null;
@@ -227,7 +236,8 @@ function AppInner() {
                 </button>
               </div>
             )}
-            <MarkFilterBar value={filter} onChange={setFilter} books={viewBooks} />
+            {!showExamples && <RoomSwitcher />}
+            <MarkFilterBar value={filter} onChange={setFilter} books={roomBooks} />
             <RoomScene standing={structure === "case"}>
               {showExamples ? (
                 <ShelfWall
@@ -285,7 +295,7 @@ function AppInner() {
 
       <BookDetail
         book={openBook}
-        shelves={isExample(openBook ?? { id: "" }) ? [EXAMPLE_SHELF] : shelves}
+        shelves={isExample(openBook ?? { id: "" }) ? [EXAMPLE_SHELF] : labelledShelves}
         index={openIndex}
         shelfSize={openList.length}
         example={openBook ? isExample(openBook) : false}
