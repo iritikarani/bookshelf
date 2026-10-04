@@ -735,6 +735,8 @@
   white-space: nowrap;
   line-height: 1.1;
 }
+/* keep a marked book's title clear of the ribbon hanging at the edge */
+.spine--marked .spine-title { max-width: calc(100% - 14px); }
 .spine-title--serif { font-family: "Gloock", "DM Serif Display", Georgia, serif; letter-spacing: 0.01em; }
 .spine-title--spaced {
   font-family: "Libre Franklin", system-ui, sans-serif;

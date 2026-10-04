@@ -118,7 +118,7 @@ function useFontsMeasured(): boolean {
   return ready;
 }
 
-type SpineBook = Pick<Book, "title" | "author" | "cover_color" | "cover_url" | "uploaded_cover" | "pages"> & Partial<Pick<Book, "year_published" | "status">>;
+type SpineBook = Pick<Book, "title" | "author" | "cover_color" | "cover_url" | "uploaded_cover" | "pages"> & Partial<Pick<Book, "year_published" | "status" | "favourite">>;
 type SpineKind = "paperback" | "hardback" | "leather";
 
 /** Old books are bound in leather, long ones are hardbacks, the rest paperbacks. */
@@ -162,10 +162,12 @@ export function BookSpine({ book }: { book: SpineBook }) {
   const maxSize = style === "serif" ? 13 : 9;
   const fits = (lines: string[], across: number) => Math.min(across, along / Math.max(...lines.map((l) => emWidth(l, style, measured))), maxSize);
   let lines = titleLines(book.title, false);
-  let size = fits(lines, w * 0.42);
+  // A bookmark ribbon hangs at the spine's edge, so marked books keep their title narrower.
+  const marked = Boolean(book.favourite || book.status === "reading" || book.status === "to_read");
+  let size = fits(lines, w * (marked ? 0.36 : 0.42));
   if (size < 9 && w >= 26 && book.title.includes(" ")) {
     const two = titleLines(book.title, true);
-    const twoSize = fits(two, w * 0.3);
+    const twoSize = fits(two, w * (marked ? 0.25 : 0.3));
     if (twoSize > size) {
       lines = two;
       size = twoSize;
@@ -181,11 +183,11 @@ export function BookSpine({ book }: { book: SpineBook }) {
   const surname = names[names.length - 1] ?? "";
   const picked = names.length > 1 && authorFit(full) >= 5 ? full : surname;
   // Too small to read means it's left off, like many real spines, rather than cut short.
-  const author = picked && authorFit(picked) >= 4.6 ? picked : "";
+  const author = picked && authorFit(picked) >= 5.2 ? picked : "";
   const authorSize = `calc(${authorFit(author || "x").toFixed(1)}px * var(--spine-scale))`;
 
   return (
-    <div className={`spine spine--${kind}`} style={{ backgroundColor: base, color: ink }}>
+    <div className={`spine spine--${kind} ${marked ? "spine--marked" : ""}`} style={{ backgroundColor: base, color: ink }}>
       {kind === "hardback" && (
         <>
           <span aria-hidden className="spine-cap top-0" />
