@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { store, type LibraryData, type PositionUpdate } from "./store";
 import { saveUsername } from "./store/supabase";
 import { DECOR } from "@/components/Decor";
+import type { RoomSettings } from "./room";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Shelf, ShelfItem, ShelfStyle } from "./types";
 
 interface LibraryContextValue {
@@ -42,7 +43,10 @@ interface LibraryContextValue {
   moveShelf(id: string, dir: -1 | 1): Promise<void>;
   deleteShelf(id: string): Promise<void>;
 
+  /** Pick a room style. Clears the room editor's own choices so the style shows as designed. */
   setShelfStyle(style: ShelfStyle): Promise<void>;
+  /** Save the room editor's choices (merged into what's there; undefined clears one). */
+  setRoom(patch: Partial<RoomSettings> | null): Promise<void>;
   setPublic(isPublic: boolean): Promise<void>;
   /** Accounts only: choose or change the reader's username. Throws with a readable message. */
   setUsername(username: string): Promise<void>;
@@ -66,6 +70,11 @@ function writeCache(userId: string, data: LibraryData) {
   } catch {
     /* storage full or blocked: the next visit just loads from the server */
   }
+}
+
+/** Picking a new room style resets the look, but keeps how many shelves each bookcase holds. */
+function keepLayout(room: RoomSettings | null | undefined): RoomSettings | null {
+  return room?.perCase ? { perCase: room.perCase } : null;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -383,10 +392,36 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const setShelfStyle = useCallback(
     async (shelf_style: ShelfStyle) => {
       const u = requireUser();
+      const before = dataRef.current?.profile.room;
+      const room = keepLayout(before);
+      if (dataRef.current) dataRef.current = { ...dataRef.current, profile: { ...dataRef.current.profile, shelf_style, room } };
       await run(
-        (cur) => ({ ...cur, profile: { ...cur.profile, shelf_style } }),
+        (cur) => ({ ...cur, profile: { ...cur.profile, shelf_style, room } }),
         async () => {
-          await store.updateProfile(u.id, { shelf_style });
+          // Only touch `room` when there is something to reset (works before migration 0008 too).
+          await store.updateProfile(u.id, before ? { shelf_style, room } : { shelf_style });
+        },
+      ).catch(() => {});
+    },
+    [run],
+  );
+
+  const setRoom = useCallback(
+    async (patch: Partial<RoomSettings> | null) => {
+      const u = requireUser();
+      const next = (cur: RoomSettings | null | undefined): RoomSettings | null => {
+        if (patch === null) return null;
+        const merged: RoomSettings = { ...(cur ?? {}), ...patch };
+        for (const k of Object.keys(merged) as (keyof RoomSettings)[]) if (merged[k] === undefined) delete merged[k];
+        return merged;
+      };
+      const room = next(dataRef.current?.profile.room);
+      // Several quick picks in a row each build on the last, before React re-renders.
+      if (dataRef.current) dataRef.current = { ...dataRef.current, profile: { ...dataRef.current.profile, room } };
+      await run(
+        (cur) => ({ ...cur, profile: { ...cur.profile, room } }),
+        async () => {
+          await store.updateProfile(u.id, { room });
         },
       ).catch(() => {});
     },
@@ -439,6 +474,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     moveShelf,
     deleteShelf,
     setShelfStyle,
+    setRoom,
     setPublic,
     setUsername,
   };

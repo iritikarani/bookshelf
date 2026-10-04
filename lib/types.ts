@@ -1,3 +1,5 @@
+import type { RoomSettings } from "./room";
+
 export type ShelfStyle =
   | "pastel"
   | "modern"
@@ -95,12 +97,14 @@ export interface Profile {
   /** Chosen at sign-up (or on first visit after Google sign-in). Null in browser-only mode. */
   username?: string | null;
   shelf_style: ShelfStyle;
+  /** Room editor choices layered on the room style (wall, floor, shelves…). */
+  room?: RoomSettings | null;
   is_public: boolean;
   public_slug: string;
 }
 
 export interface PublicShelf {
-  profile: { display_name: string | null; shelf_style: ShelfStyle };
+  profile: { display_name: string | null; shelf_style: ShelfStyle; room?: RoomSettings | null };
   shelves: Shelf[];
   books: Book[];
   decor: Decor[];

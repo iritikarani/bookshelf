@@ -33,7 +33,7 @@ export interface Store {
   insertShelf(userId: string, shelf: Pick<Shelf, "name" | "position">): Promise<Shelf>;
   updateShelves(updates: (Pick<Shelf, "id"> & Partial<Pick<Shelf, "name" | "position">>)[]): Promise<void>;
   deleteShelf(id: string): Promise<void>;
-  updateProfile(userId: string, patch: Partial<Pick<Profile, "shelf_style" | "is_public">>): Promise<Profile>;
+  updateProfile(userId: string, patch: Partial<Pick<Profile, "shelf_style" | "is_public" | "room">>): Promise<Profile>;
   uploadCover(userId: string, blob: Blob, dataUrl: string): Promise<string>;
   getPublicShelf(slug: string): Promise<PublicShelf | null>;
 }

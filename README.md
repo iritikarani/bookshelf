@@ -23,7 +23,7 @@ npm run dev                  # http://localhost:3000
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) , [`0003_decor.sql`](supabase/migrations/0003_decor.sql) (new decor objects), [`0004_half_stars.sql`](supabase/migrations/0004_half_stars.sql) (half-star ratings), [`0005_current_page.sql`](supabase/migrations/0005_current_page.sql) (reading progress), [`0006_dnf.sql`](supabase/migrations/0006_dnf.sql) ("Didn’t finish" status) and [`0007_reward_rooms.sql`](supabase/migrations/0007_reward_rooms.sql) (reward rooms) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
+2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`0002_username.sql`](supabase/migrations/0002_username.sql) , [`0003_decor.sql`](supabase/migrations/0003_decor.sql) (new decor objects), [`0004_half_stars.sql`](supabase/migrations/0004_half_stars.sql) (half-star ratings), [`0005_current_page.sql`](supabase/migrations/0005_current_page.sql) (reading progress), [`0006_dnf.sql`](supabase/migrations/0006_dnf.sql) ("Didn’t finish" status), [`0007_reward_rooms.sql`](supabase/migrations/0007_reward_rooms.sql) (reward rooms) and [`0008_room_editor.sql`](supabase/migrations/0008_room_editor.sql) (room editor choices) (usernames: a unique `profiles.username`, a `username_available()` check the sign-up form calls, and a sign-up trigger that saves the chosen username). Together they create:
    - `profiles`, `shelves` and `books`, with row-level security so each user sees only their own rows (private by default).
    - A sign-up trigger that gives every new user three plain shelves: **Top shelf**, **Middle shelf** and **Bottom shelf**.
    - `get_public_shelf(slug)`, a security-definer function that returns a shelf only when its owner has turned the public link on.
@@ -62,7 +62,7 @@ Import the repo. [`vercel.json`](vercel.json) already tells Vercel to run `npm r
 | `shelves` | id, user_id, name, position |
 | `books` | id, user_id, title, author, cover_url, uploaded_cover, cover_color, display (`spine` / `cover`), status (`to_read` / `reading` / `read` / `dnf`), favourite, year_published, pages, current_page, genre, short_description, shelf_id, position, rating (0–5 in halves), what_i_liked, favourite_line, date_finished, created_at, updated_at |
 | `decor` | id, user_id, shelf_id, kind, position (shares the shelf's ordering with books) |
-| `profiles` | id, display_name, username (unique, 3–20 of `a-z 0-9 _ .`), shelf_style (one of the 10 aesthetics), is_public, public_slug |
+| `profiles` | id, display_name, room (jsonb: wall, pattern, floor, rug, curtains, structure, finish, perCase), username (unique, 3–20 of `a-z 0-9 _ .`), shelf_style (one of the 10 aesthetics), is_public, public_slug |
 
 Beyond the brief: `status` and `favourite` are the marks (they replace the brief's "Want to read" shelf), `cover_color` stores the pastel picked for a generated cover, `display` says whether a book stands spine-out or cover-out, and the `decor` table holds the objects on each shelf.
 
@@ -78,7 +78,7 @@ components/
   ShelfWall.tsx          shelf structures, books + decor in one row, drag & drop with an insertion marker
   BookSpine.tsx          spine-out books
   Decor.tsx              the 17 decor objects (inline SVG)
-  ArrangeSheet.tsx       Decorate your room: rooms, objects, reading rewards
+  ArrangeSheet.tsx       the room editor: live preview; Room, Shelves, Objects, Lighting tabs; reading rewards
   Onboarding.tsx         the welcome setup for a new, empty shelf
   DecorSheet.tsx         move or remove one object
   BookDetail.tsx         the open-book spread: rating, marks, journal, arrange controls, remove confirmation

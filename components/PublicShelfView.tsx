@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { groupItems } from "@/lib/library";
+import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
 import { aestheticOf } from "@/lib/themes";
 import { hasSupabase } from "@/lib/store";
 import { localStore } from "@/lib/store/local";
@@ -73,7 +74,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
 
   const name = data?.profile.display_name;
   return (
-    <div data-style={aesthetic.id} className="room min-h-dvh pb-16">
+    <div data-style={aesthetic.id} {...roomAttrs(data?.profile.room)} style={roomStyle(data?.profile.room)} className="room min-h-dvh pb-16">
       <Header
         title={data ? `${name ? `${name}’s` : "A reader’s"} bookshelf` : " "}
         summary={data ? shelfSummary(books) : " "}
@@ -86,8 +87,8 @@ export function PublicShelfView({ slug }: { slug: string }) {
         {data === undefined ? (
           <ShelfSkeleton />
         ) : tab === "shelf" ? (
-          <RoomScene standing={aesthetic.structure === "case"}>
-            <ShelfWall shelves={shelves} itemsByShelf={items} structure={aesthetic.structure} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
+          <RoomScene standing={structureOf(aesthetic, data?.profile.room) === "case"}>
+            <ShelfWall shelves={shelves} itemsByShelf={items} structure={structureOf(aesthetic, data?.profile.room)} perCase={perCaseOf(data?.profile.room)} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
           </RoomScene>
         ) : tab === "quotes" ? (
           <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} />

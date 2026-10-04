@@ -10,7 +10,7 @@ import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/sear
 import { placeBook } from "@/lib/shelfRoom";
 import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
 import { MarkPicker } from "./Marks";
-import { SHELVES_PER_BOOKCASE } from "./ShelfWall";
+import { perCaseOf } from "@/lib/room";
 import { BookCover, GeneratedCover } from "./BookCover";
 import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -65,7 +65,7 @@ function nextShelfNames(shelves: Shelf[], count: number): string[] {
 }
 
 function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null, note?: string | null) => void }) {
-  const { shelves, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
+  const { profile, shelves, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -240,8 +240,9 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       let note: string | null = null;
       if ("newBookcase" in place) {
         // If the last bookcase is missing shelves, fill it out; otherwise add a whole new bookcase.
-        const missing = (SHELVES_PER_BOOKCASE - (shelves.length % SHELVES_PER_BOOKCASE)) % SHELVES_PER_BOOKCASE;
-        const names = nextShelfNames(shelves, missing || SHELVES_PER_BOOKCASE);
+        const perCase = perCaseOf(profile?.room);
+        const missing = (perCase - (shelves.length % perCase)) % perCase;
+        const names = nextShelfNames(shelves, missing || perCase);
         const added: Shelf[] = [];
         for (const name of names) {
           const s = await addShelf(name);

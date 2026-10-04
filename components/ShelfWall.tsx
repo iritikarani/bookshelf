@@ -50,6 +50,8 @@ interface ShelfWallProps {
   filter?: MarkFilter;
   /** Stack bookcases one above the other instead of side by side (the share image can't swipe). */
   stacked?: boolean;
+  /** Shelves per bookcase (room editor). */
+  perCase?: number;
 }
 
 // Prefer the item under the pointer over the shelf row that contains it.
@@ -74,7 +76,7 @@ const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
 const itemSize = (item: ShelfItem): CSSProperties =>
   item.type === "decor" ? decorSize(item.decor.kind) : item.book.display === "cover" ? coverSize(item.book) : spineSize(item.book);
 
-export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked }: ShelfWallProps) {
+export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked, perCase = SHELVES_PER_BOOKCASE }: ShelfWallProps) {
   const [active, setActive] = useState<ShelfItem | null>(null);
   const [insertion, setInsertion] = useState<Insertion | null>(null);
   // Mouse: drag after a small move. Touch: press and hold for a moment, so a quick swipe still
@@ -122,7 +124,7 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
     onMove?.(item.id, target.shelfId, index);
   };
 
-  const cases = toBookcases(shelves);
+  const cases = toBookcases(shelves, perCase);
   const renderCase = (group: Shelf[]) => (
     <div className="shelf-unit" data-structure={structure}>
       <div className="unit-cap" aria-hidden />
@@ -194,9 +196,9 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
 /** How many shelves one bookcase holds. When they're all full, a new bookcase is added. */
 export const SHELVES_PER_BOOKCASE = 3;
 
-function toBookcases(shelves: Shelf[]): Shelf[][] {
+function toBookcases(shelves: Shelf[], perCase: number): Shelf[][] {
   const out: Shelf[][] = [];
-  for (let i = 0; i < shelves.length; i += SHELVES_PER_BOOKCASE) out.push(shelves.slice(i, i + SHELVES_PER_BOOKCASE));
+  for (let i = 0; i < shelves.length; i += perCase) out.push(shelves.slice(i, i + perCase));
   return out;
 }
 

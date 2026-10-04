@@ -932,3 +932,9 @@
 .share-art .room-stage { margin-top: 0; }
 .share-art .lamp-glow,
 .share-art .window-beam { display: none; }
+
+/* ───── room editor switches (see lib/room.ts) ───── */
+.room[data-rug="none"] .room-rug { display: none; }
+.room[data-curtains="none"] .curtain { display: none; }
+[data-style][data-curtains="on"] .curtain { display: block; }
+.room[data-rug="none"] .mini-rug { display: none; }

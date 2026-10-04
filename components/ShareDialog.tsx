@@ -4,6 +4,7 @@ import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { coverImageOf } from "@/lib/covers";
 import { summary } from "@/lib/stats";
+import { perCaseOf, roomAttrs, roomStyle, structureOf, type RoomSettings } from "@/lib/room";
 import { aestheticOf } from "@/lib/themes";
 import type { Book, Shelf, ShelfItem, ShelfStyle } from "@/lib/types";
 import { spineWidthPx } from "./BookSpine";
@@ -113,13 +114,14 @@ function itemWidth(item: ShelfItem): number {
   return spineWidthPx(item.book.pages) * SPINE_SCALE + 3;
 }
 
-export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, owner, publicUrl }: {
+export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, room, owner, publicUrl }: {
   open: boolean;
   onClose: () => void;
   shelves: Shelf[];
   itemsByShelf: Map<string, ShelfItem[]>;
   books: Book[];
   styleId: ShelfStyle;
+  room?: RoomSettings | null;
   owner?: string | null;
   /** The public shelf link, when sharing is on. */
   publicUrl?: string | null;
@@ -299,7 +301,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       {/* Off-screen render target */}
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
-          <div ref={nodeRef} data-style={aesthetic.id} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={vars}>
+          <div ref={nodeRef} data-style={aesthetic.id} {...roomAttrs(room)} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={{ ...roomStyle(room), ...vars }}>
             <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
             <h1 className="mt-[18px] font-serif text-[96px] leading-none">{owner ? `${owner}’s bookshelf` : "My bookshelf"}</h1>
             <p className="mt-[16px] font-mono text-[28px] text-ink-soft">
@@ -326,11 +328,12 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
 
             {/* The room as it looks on screen: window and lamp, the shelves, the floor and rug. */}
             <div className="share-room relative mt-[40px] flex flex-1 flex-col [&_h2]:!text-[34px]">
-              <RoomScene standing={aesthetic.structure === "case"}>
+              <RoomScene standing={structureOf(aesthetic, room) === "case"}>
                 <ShelfWall
                   shelves={picked.map((p) => p.shelf)}
                   itemsByShelf={itemsForImage}
-                  structure={aesthetic.structure}
+                  structure={structureOf(aesthetic, room)}
+                  perCase={perCaseOf(room)}
                   onOpenBook={() => {}}
                   readOnly
                   floor={false}
