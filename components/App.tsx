@@ -11,7 +11,7 @@ import { finishedCount, newlyUnlocked } from "@/lib/rewards";
 import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
 import { useRoomClock, useSeason } from "@/lib/useClock";
 import { aestheticOf } from "@/lib/themes";
-import type { Book, ShelfItem } from "@/lib/types";
+import type { Book, GuestNote, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
 import { todayISO } from "@/lib/date";
 import { MARKS, matchesFilter, type MarkFilter } from "./Marks";
@@ -25,9 +25,10 @@ import { EditShelves } from "./EditShelves";
 import { Header, shelfSummary } from "./Header";
 import { MoreMenu } from "./MoreMenu";
 import { Onboarding } from "./Onboarding";
-import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
+import { BrushIcon, GearIcon, MailIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
+import { GuestbookSheet } from "./Guestbook";
 import { Settings } from "./Settings";
 import { ShareDialog } from "./ShareDialog";
 import { ShelfWall } from "./ShelfWall";
@@ -81,6 +82,47 @@ function AppInner() {
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+
+  // Guest book: notes friends left on the public shelf. Before the guest book's database table
+  // exists (or offline) it simply stays empty.
+  const [guestNotes, setGuestNotes] = useState<GuestNote[] | null>([]);
+  const [guestbookOpen, setGuestbookOpen] = useState(false);
+  const [guestSeen, setGuestSeen] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user || loading) return;
+    let alive = true;
+    try {
+      setGuestSeen(localStorage.getItem(`exlibris:guestbookSeen:${user.id}`));
+    } catch {}
+    store
+      .listGuestbook(user.id)
+      .then((notes) => alive && setGuestNotes(notes))
+      .catch(() => alive && setGuestNotes([]));
+    return () => {
+      alive = false;
+    };
+  }, [user, loading]);
+  const newNotes = (guestNotes ?? []).filter((n) => !guestSeen || n.created_at > guestSeen).length;
+  const announcedNotes = useRef(false);
+  useEffect(() => {
+    if (newNotes > 0 && !announcedNotes.current) {
+      announcedNotes.current = true;
+      setNotice(`💌 ${newNotes} new ${newNotes === 1 ? "note" : "notes"} in your guest book. Open ••• → Guest book.`);
+    }
+  }, [newNotes]);
+  const openGuestbook = () => {
+    setGuestbookOpen(true);
+    setNotice((n) => (n?.startsWith("💌") ? null : n));
+    const now = new Date().toISOString();
+    setGuestSeen(now);
+    try {
+      if (user) localStorage.setItem(`exlibris:guestbookSeen:${user.id}`, now);
+    } catch {}
+  };
+  const deleteGuestNote = (id: string) => {
+    setGuestNotes((ns) => (ns ?? []).filter((n) => n.id !== id));
+    store.deleteGuestNote(id).catch(() => {});
+  };
   const [arrangeOpen, setArrangeOpen] = useState(false);
   const [decorId, setDecorId] = useState<string | null>(null);
   const aesthetic = aestheticOf(profile?.shelf_style);
@@ -161,6 +203,7 @@ function AppInner() {
                 { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => setArrangeOpen(true) },
                 { label: "Edit shelves", icon: <ShelvesIcon width={18} height={18} />, onSelect: () => setShelvesOpen(true) },
                 { label: "Share shelf", icon: <ShareIcon width={18} height={18} />, onSelect: () => setShareOpen(true), disabled: books.length === 0 },
+                { label: newNotes ? `Guest book · ${newNotes} new` : "Guest book", icon: <MailIcon width={18} height={18} />, onSelect: openGuestbook },
                 { label: "Settings", icon: <GearIcon width={18} height={18} />, onSelect: () => setSettingsOpen(true) },
               ]}
             />
@@ -289,6 +332,18 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <GuestbookSheet
+        open={guestbookOpen}
+        onClose={() => setGuestbookOpen(false)}
+        notes={guestNotes}
+        isPublic={Boolean(profile?.is_public)}
+        onDelete={deleteGuestNote}
+        onShare={() => {
+          setGuestbookOpen(false);
+          if (profile?.is_public && books.length) setShareOpen(true);
+          else setSettingsOpen(true);
+        }}
+      />
       <ShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}

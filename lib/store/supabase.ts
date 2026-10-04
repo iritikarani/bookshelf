@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Shelf } from "../types";
 import type { Store } from "./types";
 import { siteUrl } from "../basePath";
 
@@ -152,6 +152,17 @@ export const supabaseStore: Store = {
     const { data, error } = await getSupabase().rpc("get_public_shelf", { slug });
     if (error) throw new Error(error.message);
     return (data as PublicShelf | null) ?? null;
+  },
+  async signGuestbook(slug, note) {
+    const { data, error } = await getSupabase().rpc("sign_guestbook", { slug, guest_name: note.name, note: note.message, with_heart: note.heart });
+    if (error) throw new Error(error.message);
+    return Boolean(data);
+  },
+  async listGuestbook(userId) {
+    return check(await getSupabase().from("guestbook").select("*").eq("owner_id", userId).order("created_at", { ascending: false }).limit(300)) as GuestNote[];
+  },
+  async deleteGuestNote(id) {
+    check(await getSupabase().from("guestbook").delete().eq("id", id));
   },
 };
 

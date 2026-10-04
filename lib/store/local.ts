@@ -1,7 +1,21 @@
-import type { AuthUser, Book, Decor, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Shelf } from "../types";
 import type { LibraryData, Store } from "./types";
 
 const KEY = "exlibris:local:v3";
+const GUESTBOOK_KEY = "exlibris:local:guestbook";
+
+function readNotes(): GuestNote[] {
+  try {
+    return JSON.parse(localStorage.getItem(GUESTBOOK_KEY) ?? "[]") as GuestNote[];
+  } catch {
+    return [];
+  }
+}
+function writeNotes(notes: GuestNote[]) {
+  try {
+    localStorage.setItem(GUESTBOOK_KEY, JSON.stringify(notes.slice(0, 300)));
+  } catch {}
+}
 const LOCAL_USER: AuthUser = { id: "local-user", email: null };
 
 const uid = () =>
@@ -148,5 +162,20 @@ export const localStore: Store = {
       books: d.books,
       decor: d.decor,
     };
+  },
+  async signGuestbook(slug, note) {
+    const d = read();
+    if (d.profile.public_slug !== slug || !d.profile.is_public) return false;
+    const message = note.message.trim().slice(0, 280);
+    if (!message && !note.heart) return false;
+    const entry: GuestNote = { id: uid(), owner_id: d.profile.id, name: note.name.trim().slice(0, 40) || "A friend", message, heart: note.heart, created_at: new Date().toISOString() };
+    writeNotes([entry, ...readNotes()]);
+    return true;
+  },
+  async listGuestbook() {
+    return readNotes();
+  },
+  async deleteGuestNote(id) {
+    writeNotes(readNotes().filter((n) => n.id !== id));
   },
 };

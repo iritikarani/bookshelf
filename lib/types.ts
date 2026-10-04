@@ -110,6 +110,16 @@ export interface PublicShelf {
   decor: Decor[];
 }
 
+/** A note (or just a heart) left in a public shelf's guest book. Only the owner sees these. */
+export interface GuestNote {
+  id: string;
+  owner_id: string;
+  name: string;
+  message: string;
+  heart: boolean;
+  created_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string | null;
