@@ -9,6 +9,7 @@ import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import { placeBook } from "@/lib/shelfRoom";
 import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
+import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
 import { MarkPicker } from "./Marks";
 import { perCaseOf } from "@/lib/room";
 import { BookCover, GeneratedCover } from "./BookCover";
@@ -534,18 +535,19 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
           {coverPicker}
 
           <div>
-            <span className="label" id="ab-display">Stand it on the shelf</span>
-            <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-labelledby="ab-display">
-              {(["spine", "cover"] as BookDisplay[]).map((d) => (
+            <span className="label" id="ab-display">On the shelf</span>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-labelledby="ab-display">
+              {DISPLAY_OPTIONS.map((d) => (
                 <button
-                  key={d}
+                  key={d.id}
                   type="button"
                   role="radio"
-                  aria-checked={display === d}
-                  onClick={() => setDisplay(d)}
-                  className={`rounded-full px-4 py-2 text-sm ${display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+                  aria-checked={display === d.id}
+                  onClick={() => setDisplay(d.id)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm ${display === d.id ? "border-accent bg-accent text-accent-ink" : "border-line text-ink-soft hover:text-ink"}`}
                 >
-                  {d === "spine" ? "Spine out" : "Cover facing out"}
+                  <PoseIcon pose={d.id} />
+                  {d.name}
                 </button>
               ))}
             </div>

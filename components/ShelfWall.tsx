@@ -18,11 +18,11 @@ import {
 } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { heightFactor } from "@/lib/covers";
+import { hashString, heightFactor } from "@/lib/covers";
 import type { Structure } from "@/lib/themes";
 import type { Book, Decor, Shelf, ShelfItem } from "@/lib/types";
 import { BookCover } from "./BookCover";
-import { BookSpine, spineSize } from "./BookSpine";
+import { BookSpine, LEAN_DEG, PILE_MAX, leanSize, spineSize, stackSize } from "./BookSpine";
 import { DecorArt, decorSize, decorSpec } from "./Decor";
 import { MARKS, MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
 import { ProgressBar, progressPercent } from "./ReadingProgress";
@@ -73,8 +73,64 @@ const coverSize = (book: Pick<Book, "pages">): CSSProperties => ({
   height: `calc(var(--cover-h) * ${heightFactor(book.pages).toFixed(3)})`,
 });
 
-const itemSize = (item: ShelfItem): CSSProperties =>
-  item.type === "decor" ? decorSize(item.decor.kind) : item.book.display === "cover" ? coverSize(item.book) : spineSize(item.book);
+const itemSize = (item: ShelfItem): CSSProperties => {
+  if (item.type === "decor") return decorSize(item.decor.kind);
+  const { display } = item.book;
+  return display === "cover" ? coverSize(item.book) : display === "lean" ? leanSize(item.book) : display === "stack" ? stackSize(item.book) : spineSize(item.book);
+};
+
+type Lean = "left" | "right";
+
+/**
+ * Puts a spine in its pose inside the item's slot: tipped over against a neighbour (pivoting on
+ * the bottom corner it rests on), or turned on its side to lie flat. Standing books pass through.
+ */
+function Posed({ item, lean = "right", children }: { item: ShelfItem; lean?: Lean; children: ReactNode }) {
+  const display = item.type === "book" ? item.book.display : null;
+  if (item.type !== "book" || (display !== "lean" && display !== "stack")) return <>{children}</>;
+  const size = spineSize(item.book);
+  if (display === "stack")
+    return (
+      <span className="absolute left-1/2 top-1/2 block" style={{ ...size, transform: "translate(-50%, -50%) rotate(-90deg)" }}>
+        {children}
+      </span>
+    );
+  return (
+    <span
+      className="absolute bottom-0 block"
+      style={{
+        ...size,
+        ...(lean === "left" ? { right: 0, transformOrigin: "bottom left" } : { left: 0, transformOrigin: "bottom right" }),
+        transform: `rotate(${lean === "left" ? -LEAN_DEG : LEAN_DEG}deg)`,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Something a book can lean on: a standing book, a face-out cover or an object. */
+const holdsUp = (item?: ShelfItem) => Boolean(item && (item.type === "decor" || item.book.display === "spine" || item.book.display === "cover"));
+
+/** A leaning book tips toward a neighbour that can hold it up: the one before it if it can, else the one after. */
+function leanSide(items: ShelfItem[], i: number): Lean {
+  if (holdsUp(items[i - 1])) return "left";
+  if (holdsUp(items[i + 1])) return "right";
+  return i > 0 ? "left" : "right";
+}
+
+/** Runs of flat books become piles (bottom book first); everything else stands in the row. */
+type Segment = { item: ShelfItem; index: number }[];
+const isFlat = (item: ShelfItem) => item.type === "book" && item.book.display === "stack";
+function toSegments(items: ShelfItem[]): Segment[] {
+  const out: Segment[] = [];
+  items.forEach((item, index) => {
+    const last = out[out.length - 1];
+    if (isFlat(item) && last && isFlat(last[0].item) && last.length < PILE_MAX) last.push({ item, index });
+    else out.push([{ item, index }]);
+  });
+  return out;
+}
 
 export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked, perCase = SHELVES_PER_BOOKCASE }: ShelfWallProps) {
   const [active, setActive] = useState<ShelfItem | null>(null);
@@ -184,8 +240,10 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
       {content}
       <DragOverlay dropAnimation={null}>
         {active ? (
-          <div className="rotate-2 drop-shadow-2xl" style={itemSize(active)}>
-            <ItemVisual item={active} />
+          <div className="relative rotate-2 drop-shadow-2xl" style={itemSize(active)}>
+            <Posed item={active}>
+              <ItemVisual item={active} />
+            </Posed>
           </div>
         ) : null}
       </DragOverlay>
@@ -317,23 +375,34 @@ function ShelfRow({
               {readOnly ? "Empty shelf" : "This shelf is waiting for something 📚"}
             </p>
           )}
-          {items.map((item, i) => (
-            <Slot
-              key={item.id}
-              item={item}
-              index={i}
-              shelf={shelf}
-              onOpenBook={onOpenBook}
-              onOpenDecor={onOpenDecor}
-              readOnly={readOnly}
-              justAdded={item.id === justAddedId}
-              dimmed={item.id === draggingId}
-              faded={filter !== "all" && (item.type === "decor" || !matchesFilter(item.book, filter))}
-              // Leave breathing room around face-out covers and objects, like a styled shelf.
-              spaced={item.type === "decor" || item.book.display === "cover"}
-              marker={insertion === i ? "left" : insertion === items.length && i === items.length - 1 ? "right" : null}
-            />
-          ))}
+          {toSegments(items).map((segment) => {
+            const slot = ({ item, index: i }: Segment[number], pile: boolean) => (
+              <Slot
+                key={item.id}
+                item={item}
+                index={i}
+                shelf={shelf}
+                onOpenBook={onOpenBook}
+                onOpenDecor={onOpenDecor}
+                readOnly={readOnly}
+                justAdded={item.id === justAddedId}
+                dimmed={item.id === draggingId}
+                faded={filter !== "all" && (item.type === "decor" || !matchesFilter(item.book, filter))}
+                // Leave breathing room around face-out covers and objects, like a styled shelf.
+                spaced={item.type === "decor" || item.book.display === "cover"}
+                marker={insertion === i ? "left" : insertion === items.length && i === items.length - 1 ? "right" : null}
+                lean={leanSide(items, i)}
+                // Books in a pile never line up perfectly.
+                nudge={pile ? (hashString(item.id) % 9) - 4 : 0}
+              />
+            );
+            if (!isFlat(segment[0].item)) return slot(segment[0], false);
+            return (
+              <div key={`pile:${segment[0].item.id}`} role="none" className="flex shrink-0 flex-col-reverse items-center px-1">
+                {segment.map((entry) => slot(entry, true))}
+              </div>
+            );
+          })}
           <div className="w-2 shrink-0" aria-hidden />
         </div>
       </section>
@@ -363,6 +432,8 @@ function Slot({
   faded,
   spaced,
   marker,
+  lean,
+  nudge = 0,
 }: {
   item: ShelfItem;
   index: number;
@@ -375,6 +446,8 @@ function Slot({
   faded: boolean;
   spaced: boolean;
   marker: "left" | "right" | null;
+  lean: Lean;
+  nudge?: number;
 }) {
   const drag = useDraggable({ id: item.id, data: { shelfId: shelf.id }, disabled: readOnly });
   const drop = useDroppable({ id: `slot:${item.id}`, data: { shelfId: shelf.id, index }, disabled: readOnly });
@@ -400,7 +473,7 @@ function Slot({
       role="listitem"
       data-item-id={item.id}
       className={`relative shrink-0 transition-[opacity,filter] duration-300 ${spaced ? "mx-2 md:mx-3" : ""} ${justAdded ? "animate-drop-in" : ""} ${faded ? "opacity-25 saturate-50" : ""}`}
-      style={itemSize(item)}
+      style={{ ...itemSize(item), ...(nudge ? { transform: `translateX(${nudge}px)` } : {}) }}
     >
       {marker && <Marker side={marker} />}
       {decorOnly ? (
@@ -432,18 +505,20 @@ function Slot({
               isBook && item.book.display === "cover" ? "group-hover:-translate-y-2 group-hover:-rotate-2" : "group-hover:-translate-y-1.5"
             } group-focus-visible:-translate-y-2`}
           >
-            <ItemVisual item={item} />
-            {isBook && <Ribbons book={item.book} />}
-            {isBook && item.book.status === "read" && item.book.rating === 5 && (
-              // On a spine the badge sits low, clear of the title and the mark ribbons.
-              <span
-                className={`absolute z-10 whitespace-nowrap rounded-full bg-amber-400 px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-amber-950 shadow md:text-xs ${
-                  item.book.display === "cover" ? "-right-1.5 -top-1.5" : "bottom-[14%] left-1/2 -translate-x-1/2"
-                }`}
-              >
-                ★5
-              </span>
-            )}
+            <Posed item={item} lean={lean}>
+              <ItemVisual item={item} />
+              {isBook && <Ribbons book={item.book} />}
+              {isBook && item.book.status === "read" && item.book.rating === 5 && (
+                // On a spine the badge sits low, clear of the title and the mark ribbons.
+                <span
+                  className={`absolute z-10 whitespace-nowrap rounded-full bg-amber-400 px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-amber-950 shadow md:text-xs ${
+                    item.book.display === "cover" ? "-right-1.5 -top-1.5" : `bottom-[14%] left-1/2 -translate-x-1/2 ${item.book.display === "stack" ? "rotate-90" : ""}`
+                  }`}
+                >
+                  ★5
+                </span>
+              )}
+            </Posed>
           </span>
         </button>
       )}

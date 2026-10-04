@@ -2,7 +2,7 @@
 
 import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { coverImageOf } from "@/lib/covers";
+import { coverImageOf, heightFactor } from "@/lib/covers";
 import { summary } from "@/lib/stats";
 import { perCaseOf, roomAttrs, roomStyle, structureOf, type RoomSettings } from "@/lib/room";
 import { aestheticOf } from "@/lib/themes";
@@ -111,7 +111,9 @@ function itemWidth(item: ShelfItem): number {
     return COVER_H * d.h * (d.viewBox[0] / d.viewBox[1]) + 27;
   }
   if (item.book.display === "cover") return COVER_W + 27;
-  return spineWidthPx(item.book.pages) * SPINE_SCALE + 3;
+  if (item.book.display === "stack") return COVER_H * heightFactor(item.book.pages) + 11;
+  const spine = spineWidthPx(item.book.pages) * SPINE_SCALE + 3;
+  return item.book.display === "lean" ? spine + COVER_H * heightFactor(item.book.pages) * 0.16 : spine;
 }
 
 export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, room, owner, publicUrl }: {

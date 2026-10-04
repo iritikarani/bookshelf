@@ -1,5 +1,6 @@
-import { spineWidthPx } from "@/components/BookSpine";
+import { PILE_MAX, spineWidthPx } from "@/components/BookSpine";
 import { decorSpec } from "@/components/Decor";
+import { heightFactor } from "./covers";
 import type { BookDisplay, Shelf, ShelfItem } from "./types";
 
 /** Matches the gap between items on a shelf row (gap-[3px]). */
@@ -25,13 +26,37 @@ function metrics(): Metrics {
 }
 
 function bookWidth(display: BookDisplay, pages: number | null, m: Metrics): number {
-  return display === "cover" ? m.coverW + m.margin : spineWidthPx(pages) * m.spineScale;
+  if (display === "cover") return m.coverW + m.margin;
+  if (display === "stack") return m.coverH * heightFactor(pages) + 8; // lying flat, with the pile's padding
+  const spine = spineWidthPx(pages) * m.spineScale;
+  return display === "lean" ? spine + m.coverH * heightFactor(pages) * 0.16 : spine;
 }
 
 function itemWidth(item: ShelfItem, m: Metrics): number {
   if (item.type === "book") return bookWidth(item.book.display, item.book.pages, m);
   const d = decorSpec(item.decor.kind);
   return m.coverH * d.h * (d.viewBox[0] / d.viewBox[1]) + m.margin;
+}
+
+/** Width of a whole shelf row. Flat books pile up, so a pile only takes the room of its longest book. */
+function rowWidth(items: ShelfItem[], m: Metrics): number {
+  let total = 0;
+  let pile = 0;
+  let pileW = 0;
+  for (const it of items) {
+    const flat = it.type === "book" && it.book.display === "stack";
+    if (flat && pile > 0 && pile < PILE_MAX) {
+      const w = itemWidth(it, m);
+      total += Math.max(0, w - pileW);
+      pileW = Math.max(pileW, w);
+      pile += 1;
+      continue;
+    }
+    pile = flat ? 1 : 0;
+    pileW = itemWidth(it, m);
+    total += pileW + GAP;
+  }
+  return total;
 }
 
 /**
@@ -71,7 +96,7 @@ export function placeBook(shelves: Shelf[], itemsByShelf: Map<string, ShelfItem[
   const order = [...shelves.slice(i), ...shelves.slice(0, i)];
   for (const s of order) {
     const items = itemsByShelf.get(s.id) ?? [];
-    const used = items.reduce((sum, it) => sum + itemWidth(it, m) + GAP, 0);
+    const used = rowWidth(items, m);
     if (width - used >= need) return { shelfId: s.id };
   }
   return { newBookcase: true };
