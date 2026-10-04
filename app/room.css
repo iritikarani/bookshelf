@@ -726,14 +726,85 @@
 }
 .spine-title {
   position: relative;
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: 64%;
+  max-width: 88%;
   overflow: hidden;
   writing-mode: vertical-rl;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.1;
+}
+.spine-title--serif { font-family: "Gloock", "DM Serif Display", Georgia, serif; letter-spacing: 0.01em; }
+.spine-title--spaced {
+  font-family: "Libre Franklin", system-ui, sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.spine-title--caps {
+  font-family: "Gloock", "DM Serif Display", Georgia, serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+/* the author sits quietly at the foot of the spine */
+.spine-author {
+  margin-top: auto;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 28%;
+  font-family: "Libre Franklin", system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
   line-height: 1;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.spine--leather { padding: calc(var(--cover-h) * 0.15) 0 calc(var(--cover-h) * 0.14); }
+.spine--leather .spine-author { opacity: 0.85; }
+/* paperback: smooth card with a faint sheen */
+.spine--paperback::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.22) 0%, rgba(255, 255, 255, 0.24) 13%, rgba(255, 255, 255, 0.06) 32%, transparent 55%, rgba(0, 0, 0, 0.08) 82%, rgba(0, 0, 0, 0.28) 100%),
+    var(--tex-paint);
+}
+/* a read paperback has soft creases down its spine */
+.spine-creases {
+  position: absolute;
+  inset: 5% 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 27.5%, rgba(255, 255, 255, 0.16) 28.5%, transparent 30%),
+    linear-gradient(90deg, transparent 69%, rgba(0, 0, 0, 0.08) 70%, transparent 71.5%);
+}
+/* hardback: cloth with a slightly darker head and tail */
+.spine--hardback { border-radius: 4px 4px 3px 3px / 3px 3px 3px 3px; padding-top: calc(var(--cover-h) * 0.085); }
+.spine-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4%;
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+}
+/* leather: grained hide with fine double gold rules near the head and tail */
+.spine--leather::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0%, rgba(255, 255, 255, 0.14) 18%, rgba(255, 255, 255, 0.04) 40%, transparent 58%, rgba(0, 0, 0, 0.18) 82%, rgba(0, 0, 0, 0.42) 100%),
+    var(--tex-plaster),
+    var(--tex-cloth);
+}
+.spine-gilt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-top: 1px solid rgba(217, 185, 104, 0.75);
+  border-bottom: 1px solid rgba(217, 185, 104, 0.75);
 }
 
 /* Face-out covers: page block peeking out on the right, slight board thickness */
