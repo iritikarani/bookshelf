@@ -259,7 +259,11 @@ function AppInner() {
         ) : tab === "quotes" ? (
           <>
             {showExamples && <ExampleNote />}
-            <QuoteWall books={viewBooks} onOpen={(b) => setOpenId(b.id)} />
+            <QuoteWall
+              books={viewBooks}
+              onOpen={(b) => setOpenId(b.id)}
+              look={{ styleId: aesthetic.id, room: profile?.room, publicUrl: store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null }}
+            />
           </>
         ) : (
           <>
