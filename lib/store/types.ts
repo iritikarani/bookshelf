@@ -1,4 +1,4 @@
-import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, PublicShelf, Shelf } from "../types";
+import type { AuthUser, Book, BookDraft, Decor, DecorKind, GuestNote, Profile, PublicShelf, Shelf } from "../types";
 
 export interface LibraryData {
   profile: Profile;
@@ -36,4 +36,8 @@ export interface Store {
   updateProfile(userId: string, patch: Partial<Pick<Profile, "shelf_style" | "is_public" | "room">>): Promise<Profile>;
   uploadCover(userId: string, blob: Blob, dataUrl: string): Promise<string>;
   getPublicShelf(slug: string): Promise<PublicShelf | null>;
+  /** Leave a note in a public shelf's guest book (no account needed). False if it wasn't accepted. */
+  signGuestbook(slug: string, note: { name: string; message: string; heart: boolean }): Promise<boolean>;
+  listGuestbook(userId: string): Promise<GuestNote[]>;
+  deleteGuestNote(id: string): Promise<void>;
 }

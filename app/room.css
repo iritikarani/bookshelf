@@ -1490,3 +1490,10 @@
   .kite,
   .pumpkin-glow { animation: none !important; }
 }
+
+/* ───── guest book notes: little cards of lined paper ───── */
+.guest-note {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(120, 140, 170, 0.18) 25px 26px) 0 10px,
+    linear-gradient(180deg, #fffaf0, #fbf3e3);
+}

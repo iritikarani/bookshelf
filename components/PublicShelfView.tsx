@@ -20,6 +20,7 @@ import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { RoomScene } from "./RoomScene";
 import { ShelfWall } from "./ShelfWall";
+import { SignGuestbook } from "./Guestbook";
 
 export function PublicShelfPage() {
   const slug = useSearchParams().get("u") ?? "";
@@ -32,6 +33,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useTab();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [signOpen, setSignOpen] = useState(false);
   useRoomClock(data?.profile.room);
   const season = useSeason(data?.profile.room);
 
@@ -107,6 +109,17 @@ export function PublicShelfView({ slug }: { slug: string }) {
         ownerName={name}
         readOnly
         onClose={() => setOpenId(null)}
+      />
+      {data && (
+        <button type="button" onClick={() => setSignOpen(true)} className="btn-primary fixed bottom-6 right-4 z-30 shadow-lg md:right-8">
+          <span aria-hidden>💌</span> Leave a note
+        </button>
+      )}
+      <SignGuestbook
+        open={signOpen}
+        onClose={() => setSignOpen(false)}
+        ownerName={name}
+        onSign={(note) => (hasSupabase ? supabaseStore : localStore).signGuestbook(slug, note)}
       />
     </div>
   );
