@@ -728,13 +728,75 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  max-width: 88%;
   overflow: hidden;
   writing-mode: vertical-rl;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1;
+  line-height: 1.08;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
 }
+.spine-author {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 30%;
+  opacity: 0.82;
+  line-height: 1;
+}
+/* paperback: smooth card with a faint sheen */
+.spine--paperback::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.26) 0%, rgba(255, 255, 255, 0.28) 14%, rgba(255, 255, 255, 0.08) 34%, transparent 55%, rgba(0, 0, 0, 0.1) 82%, rgba(0, 0, 0, 0.32) 100%),
+    var(--tex-paint);
+}
+/* a read paperback has creases down its spine */
+.spine-creases {
+  position: absolute;
+  inset: 4% 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 27%, rgba(255, 255, 255, 0.28) 28%, rgba(0, 0, 0, 0.12) 29.5%, transparent 31%),
+    linear-gradient(90deg, transparent 68%, rgba(0, 0, 0, 0.12) 69%, rgba(255, 255, 255, 0.22) 70.5%, transparent 72%);
+  opacity: 0.8;
+}
+/* hardback: cloth with headbands at head and tail */
+.spine--hardback { border-radius: 4px 4px 3px 3px / 3px 3px 3px 3px; padding-top: calc(var(--cover-h) * 0.1); }
+.spine-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4.5%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.08));
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+/* leather: grained hide, raised bands and a title label, all in gold */
+.spine--leather::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, rgba(255, 255, 255, 0.16) 18%, rgba(255, 255, 255, 0.04) 40%, transparent 58%, rgba(0, 0, 0, 0.2) 82%, rgba(0, 0, 0, 0.45) 100%),
+    var(--tex-plaster),
+    var(--tex-cloth);
+}
+.spine-rib {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  height: 3.2%;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.28));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35), inset 0 0 0 0.5px rgba(220, 188, 102, 0.55);
+}
+.spine-label {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  border-radius: 1px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 0.75px rgba(220, 188, 102, 0.7);
+}
+.spine--leather .spine-title { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
 
 /* Face-out covers: page block peeking out on the right, slight board thickness */
 .cover-3d {

@@ -1,24 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { averageImageColor, coverColorOf, coverImageOf } from "./covers";
+import { accentFor, coverColorOf, coverImageOf, coverPalette, type Palette } from "./covers";
 import type { Book } from "./types";
 
-/** The book's signature colour: the chosen swatch, or the average colour of its cover image. */
-export function useCoverColor(book: Pick<Book, "title" | "cover_color" | "cover_url" | "uploaded_cover"> | null): string {
+type CoverBook = Pick<Book, "title" | "cover_color" | "cover_url" | "uploaded_cover">;
+
+/** The book's colours: the chosen swatch, or the main and second colour of its cover image. */
+export function useCoverPalette(book: CoverBook | null): Palette {
   const fallback = book ? coverColorOf(book) : "#888888";
   const src = book && !book.cover_color ? coverImageOf(book) : null;
-  const [color, setColor] = useState<string | null>(null);
+  const [palette, setPalette] = useState<Palette | null>(null);
 
   useEffect(() => {
-    setColor(null);
+    setPalette(null);
     if (!src) return;
     let alive = true;
-    averageImageColor(src).then((c) => alive && setColor(c));
+    coverPalette(src).then((p) => alive && setPalette(p));
     return () => {
       alive = false;
     };
   }, [src]);
 
-  return color ?? fallback;
+  return palette ?? { base: fallback, accent: accentFor(fallback) };
+}
+
+/** The book's signature colour: the chosen swatch, or the main colour of its cover image. */
+export function useCoverColor(book: CoverBook | null): string {
+  return useCoverPalette(book).base;
 }
