@@ -30,6 +30,9 @@ export const AESTHETICS: Aesthetic[] = [
   { id: "coastal", name: "Coastal", blurb: "Whitewash and beadboard blue", structure: "case" },
   { id: "boho", name: "Boho", blurb: "Rope-hung shelves, terracotta", structure: "hanging" },
   { id: "industrial", name: "Industrial", blurb: "Iron pipes, reclaimed wood, brick", structure: "pipe" },
+  // Unlocked by reading (see lib/rewards.ts)
+  { id: "starlit", name: "Starlit library", blurb: "Midnight walls, a sky full of stars", structure: "case" },
+  { id: "gilded", name: "Gilded study", blurb: "Black lacquer shelves, gold leaf, velvet", structure: "case" },
 ];
 
 export const aestheticOf = (id: ShelfStyle | null | undefined): Aesthetic =>

@@ -330,6 +330,84 @@ export const DECOR: DecorSpec[] = [
       </>
     ),
   },
+  // ── Reading rewards (unlocked by finishing books, see lib/rewards.ts) ──
+  {
+    kind: "cactus",
+    name: "Little cactus",
+    h: 0.46,
+    viewBox: [44, 64],
+    art: (
+      <>
+        <path d="M18 44V14c0-6 8-6 8 0v30z" fill="#6f9e64" />
+        <path d="M18 30h-5c-3 0-4-2-4-5v-7c0-4 5-4 5 0v6h4zM26 26h5v-6c0-4 5-4 5 0v6c0 3-1 5-4 5h-6z" fill="#7bab6e" />
+        <path d="M21 16v26M23 18v24" stroke="#5a8650" strokeWidth="0.8" />
+        <circle cx="22" cy="9" r="3.5" fill="#f08aa0" />
+        <circle cx="22" cy="9" r="1.3" fill="#ffd36e" />
+        <path d="M8 44h28l-3 18H11z" fill="#e8d3b8" />
+        <path d="M8 44h28v4H8z" fill="#d9bf9e" />
+        <path d="M13 54h18" stroke="#c9a77f" strokeWidth="1" />
+      </>
+    ),
+  },
+  {
+    kind: "monstera",
+    name: "Monstera",
+    h: 1.05,
+    viewBox: [90, 120],
+    art: (
+      <>
+        <path d="M45 82C40 60 30 46 14 40M45 82c2-24 10-42 30-50M45 82c0-22-2-40-4-56" stroke="#4f7a45" strokeWidth="2" fill="none" />
+        <path d="M14 40C2 36 0 22 10 16c10-6 22 2 22 14 0 8-8 12-18 10z" fill="#4f8a4a" />
+        <path d="M10 22l9 6M7 30l11 3M16 17l6 9" stroke="#e9f2df" strokeWidth="2" strokeLinecap="round" />
+        <path d="M75 32c12-6 16-20 6-27-10-6-24 2-25 14-1 9 8 16 19 13z" fill="#5c9a52" />
+        <path d="M80 10l-8 9M86 18l-12 5M70 8l-3 11" stroke="#e9f2df" strokeWidth="2" strokeLinecap="round" />
+        <path d="M41 26c-8-4-10-16-2-22 8-5 18 1 18 10 0 8-7 14-16 12z" fill="#6aa65d" />
+        <path d="M42 8l3 10M50 10l-3 9" stroke="#e9f2df" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M22 82h46l-5 34H27z" fill="#f2efe8" />
+        <path d="M22 82h46v5H22z" fill="#e2ddd2" />
+        <path d="M27 98h36" stroke="#d6d0c4" strokeWidth="1.2" />
+      </>
+    ),
+  },
+  {
+    kind: "brasslamp",
+    name: "Brass reading lamp",
+    h: 0.92,
+    viewBox: [70, 100],
+    art: (
+      <>
+        <ellipse cx="35" cy="40" rx="34" ry="22" fill="rgba(255, 214, 120, 0.22)" />
+        <path d="M8 36c0-12 12-20 27-20s27 8 27 20z" fill="#2f5d48" />
+        <path d="M8 36c0-12 12-20 27-20" stroke="#5c8c74" strokeWidth="2" fill="none" />
+        <rect x="6" y="35" width="58" height="4" rx="2" fill="#c99a3e" />
+        <path d="M14 39h42l-4 4H18z" fill="rgba(255, 236, 170, 0.9)" />
+        <path d="M35 39v44" stroke="#c99a3e" strokeWidth="4" />
+        <path d="M35 39v44" stroke="#f1d08a" strokeWidth="1.2" />
+        <path d="M48 41v14" stroke="#b8893a" strokeWidth="1.5" />
+        <circle cx="48" cy="57" r="2.2" fill="#d4af5a" />
+        <path d="M16 96c0-10 8-14 19-14s19 4 19 14z" fill="#c99a3e" />
+        <path d="M20 90c4-4 10-5 15-5" stroke="#f1d08a" strokeWidth="1.5" fill="none" />
+      </>
+    ),
+  },
+  {
+    kind: "goldenbook",
+    name: "The golden book",
+    h: 0.66,
+    viewBox: [90, 80],
+    art: (
+      <>
+        <path d="M14 8l2 4 4 2-4 2-2 4-2-4-4-2 4-2zM78 4l1.5 3 3 1.5-3 1.5L78 13l-1.5-3-3-1.5 3-1.5zM70 30l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" fill="#f5d77a" />
+        <path d="M22 72l23-12 23 12z" fill="#6b4a2f" />
+        <path d="M45 60v14" stroke="#4e3420" strokeWidth="3" />
+        <path d="M8 52c14-6 26-6 37 2V22c-11-8-23-8-37-2z" fill="#f6e7bf" stroke="#c9a04a" strokeWidth="2" />
+        <path d="M82 52c-14-6-26-6-37 2V22c11-8 23-8 37-2z" fill="#fbf0d2" stroke="#c9a04a" strokeWidth="2" />
+        <path d="M15 28c8-3 16-3 24 1M15 35c8-3 16-3 24 1M15 42c8-3 16-3 24 1M51 29c8-4 16-4 24-1M51 36c8-4 16-4 24-1M51 43c8-4 16-4 24-1" stroke="#d9c08a" strokeWidth="1.3" />
+        <path d="M45 22v32" stroke="#b8893a" strokeWidth="1.5" />
+        <path d="M6 54c15-7 27-7 39 1 12-8 24-8 39-1v4c-15-6-27-6-39 2-12-8-24-8-39-2z" fill="#d4af5a" />
+      </>
+    ),
+  },
 ];
 
 export const decorSpec = (kind: DecorKind) => DECOR.find((d) => d.kind === kind) ?? DECOR[0];

@@ -277,6 +277,70 @@
   background-attachment: fixed;
 }
 
+/* ★ Reading reward · Starlit library — midnight walls scattered with stars, navy bookcase */
+[data-style="starlit"] {
+  --frame-tex-v: var(--tex-grain-v-light), var(--tex-grain-v);
+  --frame-tex-h: var(--tex-grain-h-light), var(--tex-grain-h);
+  --curtain: #2c3566;
+  --window-frame: #1a2040;
+  --lamp-shade: #e8d9a8;
+  --lamp-metal: #c9a85a;
+  --rug: #3b467e;
+  --rug-2: #d9b964;
+  --room-wall: #18203d;
+  --room-pattern:
+    radial-gradient(circle at 12px 18px, rgba(255, 240, 200, 0.9) 0.9px, transparent 1.5px) 0 0 / 97px 83px,
+    radial-gradient(circle at 60px 50px, rgba(255, 255, 255, 0.7) 0.7px, transparent 1.3px) 0 0 / 97px 83px,
+    radial-gradient(circle at 34px 70px, rgba(255, 230, 170, 0.55) 1.2px, transparent 2px) 0 0 / 131px 109px,
+    radial-gradient(circle at 90px 20px, rgba(255, 255, 255, 0.5) 0.6px, transparent 1.2px) 0 0 / 131px 109px,
+    radial-gradient(ellipse 60% 45% at 70% 10%, rgba(120, 140, 230, 0.18), transparent 70%);
+  --frame-base: #222b52;
+  --back: #161c36;
+  --cell-ink: #efe6cf;
+  --floor: #4a3b30;
+  --skirting: #141a33;
+  --grain: rgba(255, 255, 255, 0.03);
+  --ink: 238 233 218;
+  --ink-soft: 190 190 205;
+  --paper: 33 40 72;
+  --line: 66 76 120;
+  --wall: 24 32 61;
+  --accent: 217 185 100;
+  --accent-ink: 24 24 36;
+  color-scheme: dark;
+}
+
+/* ★ Reading reward · Gilded study — oxblood velvet walls, black lacquer bookcase with gold edges */
+[data-style="gilded"] {
+  --curtain: #1f3a30;
+  --window-frame: #1c1714;
+  --lamp-shade: #1f3a30;
+  --lamp-metal: #d4af5a;
+  --rug: #1f3a30;
+  --rug-2: #d4af5a;
+  --room-wall: #5a1f24;
+  --room-pattern:
+    radial-gradient(ellipse 9px 14px at 22px 22px, rgba(212, 175, 90, 0.16) 60%, transparent 64%) 0 0 / 44px 44px,
+    radial-gradient(ellipse 9px 14px at 0 0, rgba(212, 175, 90, 0.16) 60%, transparent 64%) 0 0 / 44px 44px,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 50%);
+  --frame-base: #171310;
+  --frame-light: #d4af5a; /* gold leaf on every edge */
+  --frame-dark: #050403;
+  --back: #1d1814;
+  --cell-ink: #f1e2bd;
+  --floor: #3a2418;
+  --skirting: #2b1012;
+  --grain: rgba(255, 220, 150, 0.05);
+  --ink: 244 232 210;
+  --ink-soft: 214 190 170;
+  --paper: 72 30 34;
+  --line: 120 64 64;
+  --wall: 90 31 36;
+  --accent: 212 175 90;
+  --accent-ink: 30 18 10;
+  color-scheme: dark;
+}
+
 /* ───── the floor: skirting board, then floorboards receding in perspective ───── */
 /* The floor runs to the bottom of the screen, however tall it is, so no wall shows beneath it. */
 .room-floor {
