@@ -23,16 +23,16 @@ create or replace function public.sign_guestbook(slug text, guest_name text, not
 returns boolean
 language plpgsql security definer set search_path = public as $$
 declare
-  owner uuid;
+  shelf_owner uuid;
 begin
-  select id into owner from public.profiles where public_slug = slug and is_public;
-  if owner is null then return false; end if;
+  select id into shelf_owner from public.profiles where public_slug = slug and is_public;
+  if shelf_owner is null then return false; end if;
   if coalesce(btrim(note), '') = '' and not coalesce(with_heart, false) then return false; end if;
-  if (select count(*) from public.guestbook where owner_id = owner and created_at > now() - interval '1 hour') >= 30 then
+  if (select count(*) from public.guestbook where owner_id = shelf_owner and created_at > now() - interval '1 hour') >= 30 then
     return false;
   end if;
   insert into public.guestbook (owner_id, name, message, heart)
-  values (owner, left(coalesce(nullif(btrim(guest_name), ''), 'A friend'), 40), left(coalesce(btrim(note), ''), 280), coalesce(with_heart, false));
+  values (shelf_owner, left(coalesce(nullif(btrim(guest_name), ''), 'A friend'), 40), left(coalesce(btrim(note), ''), 280), coalesce(with_heart, false));
   return true;
 end
 $$;
