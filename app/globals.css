@@ -7,14 +7,15 @@
   --wall-deep: 233 227 217;
   --paper: 255 253 249;
   --ink: 47 42 40;
-  --ink-soft: 104 97 92;
+  --ink-soft: 86 79 74; /* darker than before for readable small text (≈7:1 on paper) */
   --line: 226 218 207;
   --accent: 84 117 98;
   --accent-ink: 255 255 255;
   --danger: 158 49 38;
-  --cover-w: 72px;
-  --cover-h: 108px;
-  --spine-scale: 0.8;
+  /* Books are the hero: about a quarter wider and a sixth taller than they used to be. */
+  --cover-w: 88px;
+  --cover-h: 126px;
+  --spine-scale: 0.98;
   color-scheme: light;
 }
 
@@ -23,7 +24,7 @@
   --wall-deep: 23 26 24;
   --paper: 41 44 40;
   --ink: 237 233 223;
-  --ink-soft: 172 169 158;
+  --ink-soft: 192 188 177;
   --line: 72 76 70;
   --accent: 143 184 158;
   --accent-ink: 18 28 22;
@@ -33,9 +34,9 @@
 
 @media (min-width: 768px) {
   :root {
-    --cover-w: 90px;
-    --cover-h: 136px;
-    --spine-scale: 1;
+    --cover-w: 112px;
+    --cover-h: 158px;
+    --spine-scale: 1.22;
   }
 }
 

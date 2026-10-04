@@ -20,7 +20,7 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Edit shelves">
+    <Sheet open={open} onClose={onClose} title="Your shelves">
       <ul className="space-y-2">
         {shelves.map((s, i) => {
           const count = booksByShelf.get(s.id)?.length ?? 0;
@@ -58,7 +58,7 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-ink-soft">Shelves are just places. Use marks on each book (❤ Favourite, 📖 Reading now, 🔖 To read) to keep track of them.</p>
+      <p className="mt-2 text-sm text-ink-soft">Tap a name to make it yours. Named shelves show their name on the wood.</p>
       <form
         className="mt-5 flex gap-2"
         onSubmit={(e) => {
@@ -69,15 +69,15 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
           setNewName("");
         }}
       >
-        <input className="field flex-1" placeholder="New shelf, e.g. Poetry corner" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New shelf name" maxLength={60} />
+        <input className="field flex-1" placeholder="Create a shelf, e.g. Comfort Reads" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New shelf name" maxLength={60} />
         <button type="submit" className="btn-primary" disabled={!newName.trim()}>
           <PlusIcon width={16} height={16} /> Add
         </button>
       </form>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {["By the window", "Classics", "Poetry corner", `Read in ${new Date().getFullYear()}`].map((idea) => (
-          <button key={idea} type="button" className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-soft hover:border-accent hover:text-accent" onClick={() => setNewName(idea)}>
-            {idea}
+        {["Comfort Reads", "Books That Broke Me", `${new Date().getFullYear()} TBR`, "Fantasy Corner", "Romance", "Books I Want To Reread"].map((idea) => (
+          <button key={idea} type="button" className="rounded-full border border-line px-3 py-1.5 text-sm text-ink-soft hover:border-accent hover:text-accent" onClick={() => setNewName(idea)}>
+            ♡ {idea}
           </button>
         ))}
       </div>

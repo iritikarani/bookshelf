@@ -4,6 +4,7 @@ import {
   DndContext,
   DragOverlay,
   MouseSensor,
+  TouchSensor,
   pointerWithin,
   rectIntersection,
   useDraggable,
@@ -76,7 +77,12 @@ const itemSize = (item: ShelfItem): CSSProperties =>
 export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked }: ShelfWallProps) {
   const [active, setActive] = useState<ShelfItem | null>(null);
   const [insertion, setInsertion] = useState<Insertion | null>(null);
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  // Mouse: drag after a small move. Touch: press and hold for a moment, so a quick swipe still
+  // scrolls the page and a tap still opens the book.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+  );
 
   const find = (id: string) => {
     for (const list of itemsByShelf.values()) {
@@ -94,8 +100,9 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
     if (data.index === undefined) {
       return setInsertion({ shelfId: data.shelfId, index: (itemsByShelf.get(data.shelfId) ?? []).length });
     }
-    const start = e.activatorEvent as MouseEvent;
-    const pointerX = (start.clientX ?? 0) + e.delta.x;
+    const start = e.activatorEvent as MouseEvent | TouchEvent;
+    const startX = "touches" in start ? (start.touches[0] ?? start.changedTouches[0])?.clientX ?? 0 : start.clientX ?? 0;
+    const pointerX = startX + e.delta.x;
     const mid = e.over.rect.left + e.over.rect.width / 2;
     setInsertion({ shelfId: data.shelfId, index: data.index + (pointerX > mid ? 1 : 0) });
   };
@@ -305,7 +312,7 @@ function ShelfRow({
           {items.length === 0 && (
             <p className="relative self-center pb-3 text-sm italic opacity-70">
               {insertion === 0 && <Marker side="left" />}
-              {readOnly ? "Empty shelf" : "Nothing on this shelf yet."}
+              {readOnly ? "Empty shelf" : "This shelf is waiting for something 📚"}
             </p>
           )}
           {items.map((item, i) => (
@@ -379,7 +386,7 @@ function Slot({
   const isBook = item.type === "book";
   const decorOnly = !isBook && (readOnly || !onOpenDecor);
   const label = isBook
-    ? `${item.book.title}${item.book.author ? ` by ${item.book.author}` : ""}${item.book.status === "read" && item.book.rating ? `, rated ${formatRating(item.book.rating)} of 5` : ""}${item.book.favourite ? ", favourite" : ""}${item.book.status === "reading" ? ", reading now" : item.book.status === "to_read" ? ", to read" : ""}. Open journal entry.`
+    ? `${item.book.title}${item.book.author ? ` by ${item.book.author}` : ""}${item.book.status === "read" && item.book.rating ? `, rated ${formatRating(item.book.rating)} of 5` : ""}${item.book.favourite ? ", favourite" : ""}${item.book.status === "reading" ? ", reading now" : item.book.status === "to_read" ? ", want to read" : item.book.status === "dnf" ? ", did not finish" : ""}. Open journal entry.`
     : `${decorSpec(item.decor.kind).name}. Arrange.`;
 
   return (
@@ -416,7 +423,7 @@ function Slot({
           }}
           aria-label={label}
           title={isBook ? item.book.title : decorSpec(item.decor.kind).name}
-          className={`group block h-full w-full rounded-[3px] text-left outline-offset-4 ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
+          className={`group block h-full w-full select-none rounded-[3px] text-left outline-offset-4 [-webkit-touch-callout:none] ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
         >
           <span
             className={`relative block h-full w-full origin-bottom transition-transform duration-200 ease-out motion-reduce:transform-none ${
@@ -428,7 +435,7 @@ function Slot({
             {isBook && item.book.status === "read" && item.book.rating === 5 && (
               // On a spine the badge sits low, clear of the title and the mark ribbons.
               <span
-                className={`absolute z-10 whitespace-nowrap rounded-full bg-amber-400 px-1 py-0.5 font-mono text-[9px] font-semibold leading-none text-amber-950 shadow md:text-[10px] ${
+                className={`absolute z-10 whitespace-nowrap rounded-full bg-amber-400 px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-amber-950 shadow md:text-xs ${
                   item.book.display === "cover" ? "-right-1.5 -top-1.5" : "bottom-[14%] left-1/2 -translate-x-1/2"
                 }`}
               >
@@ -464,10 +471,10 @@ function Peek({ book, rect }: { book: Book; rect: DOMRect }) {
       {book.status === "reading" && progressPercent(book) !== null && (
         <div className="mt-2 flex items-center gap-2">
           <ProgressBar percent={progressPercent(book)!} color={MARKS.reading.color} className="flex-1" />
-          <span className="font-mono text-[11px] text-ink-soft">p. {book.current_page}/{book.pages}</span>
+          <span className="font-mono text-xs text-ink-soft">p. {book.current_page}/{book.pages}</span>
         </div>
       )}
-      <p className="mt-2 text-[11px] text-ink-soft">Click to open</p>
+      <p className="mt-2 text-xs text-ink-soft">Click to open</p>
     </div>,
     document.body,
   );

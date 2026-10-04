@@ -13,7 +13,7 @@ export function QuoteWall({ books, onOpen }: { books: Book[]; onOpen: (b: Book) 
   if (!quoted.length) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
-        <p className="font-serif text-2xl">No lines kept yet</p>
+        <p className="font-serif text-2xl">No quotes saved yet</p>
         <p className="mt-2 text-ink-soft">When you save a favourite line for a book, it'll be pinned here.</p>
       </div>
     );

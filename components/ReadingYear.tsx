@@ -67,7 +67,7 @@ export function ReadingYear({ shelves, books, onOpen }: { shelves: Shelf[]; book
           <div className="absolute inset-0 bottom-6 left-6" aria-hidden>
             {gridSteps.map((v) => (
               <div key={v} className="absolute inset-x-0 border-t border-line/60" style={{ bottom: `${(v / max) * 100}%` }}>
-                <span className="absolute -left-6 -translate-y-1/2 font-mono text-[10px] text-ink-soft">{v}</span>
+                <span className="absolute -left-6 -translate-y-1/2 font-mono text-[11px] text-ink-soft">{v}</span>
               </div>
             ))}
           </div>
@@ -92,7 +92,7 @@ export function ReadingYear({ shelves, books, onOpen }: { shelves: Shelf[]; book
                       style={{ height: n ? `calc(${(n / max) * 100}% - 0px)` : 0 }}
                     />
                   </div>
-                  <span className="mt-1 h-5 font-mono text-[10px] text-ink-soft">{MONTH_NAMES[m].slice(0, 1)}<span className="hidden md:inline">{MONTH_NAMES[m].slice(1)}</span></span>
+                  <span className="mt-1 h-5 font-mono text-[11px] text-ink-soft">{MONTH_NAMES[m].slice(0, 1)}<span className="hidden md:inline">{MONTH_NAMES[m].slice(1)}</span></span>
                   {hover === m && (
                     <div className="pointer-events-none absolute bottom-full z-10 mb-1 w-max max-w-[180px] rounded-lg bg-ink px-2.5 py-1.5 text-xs text-wall shadow-lg">
                       <p className="font-medium">{MONTH_NAMES[m]} {year}: <span className="font-mono">{n}</span></p>

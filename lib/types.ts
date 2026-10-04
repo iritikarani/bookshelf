@@ -11,7 +11,8 @@ export type ShelfStyle =
   | "industrial";
 
 /** Where a book is in your reading life. Shown as a ribbon mark on the shelf. */
-export type ReadStatus = "read" | "reading" | "to_read";
+/** "read" is Finished; "dnf" is Did not finish. */
+export type ReadStatus = "read" | "reading" | "to_read" | "dnf";
 
 /** How a book stands on the shelf. */
 export type BookDisplay = "spine" | "cover";

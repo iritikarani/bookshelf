@@ -50,7 +50,7 @@ export function DecorSheet({
             <ChevronRight />
           </button>
         </div>
-        <p className="mt-1 font-mono text-[11px] text-ink-soft">Spot {index + 1} of {list.length}. On a computer you can also drag it.</p>
+        <p className="mt-1 font-mono text-xs text-ink-soft">Spot {index + 1} of {list.length}. On a computer you can also drag it.</p>
       </fieldset>
       <button
         type="button"

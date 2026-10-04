@@ -47,7 +47,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             // A guest shelf lives only in this browser, so a link to it can't open anywhere else.
             <div className="space-y-3 text-sm">
               <p>
-                <span className="block font-medium">Public read-only link</span>
+                <span className="block font-medium">Public shelf</span>
                 <span className="block text-ink-soft">
                   You’re using a guest shelf, which is saved only on this device, so a link to it won’t open on anyone else’s phone. Create an account (free) to share your shelf.
                 </span>
@@ -67,8 +67,8 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             <>
             <label className="flex cursor-pointer items-start justify-between gap-4">
               <span>
-                <span className="block font-medium">Public read-only link</span>
-                <span className="block text-sm text-ink-soft">Your shelf is private unless this is on. Anyone with the link can view, but not change, your books and notes.</span>
+                <span className="block font-medium">Public shelf</span>
+                <span className="block text-sm text-ink-soft">Anyone with this link can view your shelf, but cannot make changes. When it’s off, your shelf is private: only you can see it.</span>
               </span>
               <input
                 type="checkbox"

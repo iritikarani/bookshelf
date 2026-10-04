@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
+import { siteUrl } from "@/lib/basePath";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { aestheticOf } from "@/lib/themes";
@@ -18,7 +19,8 @@ import { BookDetail } from "./BookDetail";
 import { DecorSheet } from "./DecorSheet";
 import { UsernameDialog } from "./UsernameDialog";
 import { EditShelves } from "./EditShelves";
-import { Header } from "./Header";
+import { Header, shelfSummary } from "./Header";
+import { MoreMenu } from "./MoreMenu";
 import { BrushIcon, GearIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
@@ -69,6 +71,7 @@ function AppInner() {
   const viewShelves = showExamples ? [EXAMPLE_SHELF, ...shelves] : shelves;
   const viewBooks = showExamples ? EXAMPLE_BOOKS : books;
   const stats = summary(books);
+  const ownerName = profile?.username ?? (store.mode === "supabase" ? profile?.display_name : null) ?? null;
 
   if (!authReady) return <Splash />;
   if (!user && store.mode === "supabase") return <Splash />; // on its way to /login
@@ -89,6 +92,8 @@ function AppInner() {
         Skip to shelves
       </a>
       <Header
+        title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"}
+        summary={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)}
         stats={stats}
         tab={tab}
         onTab={setTab}
@@ -97,18 +102,14 @@ function AppInner() {
             <button type="button" className="btn-primary hidden sm:inline-flex" onClick={startAdd}>
               <PlusIcon width={16} height={16} /> Add a book
             </button>
-            <IconButton label="Arrange: aesthetic and decor" onClick={() => setArrangeOpen(true)}>
-              <BrushIcon />
-            </IconButton>
-            <IconButton label="Share my shelf" onClick={() => setShareOpen(true)} disabled={books.length === 0}>
-              <ShareIcon />
-            </IconButton>
-            <IconButton label="Edit shelves" onClick={() => setShelvesOpen(true)}>
-              <ShelvesIcon />
-            </IconButton>
-            <IconButton label="Settings" onClick={() => setSettingsOpen(true)}>
-              <GearIcon />
-            </IconButton>
+            <MoreMenu
+              items={[
+                { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => setArrangeOpen(true) },
+                { label: "Edit shelves", icon: <ShelvesIcon width={18} height={18} />, onSelect: () => setShelvesOpen(true) },
+                { label: "Share shelf", icon: <ShareIcon width={18} height={18} />, onSelect: () => setShareOpen(true), disabled: books.length === 0 },
+                { label: "Settings", icon: <GearIcon width={18} height={18} />, onSelect: () => setSettingsOpen(true) },
+              ]}
+            />
           </>
         }
       />
@@ -127,9 +128,6 @@ function AppInner() {
               </div>
             )}
             <MarkFilterBar value={filter} onChange={setFilter} books={viewBooks} />
-            <p className="-mt-2 mb-4 hidden text-center text-xs text-ink-soft md:block">
-              Tip: drag books and objects to rearrange them. Click the lamp to switch it on or off. The brush changes the room.
-            </p>
             <RoomScene standing={aesthetic.structure === "case"}>
               {showExamples ? (
                 <ShelfWall
@@ -243,6 +241,7 @@ function AppInner() {
         books={books}
         styleId={aesthetic.id}
         owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
+        publicUrl={store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null}
       />
 
       {notice && !lib.error && (
@@ -265,20 +264,12 @@ function AppInner() {
   );
 }
 
-function IconButton({ label, onClick, children, disabled }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="rounded-full p-2.5 text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-40">
-      {children}
-    </button>
-  );
-}
-
 function MarkFilterBar({ value, onChange, books }: { value: MarkFilter; onChange: (f: MarkFilter) => void; books: Book[] }) {
   const options: { id: MarkFilter; label: string; icon?: string; color?: string }[] = [
     { id: "all", label: "All books" },
     { id: "favourite", label: "Favourites", icon: MARKS.favourite.icon, color: MARKS.favourite.color },
-    { id: "reading", label: "Reading now", icon: MARKS.reading.icon, color: MARKS.reading.color },
-    { id: "to_read", label: "To read", icon: MARKS.to_read.icon, color: MARKS.to_read.color },
+    { id: "reading", label: "Reading", icon: MARKS.reading.icon, color: MARKS.reading.color },
+    { id: "to_read", label: "Want to read", icon: MARKS.to_read.icon, color: MARKS.to_read.color },
   ];
   return (
     <div className="mb-5 flex gap-2 overflow-x-auto pb-1 no-scrollbar" role="radiogroup" aria-label="Highlight books by mark">
@@ -297,7 +288,7 @@ function MarkFilterBar({ value, onChange, books }: { value: MarkFilter; onChange
           >
             {o.icon && <span aria-hidden>{o.icon}</span>}
             {o.label}
-            <span className="font-mono text-[11px] opacity-70">{count}</span>
+            <span className="font-mono text-xs opacity-70">{count}</span>
           </button>
         );
       })}

@@ -10,6 +10,7 @@ import { spineWidthPx } from "./BookSpine";
 import { decorSpec } from "./Decor";
 import { DownloadIcon } from "./Icons";
 import { RoomScene } from "./RoomScene";
+import { shelfSummary } from "./Header";
 import { Sheet } from "./Sheet";
 import { ShelfWall } from "./ShelfWall";
 
@@ -112,7 +113,7 @@ function itemWidth(item: ShelfItem): number {
   return spineWidthPx(item.book.pages) * SPINE_SCALE + 3;
 }
 
-export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, owner }: {
+export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, styleId, owner, publicUrl }: {
   open: boolean;
   onClose: () => void;
   shelves: Shelf[];
@@ -120,7 +121,17 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   books: Book[];
   styleId: ShelfStyle;
   owner?: string | null;
+  /** The public shelf link, when sharing is on. */
+  publicUrl?: string | null;
 }) {
+  const [done, setDone] = useState<string | null>(null);
+  const flash = (msg: string) => {
+    setDone(msg);
+    window.setTimeout(() => setDone((m) => (m === msg ? null : m)), 1800);
+  };
+  const pngFile = async () => new File([await (await fetch(png!)).blob()], "cosmic-space-shelf.png", { type: "image/png" });
+  const canShareFiles = typeof navigator !== "undefined" && "canShare" in navigator;
+  const canCopyImage = typeof window !== "undefined" && "ClipboardItem" in window;
   const nodeRef = useRef<HTMLDivElement>(null);
   const [images, setImages] = useState<Map<string, string | null> | null>(null);
   const [png, setPng] = useState<string | null>(null);
@@ -146,6 +157,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   }, [shelves, itemsByShelf]);
 
   const stats = summary(books);
+  const reading = books.find((b) => b.status === "reading");
 
   useEffect(() => {
     if (!open) {
@@ -224,23 +236,86 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
           </div>
         )}
       </div>
-      <div className="mt-5 flex justify-center">
-        <a className={`btn-primary px-6 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="cosmic-space-shelf.png" aria-disabled={!png}>
-          <DownloadIcon width={16} height={16} /> Download image
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <a className={`btn-primary py-3 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="cosmic-space-shelf.png" aria-disabled={!png}>
+          <DownloadIcon width={16} height={16} /> Download story
         </a>
+        {canShareFiles && (
+          <button
+            type="button"
+            className="btn-ghost py-3"
+            disabled={!png}
+            onClick={async () => {
+              try {
+                const file = await pngFile();
+                if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "My bookshelf", url: publicUrl ?? undefined });
+                else if (publicUrl) await navigator.share({ title: "My bookshelf", url: publicUrl });
+              } catch {
+                /* closed the share sheet */
+              }
+            }}
+          >
+            Share…
+          </button>
+        )}
+        {canCopyImage && (
+          <button
+            type="button"
+            className="btn-ghost py-3"
+            disabled={!png}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.write([new ClipboardItem({ "image/png": await pngFile() })]);
+                flash("Image copied");
+              } catch {
+                flash("Couldn’t copy the image");
+              }
+            }}
+          >
+            Copy image
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn-ghost py-3"
+          disabled={!publicUrl}
+          title={publicUrl ? undefined : "Turn on Public shelf in Settings to get a link"}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(publicUrl!);
+              flash("Link copied");
+            } catch {
+              flash("Couldn’t copy the link");
+            }
+          }}
+        >
+          Copy link
+        </button>
       </div>
+      <p className="mt-2 h-5 text-center text-sm text-accent" role="status">
+        {done ?? (!publicUrl ? <span className="text-ink-soft">To share a link, turn on Public shelf in Settings.</span> : null)}
+      </p>
 
       {/* Off-screen render target */}
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
           <div ref={nodeRef} data-style={aesthetic.id} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={vars}>
             <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
-            <h1 className="mt-[18px] font-serif text-[100px] leading-none">{owner ? `${owner}'s shelf` : "My bookshelf"}</h1>
+            <h1 className="mt-[18px] font-serif text-[96px] leading-none">{owner ? `${owner}’s bookshelf` : "My bookshelf"}</h1>
+            <p className="mt-[16px] font-mono text-[28px] text-ink-soft">
+              {new Date().getFullYear()} · {shelfSummary(books)}
+            </p>
+            {reading && (
+              <p className="mt-[22px] text-[30px]">
+                <span className="font-mono text-[22px] uppercase tracking-[3px] text-ink-soft">Currently reading </span>
+                <span className="font-serif italic">{reading.title}</span>
+              </p>
+            )}
             <div className="mt-[40px] flex gap-[56px] font-mono">
               {[
                 [stats.booksRead, "books read"],
                 [stats.avgRating === null ? "–" : `${stats.avgRating.toFixed(1)}★`, "avg rating"],
-                [stats.linesKept, "lines kept"],
+                [stats.quotesSaved, "quotes saved"],
               ].map(([v, l]) => (
                 <div key={String(l)}>
                   <div className="text-[60px] font-medium leading-tight">{v}</div>
