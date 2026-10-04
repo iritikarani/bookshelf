@@ -737,17 +737,20 @@
 }
 /* keep a marked book's title clear of the ribbon hanging at the edge */
 .spine--marked .spine-title { max-width: calc(100% - 14px); }
-.spine-title--serif { font-family: "Gloock", "DM Serif Display", Georgia, serif; letter-spacing: 0.01em; }
-.spine-title--spaced {
-  font-family: "Libre Franklin", system-ui, sans-serif;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
+/* one book typeface for every spine (Cormorant Garamond), in three settings */
+.spine-title--serif,
+.spine-title--spaced,
+.spine-title--caps,
+.spine-author {
+  font-family: "Cormorant Garamond", Garamond, Georgia, serif;
+  font-variant-numeric: lining-nums;
 }
+.spine-title--serif { font-weight: 600; letter-spacing: 0.01em; }
+.spine-title--spaced { font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; }
 .spine-title--caps {
-  font-family: "Gloock", "DM Serif Display", Georgia, serif;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
 }
 /* the author sits quietly at the foot of the spine */
@@ -758,10 +761,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-height: 28%;
-  font-family: "Libre Franklin", system-ui, sans-serif;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  opacity: 0.72;
+  letter-spacing: 0.16em;
+  opacity: 0.78;
   line-height: 1;
 }
 .spine--leather { padding: calc(var(--cover-h) * 0.15) 0 calc(var(--cover-h) * 0.14); }
