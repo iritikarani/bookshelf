@@ -19,6 +19,7 @@ import { Header, shelfSummary } from "./Header";
 import { QuoteWall } from "./QuoteWall";
 import { ReadingYear } from "./ReadingYear";
 import { RoomScene } from "./RoomScene";
+import { siteUrl } from "@/lib/basePath";
 import { ShelfWall } from "./ShelfWall";
 import { SignGuestbook } from "./Guestbook";
 
@@ -96,7 +97,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
             <ShelfWall shelves={shelves} itemsByShelf={items} structure={structureOf(aesthetic, data?.profile.room)} perCase={perCaseOf(data?.profile.room)} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
           </RoomScene>
         ) : tab === "quotes" ? (
-          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} look={{ styleId: aesthetic.id, room: data?.profile.room, publicUrl: typeof window === "undefined" ? null : window.location.href }} />
+          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} look={{ styleId: aesthetic.id, room: data?.profile.room, publicUrl: typeof window === "undefined" ? null : siteUrl(`/s/?u=${encodeURIComponent(slug)}`), visitorOf: name ?? null }} />
         ) : (
           <ReadingYear shelves={shelves} books={books} onOpen={(b) => setOpenId(b.id)} />
         )}

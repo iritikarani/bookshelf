@@ -2,6 +2,7 @@
 
 import { getFontEmbedCSS, toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
+import { shareFiles, shareMessage } from "@/lib/shareMessage";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
 import { hasLine } from "@/lib/stats";
 import type { Book, ShelfStyle } from "@/lib/types";
@@ -17,6 +18,8 @@ export interface QuoteLook {
   room?: RoomSettings | null;
   /** The public shelf link, shown under the card. */
   publicUrl?: string | null;
+  /** Set on someone else's public shelf: whose shelf the quote comes from. */
+  visitorOf?: string | null;
 }
 
 export function QuoteWall({ books, onOpen, look }: { books: Book[]; onOpen: (b: Book) => void; look?: QuoteLook }) {
@@ -166,8 +169,8 @@ function QuoteShareSheet({ book, look, onClose }: { book: Book | null; look: Quo
             onClick={async () => {
               try {
                 const f = await file();
-                if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f] });
-                else {
+                const done = await shareFiles([f], shareMessage({ publicUrl: look.publicUrl, visitorOf: look.visitorOf }), book ? `A line from ${book.title}` : "A favourite line");
+                if (done === "unsupported") {
                   const a = document.createElement("a");
                   a.href = png!;
                   a.download = fileName;
