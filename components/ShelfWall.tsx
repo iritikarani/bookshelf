@@ -23,7 +23,8 @@ import type { Book, Decor, Shelf, ShelfItem } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { BookSpine, spineSize } from "./BookSpine";
 import { DecorArt, decorSize, decorSpec } from "./Decor";
-import { MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
+import { MARKS, MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
+import { ProgressBar, progressPercent } from "./ReadingProgress";
 import { StarDisplay, formatRating } from "./StarRating";
 
 interface Insertion {
@@ -460,6 +461,12 @@ function Peek({ book, rect }: { book: Book; rect: DOMRect }) {
         ) : null}
         <MarkChips book={book} />
       </div>
+      {book.status === "reading" && progressPercent(book) !== null && (
+        <div className="mt-2 flex items-center gap-2">
+          <ProgressBar percent={progressPercent(book)!} color={MARKS.reading.color} className="flex-1" />
+          <span className="font-mono text-[11px] text-ink-soft">p. {book.current_page}/{book.pages}</span>
+        </div>
+      )}
       <p className="mt-2 text-[11px] text-ink-soft">Click to open</p>
     </div>,
     document.body,

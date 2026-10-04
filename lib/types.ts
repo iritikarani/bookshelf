@@ -65,6 +65,8 @@ export interface Book {
   favourite: boolean;
   year_published: number | null;
   pages: number | null;
+  /** Reading now: the page the reader is on. */
+  current_page?: number | null;
   genre: string | null;
   short_description: string | null;
   position: number;
