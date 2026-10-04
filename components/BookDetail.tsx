@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/date";
 import type { Book, BookDisplay, ReadStatus, Shelf } from "@/lib/types";
+import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { BookCover } from "./BookCover";
 import { ChevronLeft, ChevronRight, PencilIcon, TrashIcon } from "./Icons";
@@ -153,17 +154,18 @@ export function BookDetail(props: BookDetailProps) {
 
               <fieldset className="rounded-xl bg-paper/90 p-1">
                 <legend className="label">On the shelf</legend>
-                <div className="mb-3 inline-flex rounded-full border border-line p-1" role="radiogroup" aria-label="Show on the shelf as">
-                  {(["spine", "cover"] as BookDisplay[]).map((d) => (
+                <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Show on the shelf as">
+                  {DISPLAY_OPTIONS.map((d) => (
                     <button
-                      key={d}
+                      key={d.id}
                       type="button"
                       role="radio"
-                      aria-checked={book.display === d}
-                      onClick={() => onDisplay?.(book, d)}
-                      className={`rounded-full px-3.5 py-1.5 text-sm ${book.display === d ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+                      aria-checked={book.display === d.id}
+                      onClick={() => onDisplay?.(book, d.id)}
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${book.display === d.id ? "border-accent bg-accent text-accent-ink" : "border-line text-ink-soft hover:text-ink"}`}
                     >
-                      {d === "spine" ? "Spine out" : "Cover facing out"}
+                      <PoseIcon pose={d.id} />
+                      {d.name}
                     </button>
                   ))}
                 </div>

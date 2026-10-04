@@ -19,8 +19,8 @@ export type ShelfStyle =
 /** "read" is Finished; "dnf" is Did not finish. */
 export type ReadStatus = "read" | "reading" | "to_read" | "dnf";
 
-/** How a book stands on the shelf. */
-export type BookDisplay = "spine" | "cover";
+/** How a book sits on the shelf: standing spine-out, leaning on its neighbour, lying flat in a pile, or cover facing out. */
+export type BookDisplay = "spine" | "lean" | "stack" | "cover";
 
 export type DecorKind =
   | "plant"
