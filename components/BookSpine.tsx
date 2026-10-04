@@ -74,14 +74,14 @@ export function spineSize(book: Pick<Book, "pages">): CSSProperties {
   };
 }
 
-type TextStyle = "serif" | "sans" | "caps" | "authorCaps";
+type TextStyle = "serif" | "spaced" | "caps" | "authorCaps";
 const FONTS: Record<TextStyle, string> = {
   serif: '400 100px "Gloock", "DM Serif Display", Georgia, serif',
-  sans: '600 100px "Libre Franklin", system-ui, sans-serif',
+  spaced: '500 100px "Libre Franklin", system-ui, sans-serif',
   caps: '400 100px "Gloock", "DM Serif Display", Georgia, serif',
   authorCaps: '400 100px "Libre Franklin", system-ui, sans-serif',
 };
-const TRACKING: Record<TextStyle, number> = { serif: 0, sans: -0.025, caps: 0.05, authorCaps: 0.025 };
+const TRACKING: Record<TextStyle, number> = { serif: 0, spaced: 0.16, caps: 0.08, authorCaps: 0.14 };
 let measureCtx: CanvasRenderingContext2D | null = null;
 
 /**
@@ -89,7 +89,7 @@ let measureCtx: CanvasRenderingContext2D | null = null;
  * and estimated before that so the first render matches the prebuilt page.
  */
 function emWidth(text: string, style: TextStyle, measured: boolean): number {
-  const t = style === "caps" || style === "authorCaps" ? text.toUpperCase() : text;
+  const t = style === "serif" ? text : text.toUpperCase();
   if (measured && typeof document !== "undefined") {
     measureCtx ??= document.createElement("canvas").getContext("2d");
     if (measureCtx) {
@@ -97,7 +97,7 @@ function emWidth(text: string, style: TextStyle, measured: boolean): number {
       return measureCtx.measureText(t).width / 100 + t.length * TRACKING[style];
     }
   }
-  return t.length * (style === "serif" ? 0.52 : style === "sans" ? 0.6 : 0.74);
+  return t.length * (style === "serif" ? 0.52 : style === "spaced" ? 0.82 : 0.78);
 }
 
 /** True once the web fonts have loaded, so spine text can be measured exactly. */
@@ -138,46 +138,32 @@ function titleLines(title: string, twoLines: boolean): string[] {
   return best > 0 ? [title.slice(0, best), title.slice(best + 1)] : [title];
 }
 
-/** The little publisher's mark at the foot of a spine. */
-function PublisherMark({ variant, color, size }: { variant: number; color: string; size: string }) {
-  return (
-    <svg viewBox="0 0 10 10" className="relative mt-auto shrink-0" style={{ width: size, height: size }} aria-hidden>
-      {variant === 0 && <ellipse cx="5" cy="5" rx="4.4" ry="4.4" fill={color} />}
-      {variant === 1 && <rect x="1" y="1" width="8" height="8" rx="1.6" fill={color} />}
-      {variant === 2 && <ellipse cx="5" cy="5" rx="3.4" ry="4.6" fill={color} />}
-      {variant === 3 && <path d="M5 0.8 L9.2 4.4 V9.2 H0.8 V4.4 Z" fill={color} />}
-      <circle cx="5" cy="5.4" r="1.4" fill="rgba(255,255,255,.85)" />
-    </svg>
-  );
-}
-
 /**
- * A book standing spine-out, drawn like the real thing: the cover's own colours; a paperback with
- * a publisher's mark (and reading creases once it's been read), a hardback with headbands and
- * rules, or an old book in leather with raised bands and gold lettering. Long titles wrap onto two
- * lines and shrink to fit rather than being cut off.
+ * A book standing spine-out, drawn like the real thing but kept calm: the cover's own colour,
+ * elegant lettering (a serif title, or spaced capitals on some modern paperbacks), the author in
+ * small capitals at the foot. Hardbacks get headbands, pre-1930 classics leather with gold
+ * lettering and fine gold rules, and a paperback you've read shows creases down its spine.
  */
 export function BookSpine({ book }: { book: SpineBook }) {
   const palette = useCoverPalette(book);
   const kind = spineKind(book);
   const variant = hashString(book.title + book.author);
   const w = spineWidthPx(book.pages);
-  const gold = "#dcbc66";
+  const gold = "#d9b968";
   const base = kind === "leather" ? mixHex(palette.base, "#1d120c", 0.42) : palette.base;
   const ink = kind === "leather" ? gold : textColorFor(base);
-  const accent = palette.accent;
 
-  const serif = kind !== "paperback" || variant % 2 === 0;
-  const style: TextStyle = kind === "leather" ? "caps" : serif ? "serif" : "sans";
+  const style: TextStyle = kind === "leather" ? "caps" : kind === "paperback" && variant % 3 === 1 ? "spaced" : "serif";
   const measured = useFontsMeasured();
 
   // Fit the title: the room along the spine for it, and how long its longest line is.
   const hf = heightFactor(book.pages);
-  const along = 129 * hf * (kind === "leather" ? 0.36 : kind === "hardback" ? 0.45 : 0.56);
-  const fits = (lines: string[], across: number) => Math.min(across, along / Math.max(...lines.map((l) => emWidth(l, style, measured))), 14);
+  const along = 129 * hf * (kind === "leather" ? 0.44 : kind === "hardback" ? 0.52 : 0.58);
+  const maxSize = style === "serif" ? 13 : 9;
+  const fits = (lines: string[], across: number) => Math.min(across, along / Math.max(...lines.map((l) => emWidth(l, style, measured))), maxSize);
   let lines = titleLines(book.title, false);
   let size = fits(lines, w * 0.42);
-  if (size < 10 && w >= 26 && book.title.includes(" ")) {
+  if (size < 9 && w >= 26 && book.title.includes(" ")) {
     const two = titleLines(book.title, true);
     const twoSize = fits(two, w * 0.3);
     if (twoSize > size) {
@@ -185,17 +171,18 @@ export function BookSpine({ book }: { book: SpineBook }) {
       size = twoSize;
     }
   }
-  const fontSize = `calc(${Math.max(6.5, size).toFixed(1)}px * var(--spine-scale))`;
+  const fontSize = `calc(${Math.max(6, size).toFixed(1)}px * var(--spine-scale))`;
 
   // The author's full name when it fits, else just the surname.
   const names = book.author.split(",")[0].trim().split(/\s+/).filter(Boolean);
-  const authorRoom = 129 * hf * 0.25;
-  const authorFit = (name: string) => Math.min(w * 0.22, 8, authorRoom / Math.max(emWidth(name, "authorCaps", measured), 0.1));
+  const authorRoom = 129 * hf * (kind === "leather" ? 0.15 : 0.22);
+  const authorFit = (name: string) => Math.min(w * 0.2, 6.5, authorRoom / Math.max(emWidth(name, "authorCaps", measured), 0.1));
   const full = names.join(" ");
   const surname = names[names.length - 1] ?? "";
-  const author = names.length > 1 && authorFit(full) >= 5.5 ? full : surname;
-  const authorSize = `calc(${Math.max(5.5, authorFit(author)).toFixed(1)}px * var(--spine-scale))`;
-  const band = kind === "paperback" && variant % 3 === 0;
+  const picked = names.length > 1 && authorFit(full) >= 5 ? full : surname;
+  // Too small to read means it's left off, like many real spines, rather than cut short.
+  const author = picked && authorFit(picked) >= 4.6 ? picked : "";
+  const authorSize = `calc(${authorFit(author || "x").toFixed(1)}px * var(--spine-scale))`;
 
   return (
     <div className={`spine spine--${kind}`} style={{ backgroundColor: base, color: ink }}>
@@ -203,24 +190,17 @@ export function BookSpine({ book }: { book: SpineBook }) {
         <>
           <span aria-hidden className="spine-cap top-0" />
           <span aria-hidden className="spine-cap bottom-0" />
-          <span aria-hidden className="absolute inset-x-[18%] top-[6%] h-px opacity-60" style={{ background: variant % 2 ? accent : "currentColor" }} />
         </>
       )}
       {kind === "leather" && (
         <>
-          {[11, 19, 74, 82].map((top) => (
-            <span key={top} aria-hidden className="spine-rib" style={{ top: `${top}%` }} />
-          ))}
-          <span aria-hidden className="spine-label" style={{ top: "26%", bottom: "30%" }} />
+          <span aria-hidden className="spine-gilt top-[7%]" />
+          <span aria-hidden className="spine-gilt bottom-[7%]" />
         </>
       )}
-      {band && <span aria-hidden className="absolute inset-x-0 bottom-0 h-[24%]" style={{ background: accent }} />}
       {kind === "paperback" && book.status === "read" && <span aria-hidden className="spine-creases" />}
 
-      <span
-        className={`spine-title ${serif ? "font-serif" : "font-sans font-semibold tracking-tight"} ${kind === "leather" ? "uppercase tracking-wider" : ""}`}
-        style={{ fontSize, ...(kind === "leather" ? { marginTop: "18%", flex: "0 1 auto", maxHeight: "40%" } : {}) }}
-      >
+      <span className={`spine-title spine-title--${style}`} style={{ fontSize }}>
         {lines.map((line, i) => (
           <span key={i} className="block overflow-hidden text-ellipsis">
             {line}
@@ -228,15 +208,9 @@ export function BookSpine({ book }: { book: SpineBook }) {
         ))}
       </span>
       {author && w >= 22 && (
-        <span
-          className={`spine-author relative font-sans uppercase tracking-wide ${kind === "leather" ? "mt-[30%]" : "mt-[7%]"}`}
-          style={{ fontSize: authorSize, ...(band ? { color: textColorFor(accent) } : {}) }}
-        >
+        <span className="spine-author relative" style={{ fontSize: authorSize }}>
           {author}
         </span>
-      )}
-      {kind !== "leather" && w >= 24 && (
-        <PublisherMark variant={variant % 4} color={band ? textColorFor(accent) : kind === "hardback" ? ink : accent} size={`calc(${(w * 0.4).toFixed(1)}px * var(--spine-scale))`} />
       )}
     </div>
   );
