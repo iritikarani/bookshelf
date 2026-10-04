@@ -96,7 +96,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
             <ShelfWall shelves={shelves} itemsByShelf={items} structure={structureOf(aesthetic, data?.profile.room)} perCase={perCaseOf(data?.profile.room)} onOpenBook={(b) => setOpenId(b.id)} readOnly floor={false} />
           </RoomScene>
         ) : tab === "quotes" ? (
-          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} />
+          <QuoteWall books={books} onOpen={(b) => setOpenId(b.id)} look={{ styleId: aesthetic.id, room: data?.profile.room, publicUrl: typeof window === "undefined" ? null : window.location.href }} />
         ) : (
           <ReadingYear shelves={shelves} books={books} onOpen={(b) => setOpenId(b.id)} />
         )}
