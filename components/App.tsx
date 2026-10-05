@@ -39,6 +39,7 @@ import { Settings } from "./Settings";
 import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
 import { ShelfWall } from "./ShelfWall";
+import { StatusShelves, type MarkPatch } from "./StatusShelves";
 
 export function App() {
   return (
@@ -139,6 +140,19 @@ function AppInner() {
   const structure = structureOf(aesthetic, profile?.room);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
+  // My Shelf as the room, or as status shelves (Reading / Want to Read / Finished / Favourites).
+  const [shelfView, setShelfView] = useState<"room" | "status">("room");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("exlibris:shelfView") === "status") setShelfView("status");
+    } catch {}
+  }, []);
+  const pickShelfView = (v: "room" | "status") => {
+    setShelfView(v);
+    try {
+      localStorage.setItem("exlibris:shelfView", v);
+    } catch {}
+  };
   // Accounts made with Google have no username yet: ask once per visit.
   const [usernameSkipped, setUsernameSkipped] = useState(false);
   const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
@@ -191,6 +205,9 @@ function AppInner() {
   const openDecor = decorId ? (lib.decor.find((d) => d.id === decorId) ?? null) : null;
   const openIndex = openBook ? openList.findIndex((b) => b.id === openBook.id) : 0;
 
+  // Status changes keep the rating and finish date honest: only finished books keep a rating.
+  const markBook = (b: Book, patch: MarkPatch) =>
+    lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch);
   const startAdd = () => {
     setEditing(null);
     setDiscovered(null);
@@ -263,7 +280,27 @@ function AppInner() {
           </>
         ) : (
           <>
-            <PageTitle title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"} sub={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)} />
+            <PageTitle title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"} sub={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)}>
+              <div role="radiogroup" aria-label="Show my shelf" className="inline-flex gap-1 rounded-full bg-paper/70 p-1 ring-1 ring-line/70 backdrop-blur">
+                {(
+                  [
+                    ["room", "My room"],
+                    ["status", "By status"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={shelfView === id}
+                    onClick={() => pickShelfView(id)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${shelfView === id ? "bg-ink text-wall" : "text-ink-soft hover:text-ink"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </PageTitle>
             {showExamples && (
               <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
@@ -272,34 +309,40 @@ function AppInner() {
                 </button>
               </div>
             )}
-            {!showExamples && <RoomSwitcher />}
-            <MarkFilterBar value={filter} onChange={setFilter} books={roomBooks} />
-            <RoomScene standing={structure === "case"}>
-              {showExamples ? (
-                <ShelfWall
-                  shelves={[EXAMPLE_SHELF]}
-                  itemsByShelf={exampleMap}
-                  structure={structure}
-                  onOpenBook={(b) => setOpenId(b.id)}
-                  filter={filter}
-                  floor={false}
-                  readOnly
-                />
-              ) : (
-                <ShelfWall
-                  shelves={shelves}
-                  itemsByShelf={itemsByShelf}
-                  structure={structure}
-                  onOpenBook={(b) => setOpenId(b.id)}
-                  onOpenDecor={(d) => setDecorId(d.id)}
-                  perCase={perCaseOf(profile?.room)}
-                  onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
-                  justAddedId={lib.justAddedId}
-                  filter={filter}
-                  floor={false}
-                />
-              )}
-            </RoomScene>
+            {shelfView === "status" ? (
+              <StatusShelves books={showExamples ? EXAMPLE_BOOKS : books} onOpen={(b) => setOpenId(b.id)} onMark={markBook} readOnly={showExamples} />
+            ) : (
+              <>
+                {!showExamples && <RoomSwitcher />}
+                <MarkFilterBar value={filter} onChange={setFilter} books={roomBooks} />
+                <RoomScene standing={structure === "case"}>
+                  {showExamples ? (
+                    <ShelfWall
+                      shelves={[EXAMPLE_SHELF]}
+                      itemsByShelf={exampleMap}
+                      structure={structure}
+                      onOpenBook={(b) => setOpenId(b.id)}
+                      filter={filter}
+                      floor={false}
+                      readOnly
+                    />
+                  ) : (
+                    <ShelfWall
+                      shelves={shelves}
+                      itemsByShelf={itemsByShelf}
+                      structure={structure}
+                      onOpenBook={(b) => setOpenId(b.id)}
+                      onOpenDecor={(d) => setDecorId(d.id)}
+                      perCase={perCaseOf(profile?.room)}
+                      onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
+                      justAddedId={lib.justAddedId}
+                      filter={filter}
+                      floor={false}
+                    />
+                  )}
+                </RoomScene>
+              </>
+            )}
 
           </>
         )}
@@ -320,7 +363,7 @@ function AppInner() {
         onMove={(b, shelfId) => lib.sendToShelf(b.id, shelfId)}
         onNudge={(b, dir) => lib.nudgeItem(b.id, dir)}
         onDisplay={(b, display) => lib.updateBook(b.id, { display })}
-        onMarks={(b, patch) => lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch)}
+        onMarks={markBook}
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
         onProgress={(b, patch) => lib.updateBook(b.id, patch)}
         onRemove={(b) => lib.removeBook(b.id)}
