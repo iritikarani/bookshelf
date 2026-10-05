@@ -40,7 +40,7 @@ export function SoundButton({ room, season }: { room?: RoomSettings | null; seas
       aria-pressed={s.playing}
       aria-label={s.playing ? `Pause room sounds (${name})` : `Play room sounds (${name})`}
       title={s.playing ? `${name}: tap to pause` : `${name}: tap to play`}
-      className="fixed bottom-5 left-5 z-30 flex h-12 items-center gap-2 rounded-full bg-paper/90 px-4 text-sm text-ink shadow-lg ring-1 ring-line backdrop-blur transition hover:bg-paper"
+      className="fixed bottom-24 left-4 z-30 flex h-12 md:bottom-5 md:left-5 items-center gap-2 rounded-full bg-paper/90 px-4 text-sm text-ink shadow-lg ring-1 ring-line backdrop-blur transition hover:bg-paper"
     >
       <span aria-hidden className="text-lg">
         {s.playing ? "🔊" : "🔈"}

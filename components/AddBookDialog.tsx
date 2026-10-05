@@ -27,18 +27,21 @@ interface Props {
   onClose: () => void;
   editing?: Book | null;
   defaultShelfId?: string;
+  /** A book picked elsewhere (Discover): opens straight to its details. */
+  initialResult?: SearchResult | null;
   /** note: where the book went, if not the chosen shelf because it was full. */
   onSaved?: (book: Book | null, note: string | null) => void;
 }
 
-export function AddBookDialog({ open, onClose, editing, defaultShelfId, onSaved }: Props) {
+export function AddBookDialog({ open, onClose, editing, defaultShelfId, initialResult, onSaved }: Props) {
   return (
     <Sheet open={open} onClose={onClose} title={editing ? "Edit book" : "Add a book"} wide>
       {open && (
         <AddBookForm
-          key={editing?.id ?? "new"}
+          key={editing?.id ?? initialResult?.key ?? "new"}
           editing={editing ?? null}
           defaultShelfId={defaultShelfId}
+          initialResult={editing ? null : (initialResult ?? null)}
           onDone={(b, note) => {
             onSaved?.(b, note ?? null);
             onClose();
@@ -65,7 +68,17 @@ function nextShelfNames(shelves: Shelf[], count: number): string[] {
   return names;
 }
 
-function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null; defaultShelfId?: string; onDone: (b: Book | null, note?: string | null) => void }) {
+function AddBookForm({
+  editing,
+  defaultShelfId,
+  initialResult,
+  onDone,
+}: {
+  editing: Book | null;
+  defaultShelfId?: string;
+  initialResult?: SearchResult | null;
+  onDone: (b: Book | null, note?: string | null) => void;
+}) {
   const { profile, shelves, allShelves, shelfLabel: roomShelfLabel, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
@@ -139,6 +152,12 @@ function AddBookForm({ editing, defaultShelfId, onDone }: { editing: Book | null
       window.clearTimeout(t);
     };
   }, [query, publisher, stage, searchable]);
+
+  // Picked on the Discover page: go straight to the details.
+  useEffect(() => {
+    if (initialResult) void pick(initialResult);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function pick(r: SearchResult) {
     const token = ++pickToken.current;

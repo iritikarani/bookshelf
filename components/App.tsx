@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
@@ -22,12 +21,17 @@ import { BookDetail } from "./BookDetail";
 import { DecorSheet } from "./DecorSheet";
 import { UsernameDialog } from "./UsernameDialog";
 import { EditShelves } from "./EditShelves";
-import { Header, shelfSummary } from "./Header";
+import { shelfSummary } from "./Header";
+import { BottomNav, PageTitle, TopBar } from "./AppNav";
+import { DiscoverPage } from "./DiscoverPage";
+import { HomePage } from "./HomePage";
+import { JournalPage } from "./JournalPage";
+import { Landing } from "./Landing";
+import { ProfilePage } from "./ProfilePage";
+import type { SearchResult } from "@/lib/search";
 import { MoreMenu } from "./MoreMenu";
 import { Onboarding } from "./Onboarding";
 import { BrushIcon, GearIcon, MailIcon, PlusIcon, ShareIcon, ShelvesIcon, XIcon } from "./Icons";
-import { QuoteWall } from "./QuoteWall";
-import { ReadingYear } from "./ReadingYear";
 import { GuestbookSheet } from "./Guestbook";
 import { RoomSwitcher } from "./RoomSwitcher";
 import { SoundButton } from "./SoundButton";
@@ -53,6 +57,8 @@ function AppInner() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // A book picked on the Discover page, opened straight to its details.
+  const [discovered, setDiscovered] = useState<SearchResult | null>(null);
   // A short message after adding, e.g. "your bookcase was full, so a new one was added".
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
@@ -135,11 +141,6 @@ function AppInner() {
   const [filter, setFilter] = useState<MarkFilter>("all");
   // Accounts made with Google have no username yet: ask once per visit.
   const [usernameSkipped, setUsernameSkipped] = useState(false);
-  const router = useRouter();
-  // Signed out with accounts switched on: the front door is the login page.
-  useEffect(() => {
-    if (authReady && !user && store.mode === "supabase") router.replace("/login/");
-  }, [authReady, user, router]);
   const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
   const exampleMap = useMemo(() => new Map<string, ShelfItem[]>([[EXAMPLE_SHELF.id, EXAMPLE_ITEMS]]), []);
   // Quote wall & reading year show the examples too until the first real book arrives.
@@ -182,7 +183,8 @@ function AppInner() {
   const ownerName = profile?.username ?? (store.mode === "supabase" ? profile?.display_name : null) ?? null;
 
   if (!authReady) return <Splash />;
-  if (!user && store.mode === "supabase") return <Splash />; // on its way to /login
+  // Signed out with accounts switched on: the front door.
+  if (!user && store.mode === "supabase") return <Landing />;
 
   const openBook = openId ? (viewBooks.find((b) => b.id === openId) ?? null) : null;
   const openList = openBook ? (isExample(openBook) ? exampleMap.get(EXAMPLE_SHELF.id) : itemsByShelf.get(openBook.shelf_id)) ?? [] : [];
@@ -191,28 +193,28 @@ function AppInner() {
 
   const startAdd = () => {
     setEditing(null);
+    setDiscovered(null);
     setAddOpen(true);
   };
+  const publicUrl = store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null;
+  const quoteLook = { styleId: aesthetic.id, room: profile?.room, publicUrl };
 
   return (
-    <div data-style={aesthetic.id} {...roomAttrs(profile?.room, undefined, season)} style={roomStyle(profile?.room)} className={`room flex min-h-dvh flex-col ${tab === "shelf" && !loading ? "" : "pb-24"}`}>
+    <div data-style={aesthetic.id} {...roomAttrs(profile?.room, undefined, season)} style={roomStyle(profile?.room)} className="room flex min-h-dvh flex-col pb-28 md:pb-12">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-paper focus:px-3 focus:py-2">
         Skip to shelves
       </a>
-      <Header
-        title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"}
-        summary={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)}
-        stats={stats}
+      <TopBar
         tab={tab}
         onTab={setTab}
         actions={
           <>
-            <button type="button" className="btn-primary hidden sm:inline-flex" onClick={startAdd}>
-              <PlusIcon width={16} height={16} /> Add a book
+            <button type="button" className="btn-primary h-11 w-11 px-0 sm:w-auto sm:px-4" onClick={startAdd} aria-label="Add a book">
+              <PlusIcon width={18} height={18} /> <span className="hidden sm:inline">Add a book</span>
             </button>
             <MoreMenu
               items={[
-                { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => setArrangeOpen(true) },
+                { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => (setTab("shelf"), setArrangeOpen(true)) },
                 { label: "Edit shelves", icon: <ShelvesIcon width={18} height={18} />, onSelect: () => setShelvesOpen(true) },
                 { label: "Share shelf", icon: <ShareIcon width={18} height={18} />, onSelect: () => setShareOpen(true), disabled: books.length === 0 },
                 { label: "Your year, wrapped", icon: <span className="inline-block w-[18px] text-center" aria-hidden>✨</span>, onSelect: () => setWrappedOpen(true) },
@@ -224,11 +226,44 @@ function AppInner() {
         }
       />
 
-      <main id="main" className={`mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 md:px-8 md:pt-8`}>
+      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 md:px-8 md:pt-10">
         {loading ? (
           <ShelfSkeleton />
-        ) : tab === "shelf" ? (
+        ) : tab === "home" ? (
+          <HomePage books={books} name={profile?.display_name ?? ownerName} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
+        ) : tab === "discover" ? (
+          <DiscoverPage
+            books={books}
+            onAdd={(r) => {
+              setEditing(null);
+              setDiscovered(r);
+              setAddOpen(true);
+            }}
+          />
+        ) : tab === "journal" ? (
           <>
+            {showExamples && <ExampleNote />}
+            <JournalPage books={viewBooks} look={quoteLook} onOpen={(b) => setOpenId(b.id)} onShelf={() => setTab("shelf")} />
+          </>
+        ) : tab === "profile" ? (
+          <>
+            {showExamples && <ExampleNote />}
+            <ProfilePage
+              name={profile?.display_name ?? ownerName}
+              username={profile?.username}
+              books={viewBooks}
+              shelves={viewShelves}
+              newNotes={newNotes}
+              onOpen={(b) => setOpenId(b.id)}
+              onSettings={() => setSettingsOpen(true)}
+              onShare={books.length ? () => setShareOpen(true) : undefined}
+              onWrapped={showExamples ? undefined : () => setWrappedOpen(true)}
+              onGuestbook={openGuestbook}
+            />
+          </>
+        ) : (
+          <>
+            <PageTitle title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"} sub={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)} />
             {showExamples && (
               <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
@@ -267,32 +302,8 @@ function AppInner() {
             </RoomScene>
 
           </>
-        ) : tab === "quotes" ? (
-          <>
-            {showExamples && <ExampleNote />}
-            <QuoteWall
-              books={viewBooks}
-              onOpen={(b) => setOpenId(b.id)}
-              look={{ styleId: aesthetic.id, room: profile?.room, publicUrl: store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null }}
-            />
-          </>
-        ) : (
-          <>
-            {showExamples && <ExampleNote />}
-            <ReadingYear shelves={viewShelves} books={viewBooks} onOpen={(b) => setOpenId(b.id)} onWrapped={showExamples ? undefined : () => setWrappedOpen(true)} />
-          </>
         )}
       </main>
-
-      {/* Mobile floating add button */}
-      <button
-        type="button"
-        onClick={startAdd}
-        className="btn-primary fixed bottom-5 right-5 z-30 px-5 py-3 shadow-xl sm:hidden"
-        aria-label="Add a book"
-      >
-        <PlusIcon width={18} height={18} /> Add a book
-      </button>
 
       <BookDetail
         book={openBook}
@@ -318,11 +329,18 @@ function AppInner() {
       <AddBookDialog
         open={addOpen}
         editing={editing}
+        initialResult={discovered}
         onClose={() => {
           setAddOpen(false);
           setEditing(null);
+          setDiscovered(null);
         }}
         onSaved={(b, note) => {
+          // Added from Discover: stay and keep browsing.
+          if (b && tab === "discover") {
+            setNotice(note ?? `“${b.title}” is on your shelf now.`);
+            return;
+          }
           if (note) setNotice(note);
           if (b) {
             setOpenId(null);
@@ -350,7 +368,8 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      {!loading && <SoundButton room={profile?.room} season={season} />}
+      {!loading && tab === "shelf" && <SoundButton room={profile?.room} season={season} />}
+      <BottomNav tab={tab} onTab={setTab} />
 
       <GuestbookSheet
         open={guestbookOpen}
@@ -373,7 +392,7 @@ function AppInner() {
         styleId={aesthetic.id}
         room={profile?.room}
         owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
-        publicUrl={store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null}
+        publicUrl={publicUrl}
       />
 
       <WrappedSheet
@@ -383,11 +402,11 @@ function AppInner() {
         styleId={aesthetic.id}
         room={profile?.room}
         owner={store.mode === "supabase" ? (profile?.username ?? profile?.display_name ?? null) : null}
-        publicUrl={store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null}
+        publicUrl={publicUrl}
       />
 
       {notice && !lib.error && (
-        <div role="status" className="fixed inset-x-4 bottom-20 z-[60] mx-auto flex max-w-md animate-fade-in items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
+        <div role="status" className="fixed inset-x-4 bottom-24 z-[60] mx-auto flex max-w-md animate-fade-in items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
           <p className="flex-1">{notice}</p>
           <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
             <XIcon width={18} height={18} />
@@ -395,7 +414,7 @@ function AppInner() {
         </div>
       )}
       {lib.error && (
-        <div role="alert" className="fixed inset-x-4 bottom-20 z-[60] mx-auto flex max-w-md items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
+        <div role="alert" className="fixed inset-x-4 bottom-24 z-[60] mx-auto flex max-w-md items-start gap-3 rounded-xl bg-ink px-4 py-3 text-sm text-wall shadow-2xl sm:bottom-6">
           <p className="flex-1">{lib.error}</p>
           <button type="button" onClick={lib.clearError} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
             <XIcon width={18} height={18} />

@@ -12,7 +12,7 @@ import { localStore } from "@/lib/store/local";
 import { supabaseStore } from "@/lib/store/supabase";
 import { summary } from "@/lib/stats";
 import type { PublicShelf } from "@/lib/types";
-import { useTab } from "@/lib/useTab";
+import { usePublicTab } from "@/lib/useTab";
 import { ShelfSkeleton } from "./App";
 import { BookDetail } from "./BookDetail";
 import { Header, shelfSummary } from "./Header";
@@ -34,7 +34,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
   const [data, setData] = useState<PublicShelf | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useTab();
+  const [tab, setTab] = usePublicTab();
   const [openId, setOpenId] = useState<string | null>(null);
   const [signOpen, setSignOpen] = useState(false);
   // Which room the visitor is looking at (null is the first room).
