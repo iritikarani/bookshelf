@@ -46,3 +46,10 @@ export const GoogleIcon = (p: P) => (
   </svg>
 );
 export const BrushIcon = (p: P) => (<svg {...base(p)}><path d="M14.5 4.5l5 5L11 18l-5-5z" /><path d="M6 13c-2 0-3 1.5-3 3.5S2 20 2 20s3.5.5 5.5-1.5S8 15 8 15" /><path d="M16.5 2.5l5 5" /></svg>);
+
+// Navigation
+export const HomeIcon = (p: P) => (<svg {...base(p)}><path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-4.5v-6h-5v6H5a1 1 0 01-1-1z" /></svg>);
+export const BooksIcon = (p: P) => (<svg {...base(p)}><rect x="4" y="4" width="4" height="16" rx="0.8" /><rect x="9.5" y="6" width="4" height="14" rx="0.8" /><path d="M15.4 7.2l3.7-1 3 13.4-3.7 1z" /></svg>);
+export const CompassIcon = (p: P) => (<svg {...base(p)}><circle cx="12" cy="12" r="8.5" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></svg>);
+export const JournalIcon = (p: P) => (<svg {...base(p)}><path d="M6 3.5h11a1 1 0 011 1v15a1 1 0 01-1 1H6z" /><path d="M6 3.5v17M9.5 8h5M9.5 11.5h5" /></svg>);
+export const UserIcon = (p: P) => (<svg {...base(p)}><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20.5c1.2-3.8 4-5.6 7.5-5.6s6.3 1.8 7.5 5.6" /></svg>);

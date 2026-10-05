@@ -7,7 +7,7 @@ import type { Book, Shelf } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { StarDisplay } from "./StarRating";
 
-export function ReadingYear({ shelves, books, onOpen, onWrapped }: { shelves: Shelf[]; books: Book[]; onOpen: (b: Book) => void; onWrapped?: () => void }) {
+export function ReadingYear({ shelves, books, onOpen, onWrapped, title = "Reading year" }: { shelves: Shelf[]; books: Book[]; onOpen: (b: Book) => void; onWrapped?: () => void; title?: string }) {
   const { read } = splitByReadState(books);
   const years = useMemo(() => {
     const ys = new Set<number>([new Date().getFullYear()]);
@@ -34,7 +34,7 @@ export function ReadingYear({ shelves, books, onOpen, onWrapped }: { shelves: Sh
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-serif text-2xl md:text-3xl">
-          Reading year <span className="font-mono text-xl text-ink-soft md:text-2xl">{year}</span>
+          {title} <span className="font-mono text-xl text-ink-soft md:text-2xl">{year}</span>
         </h2>
         <label className="flex items-center gap-2 text-sm">
           <span className="sr-only">Year</span>
