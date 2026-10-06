@@ -10,6 +10,7 @@ import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/sear
 import { placeBook } from "@/lib/shelfRoom";
 import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
 import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
+import { MAX_TAGS, cleanTag } from "./BookJournal";
 import { MarkPicker } from "./Marks";
 import { perCaseOf } from "@/lib/room";
 import { BookCover, GeneratedCover } from "./BookCover";
@@ -97,6 +98,8 @@ function AddBookForm({
   const [rating, setRating] = useState(editing?.rating ?? 0);
   const [liked, setLiked] = useState(editing?.what_i_liked ?? "");
   const [line, setLine] = useState(editing?.favourite_line ?? "");
+  const [dateStarted, setDateStarted] = useState(editing?.date_started ?? "");
+  const [tagText, setTagText] = useState((editing?.tags ?? []).join(", "));
   const [display, setDisplay] = useState<BookDisplay>(editing?.display ?? "spine");
   const [status, setStatus] = useState<ReadStatus>(editing?.status ?? "to_read");
   const [favourite, setFavourite] = useState(editing?.favourite ?? false);
@@ -248,6 +251,11 @@ function AddBookForm({
         favourite_line: line.trim() || null,
         date_finished: finished ? dateFinished || null : null,
       };
+      // Journal extras: only sent when there's something to save or change.
+      const started = status === "to_read" ? null : dateStarted || null;
+      if (started !== (editing?.date_started ?? null)) draft.date_started = started;
+      const tags = [...new Set(tagText.split(",").map(cleanTag).filter(Boolean))].slice(0, MAX_TAGS);
+      if (tags.join("|") !== (editing?.tags ?? []).join("|")) draft.tags = tags;
       if (editing) {
         await updateBook(editing.id, draft);
         onDone(null);
@@ -512,6 +520,12 @@ function AddBookForm({
             </div>
           </div>
         )}
+        {status !== "to_read" && (
+          <div>
+            <label className="label" htmlFor="ab-started">Date started <span className="font-normal normal-case tracking-normal text-ink-soft">(optional)</span></label>
+            <input id="ab-started" type="date" className="field font-mono" value={dateStarted} max={(finished && dateFinished) || todayISO()} onChange={(e) => setDateStarted(e.target.value)} />
+          </div>
+        )}
         {finished && (
           <div>
             <label className="label" htmlFor="ab-date">Date finished <span className="font-normal normal-case tracking-normal text-ink-soft">(optional)</span></label>
@@ -550,6 +564,12 @@ function AddBookForm({
           <div>
             <label className="label" htmlFor="ab-line">Favourite line</label>
             <textarea id="ab-line" rows={2} className="field resize-y font-serif text-lg" placeholder="A sentence worth keeping" value={line} onChange={(e) => setLine(e.target.value)} />
+          </div>
+
+          <div>
+            <label className="label" htmlFor="ab-tags">Tags</label>
+            <input id="ab-tags" className="field" maxLength={400} placeholder="comfort read, book club, autumn" value={tagText} onChange={(e) => setTagText(e.target.value)} />
+            <p className="mt-1 text-xs text-ink-soft">Separate tags with commas.</p>
           </div>
 
           {coverPicker}

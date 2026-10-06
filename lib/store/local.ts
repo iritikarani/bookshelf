@@ -69,6 +69,10 @@ function mutate<T>(fn: (d: LibraryData) => T): T {
 }
 
 /** Browser-only store used when Supabase isn't configured. Same API, data in localStorage. */
+/** Does a public link ("@username" or the random slug) point at this profile? */
+const ownsLink = (p: Profile, slug: string) =>
+  p.is_public && (slug.startsWith("@") ? Boolean(p.username) && p.username === slug.slice(1).toLowerCase() : p.public_slug === slug);
+
 export const localStore: Store = {
   mode: "local",
   async getUser() {
@@ -175,9 +179,17 @@ export const localStore: Store = {
   },
   async getPublicShelf(slug): Promise<PublicShelf | null> {
     const d = read();
-    if (d.profile.public_slug !== slug || !d.profile.is_public) return null;
+    if (!ownsLink(d.profile, slug)) return null;
     return {
-      profile: { display_name: d.profile.display_name, shelf_style: d.profile.shelf_style, room: d.profile.room ?? null },
+      profile: {
+        display_name: d.profile.display_name,
+        username: d.profile.username ?? null,
+        bio: d.profile.bio ?? null,
+        avatar_url: d.profile.avatar_url ?? null,
+        guestbook_enabled: d.profile.guestbook_enabled !== false,
+        shelf_style: d.profile.shelf_style,
+        room: d.profile.room ?? null,
+      },
       rooms: d.rooms ?? [],
       shelves: d.shelves,
       books: d.books,
@@ -186,7 +198,7 @@ export const localStore: Store = {
   },
   async signGuestbook(slug, note) {
     const d = read();
-    if (d.profile.public_slug !== slug || !d.profile.is_public) return false;
+    if (!ownsLink(d.profile, slug) || d.profile.guestbook_enabled === false) return false;
     const message = note.message.trim().slice(0, 280);
     if (!message && !note.heart) return false;
     const entry: GuestNote = { id: uid(), owner_id: d.profile.id, name: note.name.trim().slice(0, 40) || "A friend", message, heart: note.heart, created_at: new Date().toISOString() };
@@ -198,5 +210,8 @@ export const localStore: Store = {
   },
   async deleteGuestNote(id) {
     writeNotes(readNotes().filter((n) => n.id !== id));
+  },
+  async listPublicShelves() {
+    return [];
   },
 };

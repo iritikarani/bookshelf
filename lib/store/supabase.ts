@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, Room, Shelf } from "../types";
+import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, PublicShelfCard, Room, Shelf } from "../types";
 import type { Store } from "./types";
 import { siteUrl } from "../basePath";
 
@@ -178,6 +178,11 @@ export const supabaseStore: Store = {
   },
   async deleteGuestNote(id) {
     check(await getSupabase().from("guestbook").delete().eq("id", id));
+  },
+  async listPublicShelves(max = 12) {
+    const { data, error } = await getSupabase().rpc("list_public_shelves", { max_count: max });
+    if (error) return [];
+    return (data ?? []) as PublicShelfCard[];
   },
 };
 

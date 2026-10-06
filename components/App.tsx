@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
-import { siteUrl } from "@/lib/basePath";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { finishedCount, newlyUnlocked } from "@/lib/rewards";
@@ -28,6 +27,8 @@ import { HomePage } from "./HomePage";
 import { JournalPage } from "./JournalPage";
 import { Landing } from "./Landing";
 import { ProfilePage } from "./ProfilePage";
+import { EditProfile } from "./EditProfile";
+import { publicUrlOf } from "@/lib/publicLink";
 import type { SearchResult } from "@/lib/search";
 import { MoreMenu } from "./MoreMenu";
 import { Onboarding } from "./Onboarding";
@@ -40,6 +41,7 @@ import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
 import { ShelfWall } from "./ShelfWall";
 import { StatusShelves, type MarkPatch } from "./StatusShelves";
+import { QuoteShareSheet, type QuoteItem } from "./QuoteWall";
 
 export function App() {
   return (
@@ -58,6 +60,8 @@ function AppInner() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [sharingQuote, setSharingQuote] = useState<QuoteItem | null>(null);
   // A book picked on the Discover page, opened straight to its details.
   const [discovered, setDiscovered] = useState<SearchResult | null>(null);
   // A short message after adding, e.g. "your bookcase was full, so a new one was added".
@@ -213,7 +217,7 @@ function AppInner() {
     setDiscovered(null);
     setAddOpen(true);
   };
-  const publicUrl = store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null;
+  const publicUrl = store.mode === "supabase" ? publicUrlOf(profile) : null;
   const quoteLook = { styleId: aesthetic.id, room: profile?.room, publicUrl };
 
   return (
@@ -247,7 +251,7 @@ function AppInner() {
         {loading ? (
           <ShelfSkeleton />
         ) : tab === "home" ? (
-          <HomePage books={books} name={profile?.display_name ?? ownerName} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
+          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
         ) : tab === "discover" ? (
           <DiscoverPage
             books={books}
@@ -260,18 +264,18 @@ function AppInner() {
         ) : tab === "journal" ? (
           <>
             {showExamples && <ExampleNote />}
-            <JournalPage books={viewBooks} look={quoteLook} onOpen={(b) => setOpenId(b.id)} onShelf={() => setTab("shelf")} />
+            <JournalPage books={viewBooks} look={quoteLook} onOpen={(b) => setOpenId(b.id)} onShelf={() => setTab("shelf")} onUpdate={showExamples ? undefined : (b, patch) => lib.updateBook(b.id, patch)} />
           </>
         ) : tab === "profile" ? (
           <>
             {showExamples && <ExampleNote />}
             <ProfilePage
-              name={profile?.display_name ?? ownerName}
-              username={profile?.username}
+              profile={profile}
               books={viewBooks}
               shelves={viewShelves}
               newNotes={newNotes}
               onOpen={(b) => setOpenId(b.id)}
+              onEdit={() => setEditProfileOpen(true)}
               onSettings={() => setSettingsOpen(true)}
               onShare={books.length ? () => setShareOpen(true) : undefined}
               onWrapped={showExamples ? undefined : () => setWrappedOpen(true)}
@@ -367,6 +371,8 @@ function AppInner() {
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
         onProgress={(b, patch) => lib.updateBook(b.id, patch)}
         onRemove={(b) => lib.removeBook(b.id)}
+        onUpdate={(b, patch) => lib.updateBook(b.id, patch)}
+        onShareQuote={(b, quote) => setSharingQuote({ book: b, quote })}
       />
 
       <AddBookDialog
@@ -411,6 +417,7 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <EditProfile open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSaved={setNotice} />
       {!loading && tab === "shelf" && <SoundButton room={profile?.room} season={season} />}
       <BottomNav tab={tab} onTab={setTab} />
 
@@ -438,6 +445,7 @@ function AppInner() {
         publicUrl={publicUrl}
       />
 
+      <QuoteShareSheet item={sharingQuote} look={quoteLook} onClose={() => setSharingQuote(null)} />
       <WrappedSheet
         open={wrappedOpen}
         onClose={() => setWrappedOpen(false)}

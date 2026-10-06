@@ -98,8 +98,22 @@ export interface Book {
   what_i_liked: string | null;
   favourite_line: string | null;
   date_finished: string | null; // YYYY-MM-DD
+  /** When you started reading it (YYYY-MM-DD). */
+  date_started?: string | null;
+  /** Your own tags, e.g. "comfort read", "book club". */
+  tags?: string[];
+  /** Lines saved from the book, each with an optional page and note. */
+  quotes?: Quote[];
   created_at: string;
   updated_at: string;
+}
+
+export interface Quote {
+  id: string;
+  text: string;
+  page?: number | null;
+  note?: string | null;
+  created_at: string;
 }
 
 export type BookDraft = Omit<Book, "id" | "user_id" | "position" | "created_at" | "updated_at">;
@@ -114,10 +128,35 @@ export interface Profile {
   room?: RoomSettings | null;
   is_public: boolean;
   public_slug: string;
+  bio?: string | null;
+  avatar_url?: string | null;
+  /** Books to finish this year. */
+  reading_goal?: number | null;
+  /** Visitors may sign the guest book (on by default). */
+  guestbook_enabled?: boolean;
+}
+
+/** A public shelf as listed on Discover. */
+export interface PublicShelfCard {
+  display_name: string | null;
+  username: string | null;
+  slug: string;
+  avatar_url: string | null;
+  shelf_style: ShelfStyle;
+  book_count: number;
+  books: Pick<Book, "title" | "author" | "cover_url" | "cover_color">[];
 }
 
 export interface PublicShelf {
-  profile: { display_name: string | null; shelf_style: ShelfStyle; room?: RoomSettings | null };
+  profile: {
+    display_name: string | null;
+    username?: string | null;
+    bio?: string | null;
+    avatar_url?: string | null;
+    guestbook_enabled?: boolean;
+    shelf_style: ShelfStyle;
+    room?: RoomSettings | null;
+  };
   rooms?: Room[];
   shelves: Shelf[];
   books: Book[];

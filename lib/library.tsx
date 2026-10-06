@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { store, type LibraryData, type PositionUpdate } from "./store";
-import { saveUsername } from "./store/supabase";
+import type { ProfilePatch } from "./store/types";
+import { isUsernameAvailable, saveUsername } from "./store/supabase";
 import { DECOR } from "@/components/Decor";
 import type { RoomSettings } from "./room";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Room, Shelf, ShelfItem, ShelfStyle } from "./types";
@@ -74,6 +75,8 @@ interface LibraryContextValue {
   setPublic(isPublic: boolean): Promise<void>;
   /** Accounts only: choose or change the reader's username. Throws with a readable message. */
   setUsername(username: string): Promise<void>;
+  /** Save profile details (name, bio, picture, goal, guest book…). Resolves to an error message, or null when saved. */
+  saveProfile(patch: ProfilePatch): Promise<string | null>;
 }
 
 const CACHE_PREFIX = "exlibris:cache:";
@@ -602,6 +605,33 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setData((d) => (d ? { ...d, profile: { ...d.profile, username, display_name: username } } : d));
   }, []);
 
+  const saveProfile = useCallback(
+    async (patch: ProfilePatch): Promise<string | null> => {
+      const u = userRef.current;
+      const current = dataRef.current?.profile;
+      if (!u || !current) return "Please sign in first.";
+      const clean: ProfilePatch = { ...patch };
+      if (clean.username !== undefined && clean.username !== current.username) {
+        const name = (clean.username ?? "").trim().toLowerCase();
+        if (!/^[a-z0-9][a-z0-9_.]{2,19}$/.test(name)) return "Usernames are 3–20 letters, numbers, “_” or “.”.";
+        if (store.mode === "supabase" && !(await isUsernameAvailable(name).catch(() => false))) return `@${name} is taken. Try another.`;
+        clean.username = name;
+      } else delete clean.username;
+      try {
+        await run(
+          (cur) => ({ ...cur, profile: { ...cur.profile, ...clean } }),
+          async () => {
+            await store.updateProfile(u.id, clean);
+          },
+        );
+        return null;
+      } catch {
+        return "Couldn’t save your profile. Check your connection and try again.";
+      }
+    },
+    [run],
+  );
+
   const value: LibraryContextValue = {
     user,
     authReady,
@@ -640,6 +670,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setRoom,
     setPublic,
     setUsername,
+    saveProfile,
   };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
