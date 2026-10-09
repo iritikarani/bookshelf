@@ -12,11 +12,43 @@ export async function politeFetch(url: string, signal?: AbortSignal, ms = 12000)
   try {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     // The clock starts once it's our turn, not while waiting in line.
-    return await fetch(url, { signal: withTimeout(signal, ms) });
+    return await catalogFetch(url, signal, ms);
   } finally {
     olActive--;
     olQueue.shift()?.();
   }
+}
+
+/**
+ * The site's own catalogue helper (/api/catalog on Vercel) answers for the phone, so a network
+ * or browser that can't reach the catalogues directly still gets books, and answers are cached.
+ * Where the helper doesn't exist (local preview, other hosts) requests go straight to the source.
+ */
+let helperMissing = false;
+const BASE = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
+function viaHelper(url: string): string | null {
+  const u = new URL(url);
+  if (u.hostname === "openlibrary.org" && u.pathname === "/search.json") return `${BASE}/api/catalog?kind=search&${u.searchParams}`;
+  const work = u.hostname === "openlibrary.org" && u.pathname.match(/^(\/works\/OL\d+W)\.json$/);
+  if (work) return `${BASE}/api/catalog?kind=work&key=${encodeURIComponent(work[1])}`;
+  if (u.hostname === "www.googleapis.com" && u.pathname === "/books/v1/volumes") return `${BASE}/api/catalog?kind=google&q=${encodeURIComponent(u.searchParams.get("q") ?? "")}`;
+  return null;
+}
+
+export async function catalogFetch(url: string, signal?: AbortSignal, ms = 12000): Promise<Response> {
+  const helper = typeof window !== "undefined" && !helperMissing ? viaHelper(url) : null;
+  if (helper) {
+    try {
+      const res = await fetch(helper, { signal: withTimeout(signal, ms) });
+      if (res.ok) return res;
+      if (res.status === 404) helperMissing = true; // no helper on this host
+    } catch (e) {
+      if (signal?.aborted) throw e;
+    }
+  }
+  // Straight to the catalogue (also a second chance when the helper couldn't get an answer).
+  return fetch(url, { signal: withTimeout(signal, ms) });
 }
 
 /** A catalogue that hasn't answered in `ms` is given up on, so nothing waits forever. */
@@ -124,7 +156,7 @@ let googleOutUntil = 0;
 export async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
   if (Date.now() < googleOutUntil) return [];
   const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books${GOOGLE_KEY ? `&key=${encodeURIComponent(GOOGLE_KEY)}` : ""}`;
-  const res = await fetch(url, { signal: withTimeout(signal) });
+  const res = await catalogFetch(url, signal);
   if (res.status === 429 || res.status === 403) {
     googleOutUntil = Date.now() + 30 * 60 * 1000;
     return [];
