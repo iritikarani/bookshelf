@@ -87,7 +87,7 @@ export function sizedCover(url: string, size: "S" | "M" | "L"): string {
 }
 
 const isOL = (url: string) => url.startsWith("https://covers.openlibrary.org/");
-const isGoogle = (url: string) => /^https:\/\/books\.google(apis)?\.com\/books\/(content|publisher)/.test(url);
+export const isGoogleCover = (url: string) => /^https:\/\/books\.google(apis)?\.com\/books\/(content|publisher)/.test(url);
 
 /** A Google Books thumbnail asked for at a given width (they default to ~128px, blurry on phones). */
 export function googleAtWidth(url: string, width: number): string {
@@ -105,10 +105,7 @@ export function coverSources(url: string, cssWidth = 100): { src: string; srcSet
     const m = sizedCover(url, "M");
     return cssWidth <= 90 ? { src: m, srcSet: `${m} 1x, ${sizedCover(url, "L")} 2x` } : { src: m, srcSet: `${sizedCover(url, "L")} 1.5x` };
   }
-  if (isGoogle(url)) {
-    const w = Math.max(200, Math.round(cssWidth));
-    return { src: googleAtWidth(url, w), srcSet: `${googleAtWidth(url, w)} 1x, ${googleAtWidth(url, w * 2)} 2x, ${googleAtWidth(url, w * 3)} 3x` };
-  }
+  // Google Books thumbnails are used as given; a larger one is tried separately (see ResultCover).
   return { src: url };
 }
 
