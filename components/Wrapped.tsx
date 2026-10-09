@@ -6,7 +6,8 @@ import { coverImageOf } from "@/lib/covers";
 import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
 import { shareFiles, shareMessage } from "@/lib/shareMessage";
-import { averageRating, hasLine } from "@/lib/stats";
+import { averageRating, bestMonthRun, firstAuthor, hasLine, topCounts } from "@/lib/stats";
+import { quotesOf } from "@/lib/quotes";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { BookSpine, spineWidthPx } from "./BookSpine";
@@ -45,7 +46,17 @@ function yearStats(books: Book[], year: number) {
   const favourite =
     [...done].sort((a, b) => b.rating - a.rating || Number(b.favourite) - Number(a.favourite) || Number(hasLine(b)) - Number(hasLine(a)) || (b.date_finished ?? "").localeCompare(a.date_finished ?? ""))[0] ?? null;
   const line = (favourite && hasLine(favourite) ? favourite : done.find(hasLine)) ?? null;
+  // The most memorable quote: the one with a note, else the longest-kept line, from the best-rated book.
+  const quotes = [...done].sort((a, b) => b.rating - a.rating).flatMap((b) => quotesOf(b).map((q) => ({ book: b, q })));
+  const memorable = quotes.find((x) => x.q.note) ?? quotes[0] ?? null;
+  const authorsAll = topCounts(done.map(firstAuthor), 1)[0];
   return {
+    genres: topCounts(done.map((b) => b.genre), 3),
+    mostAuthor: authorsAll ? { name: authorsAll[0], count: authorsAll[1] } : null,
+    topRated: [...done].filter((b) => b.rating > 0).sort((a, b) => b.rating - a.rating || (b.date_finished ?? "").localeCompare(a.date_finished ?? "")).slice(0, 3),
+    monthsActive: perMonth.filter(Boolean).length,
+    bestRun: bestMonthRun(done, year),
+    memorable,
     done,
     pages: done.reduce((s, b) => s + (b.pages ?? 0), 0),
     perMonth,
@@ -150,7 +161,7 @@ function IntroCard({ s, year, owner }: { s: Stats; year: number; owner?: string 
 
 function FavouriteCard({ s }: { s: Stats }) {
   const b = s.favourite!;
-  const quote = s.line?.favourite_line?.trim();
+  const quote = s.line ? quotesOf(s.line)[0]?.text : undefined;
   return (
     <>
       <Kicker>{b.rating > 0 ? "Book of the year" : "A book to remember"}</Kicker>
@@ -241,6 +252,92 @@ function MonthsCard({ s }: { s: Stats }) {
             at {s.longest.pages?.toLocaleString()} pages.
           </p>
         )}
+      </div>
+    </>
+  );
+}
+
+function RatedCard({ s }: { s: Stats }) {
+  return (
+    <>
+      <Kicker>Highest rated</Kicker>
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-14 pb-10">
+        {s.topRated.map((b, i) => (
+          <div key={b.id} className="flex w-full items-center gap-12 text-left">
+            <span className="w-[70px] shrink-0 text-center text-[90px] font-medium italic text-ink-soft">{i + 1}</span>
+            <div className="w-[200px] shrink-0 overflow-hidden rounded-[5px] shadow-[0_24px_40px_-18px_rgba(0,0,0,.55)]" style={{ aspectRatio: "2 / 3" }}>
+              <BookCover book={b} size="L" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[60px] font-semibold leading-[1.05]">{b.title}</p>
+              {b.author && <p className="mt-3 text-[32px] font-semibold uppercase tracking-[0.18em] text-ink-soft">{b.author}</p>}
+              <div className="mt-5">
+                <StarDisplay rating={b.rating} size={44} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function TasteCard({ s }: { s: Stats }) {
+  return (
+    <>
+      <Kicker>What you read</Kicker>
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-10">
+        {s.genres.length > 0 && (
+          <>
+            <p className="text-[40px] font-semibold uppercase tracking-[0.22em] text-ink-soft">Favourite genres</p>
+            <ol className="mt-8 space-y-4">
+              {s.genres.map(([g, n], i) => (
+                <li key={g} className={`${i === 0 ? "text-[110px]" : "text-[70px]"} font-semibold italic leading-[1.05]`}>
+                  {g} <span className="text-[36px] not-italic text-ink-soft">· {n}</span>
+                </li>
+              ))}
+            </ol>
+            <Ornament className="my-16" />
+          </>
+        )}
+        {s.mostAuthor && (
+          <>
+            <p className="text-[40px] font-semibold uppercase tracking-[0.22em] text-ink-soft">Most-read author</p>
+            <p className="mt-6 text-[96px] font-semibold italic leading-[1]">{s.mostAuthor.name}</p>
+            <p className="mt-4 text-[40px]">
+              {s.mostAuthor.count} {s.mostAuthor.count === 1 ? "book" : "books"}
+            </p>
+          </>
+        )}
+        <Ornament className="my-16" />
+        <p className="text-[40px] font-semibold uppercase tracking-[0.22em] text-ink-soft">Consistency</p>
+        <p className="mt-6 text-[84px] font-semibold leading-[1.05]">
+          {s.monthsActive} of 12 months
+        </p>
+        <p className="mt-4 text-[44px] italic">
+          {s.bestRun > 1 ? `with a ${s.bestRun}-month reading streak` : "with a finished book"}
+        </p>
+      </div>
+    </>
+  );
+}
+
+function QuoteCard({ s }: { s: Stats }) {
+  const m = s.memorable!;
+  const text = m.q.text.length > 280 ? `${m.q.text.slice(0, 277)}…` : m.q.text;
+  return (
+    <>
+      <Kicker>Most memorable line</Kicker>
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-10">
+        <span aria-hidden className="text-[260px] leading-none text-ink/25">“</span>
+        <blockquote className={`-mt-20 font-medium italic leading-[1.22] ${text.length > 160 ? "text-[62px]" : "text-[84px]"}`}>{text}</blockquote>
+        {m.q.note && <p className="mt-12 max-w-[820px] text-[40px] leading-snug text-ink-soft">{m.q.note}</p>}
+        <Ornament className="my-14" />
+        <p className="text-[56px] font-semibold">{m.book.title}</p>
+        <p className="mt-3 text-[34px] font-semibold uppercase tracking-[0.2em] text-ink-soft">
+          {m.book.author}
+          {m.q.page ? ` · p. ${m.q.page}` : ""}
+        </p>
       </div>
     </>
   );
@@ -358,7 +455,10 @@ export function WrappedSheet({
   const slides = [
     { key: "intro", label: "The year", node: <IntroCard s={s} year={shownYear} owner={owner} /> },
     ...(s.favourite ? [{ key: "favourite", label: "Book of the year", node: <FavouriteCard s={s} /> }] : []),
+    ...(s.topRated.length > 1 ? [{ key: "rated", label: "Highest rated", node: <RatedCard s={s} /> }] : []),
     { key: "months", label: "Month by month", node: <MonthsCard s={s} /> },
+    ...(s.genres.length || s.mostAuthor ? [{ key: "taste", label: "What you read", node: <TasteCard s={s} /> }] : []),
+    ...(s.memorable ? [{ key: "quote", label: "Memorable line", node: <QuoteCard s={s} /> }] : []),
     { key: "more", label: "And also", node: <MoreCard s={s} /> },
   ];
   const current = Math.min(index, slides.length - 1);
