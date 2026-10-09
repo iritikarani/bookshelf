@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { yearOf } from "@/lib/date";
-import { firstAuthor, monthStreak, topCounts } from "@/lib/stats";
+import { authorCounts, monthStreak, topCounts } from "@/lib/stats";
 import type { Book, Profile, Shelf } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { CoverRow } from "./HomePage";
@@ -100,7 +100,7 @@ export function ProfilePage({
   onGuestbook: () => void;
 }) {
   const genres = topCounts(books.map((b) => b.genre), 500);
-  const authors = topCounts(books.map(firstAuthor), 500);
+  const authors = authorCounts(books);
   const streak = monthStreak(books);
   const recent = books
     .filter((b) => b.status === "read")

@@ -6,7 +6,7 @@ import { coverImageOf } from "@/lib/covers";
 import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
 import { shareFiles, shareMessage } from "@/lib/shareMessage";
-import { averageRating, bestMonthRun, firstAuthor, hasLine, topCounts } from "@/lib/stats";
+import { averageRating, bestMonthRun, authorCounts, hasLine, topCounts } from "@/lib/stats";
 import { quotesOf } from "@/lib/quotes";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { BookCover } from "./BookCover";
@@ -49,7 +49,7 @@ function yearStats(books: Book[], year: number) {
   // The most memorable quote: the one with a note, else the longest-kept line, from the best-rated book.
   const quotes = [...done].sort((a, b) => b.rating - a.rating).flatMap((b) => quotesOf(b).map((q) => ({ book: b, q })));
   const memorable = quotes.find((x) => x.q.note) ?? quotes[0] ?? null;
-  const authorsAll = topCounts(done.map(firstAuthor), 1)[0];
+  const authorsAll = authorCounts(done, 1)[0];
   return {
     genres: topCounts(done.map((b) => b.genre), 3),
     mostAuthor: authorsAll ? { name: authorsAll[0], count: authorsAll[1] } : null,

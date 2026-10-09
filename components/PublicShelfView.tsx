@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { slugFromLocation } from "@/lib/publicLink";
-import { firstAuthor, topCounts } from "@/lib/stats";
+import { authorCounts, topCounts } from "@/lib/stats";
 import { CountsRow, ReaderHeader, TopList } from "./ProfilePage";
 import { CoverRow } from "./HomePage";
 import { EmptyState } from "./AppNav";
@@ -197,7 +197,7 @@ function PublicBooks({ books, onOpen }: { books: import("@/lib/types").Book[]; o
     ["Want to read", by((b) => b.status === "to_read")],
   ];
   const genres = topCounts(books.map((b) => b.genre), 500);
-  const authors = topCounts(books.map(firstAuthor), 500);
+  const authors = authorCounts(books);
   return (
     <div className="space-y-10">
       {sections

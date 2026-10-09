@@ -8,6 +8,7 @@ import { INDIAN_PUBLISHERS } from "@/lib/indianPublishers";
 import { useLibrary } from "@/lib/library";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import { placeBook } from "@/lib/shelfRoom";
+import { authorCounts } from "@/lib/stats";
 import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
 import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
 import { MAX_TAGS, cleanTag } from "./BookJournal";
@@ -81,7 +82,7 @@ function AddBookForm({
   initialResult?: SearchResult | null;
   onDone: (b: Book | null, note?: string | null) => void;
 }) {
-  const { profile, shelves, allShelves, shelfLabel: roomShelfLabel, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
+  const { books: allBooks, profile, shelves, allShelves, shelfLabel: roomShelfLabel, itemsByShelf, addBook, addShelf, updateBook, uploadCover } = useLibrary();
   const listId = useId();
 
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -130,6 +131,7 @@ function AddBookForm({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const finished = status === "read";
+  const knownAuthors = useMemo(() => authorCounts(allBooks), [allBooks]);
 
   const searchable = query.trim().length >= 2 || publisher.trim().length >= 2;
 
@@ -471,7 +473,13 @@ function AddBookForm({
           </div>
           <div>
             <label className="label" htmlFor="ab-author">Author</label>
-            <input id="ab-author" className="field" value={author} autoComplete="off" placeholder="e.g. Charlotte Brontë" onChange={(e) => setAuthor(e.target.value)} />
+            <input id="ab-author" className="field" value={author} autoComplete="off" list={`${listId}-authors`} placeholder="e.g. Charlotte Brontë" onChange={(e) => setAuthor(e.target.value)} />
+            {/* Authors already on the shelf, so the same name is spelled the same way. */}
+            <datalist id={`${listId}-authors`}>
+              {knownAuthors.map(([a]) => (
+                <option key={a} value={a} />
+              ))}
+            </datalist>
           </div>
         </div>
       ) : (
