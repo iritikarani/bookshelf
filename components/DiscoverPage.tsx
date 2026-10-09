@@ -159,7 +159,8 @@ function SearchResults({ query, has, onOpen }: { query: string; has: (r: SearchR
       } catch {
         if (ctrl.signal.aborted) return;
         setResults([]);
-        setState("error");
+        // Nothing came back: "No matches", unless the phone is offline.
+        setState(typeof navigator !== "undefined" && !navigator.onLine ? "error" : "done");
       }
     }, 300);
     return () => {

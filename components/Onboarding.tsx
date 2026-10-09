@@ -45,7 +45,7 @@ export function Onboarding({ name, onDone }: { name?: string | null; onDone: () 
   const [decor, setDecor] = useState<DecorKind[]>([]);
   const [finishing, setFinishing] = useState(false);
 
-  const { results, searching, failed: searchFailed, retry: retrySearch } = useBookSearch(query, { enabled: step === 1, limit: 6 });
+  const { results, searching, failed: searchFailed, offline, retry: retrySearch } = useBookSearch(query, { enabled: step === 1, limit: 6 });
 
   const add = async (r: SearchResult) => {
     if (!firstShelf || adding) return;
@@ -203,10 +203,10 @@ export function Onboarding({ name, onDone }: { name?: string | null; onDone: () 
                     />
                   </div>
                   {searchFailed && !searching && (
-                    <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-soft/30 px-4 py-3 text-sm text-ink-soft">
-                      <p>Couldn’t reach the book catalogues. Check your connection and try again.</p>
-                      <button type="button" className="btn-ghost bg-paper/70 py-1.5" onClick={retrySearch}>
-                        Try again
+                    <div role="status" className="mt-3 flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-ink-soft">
+                      <p>{offline ? "You’re offline. Connect to the internet to search for books." : "No matches yet. Try fewer words, the author’s name, or the ISBN."}</p>
+                      <button type="button" className="font-medium text-accent underline-offset-2 hover:underline" onClick={retrySearch}>
+                        Search again
                       </button>
                     </div>
                   )}

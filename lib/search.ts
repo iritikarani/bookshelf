@@ -231,7 +231,9 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
   const res = await politeFetch(`https://openlibrary.org/search.json?${params}`, signal, 12000, true);
-  // Not an empty list: "Open Library didn't answer" must not look like "no such book".
+  // Open Library turning down the words typed (e.g. punctuation it can't read) just means no
+  // matches; being busy or unreachable is a failure the caller can offer to retry.
+  if (!res.ok && res.status >= 400 && res.status < 500 && res.status !== 429) return [];
   if (!res.ok) throw new Error(`Open Library answered ${res.status}`);
   const json = (await res.json()) as { docs?: OLDoc[] };
   return (json.docs ?? []).map((d) => {

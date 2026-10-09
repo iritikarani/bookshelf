@@ -137,7 +137,7 @@ function AddBookForm({
   const duplicate = editing ? undefined : owned.get(bookKey(title, author));
 
   // Search-as-you-type across Google Books + Open Library: a title, an author or an ISBN.
-  const { results, searching, failed: searchFailed, searchable, retry: retrySearch } = useBookSearch(query, { publisher, enabled: stage === "find" });
+  const { results, searching, failed: searchFailed, offline, searchable, retry: retrySearch } = useBookSearch(query, { publisher, enabled: stage === "find" });
 
   // Picked on the Discover page: go straight to the details.
   useEffect(() => {
@@ -325,10 +325,10 @@ function AddBookForm({
           </div>
         ) : null}
         {searchFailed && !searching ? (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-soft/30 px-4 py-3 text-sm text-ink-soft">
-            <p>Couldn’t reach the book catalogues. Check your connection and try again.</p>
-            <button type="button" className="btn-ghost bg-paper/70 py-1.5" onClick={retrySearch}>
-              Try again
+          <div role="status" className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-ink-soft">
+            <p>{offline ? "You’re offline. Connect to the internet to search for books." : "No matches yet. Try fewer words, the author’s name, or the ISBN."}</p>
+            <button type="button" className="font-medium text-accent underline-offset-2 hover:underline" onClick={retrySearch}>
+              Search again
             </button>
           </div>
         ) : (

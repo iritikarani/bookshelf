@@ -46,5 +46,7 @@ export function useBookSearch(query: string, { publisher = "", enabled = true, l
     };
   }, [query, publisher, enabled, searchable, limit, attempt]);
 
-  return { results, searching, failed, searchable, retry: () => setAttempt((n) => n + 1) };
+  // Only an offline phone is reported as such; anything else that finds nothing reads "No matches".
+  const offline = failed && typeof navigator !== "undefined" && navigator.onLine === false;
+  return { results, searching, failed, offline, searchable, retry: () => setAttempt((n) => n + 1) };
 }
