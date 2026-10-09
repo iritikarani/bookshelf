@@ -14,6 +14,7 @@ import { MAX_TAGS, cleanTag } from "./BookJournal";
 import { MarkPicker } from "./Marks";
 import { perCaseOf } from "@/lib/room";
 import { BookCover, GeneratedCover } from "./BookCover";
+import { ResultCover } from "./ResultCover";
 import { SearchIcon, UploadIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 import { StarInput } from "./StarRating";
@@ -357,12 +358,7 @@ function AddBookForm({
               <li key={r.key}>
                 <button type="button" onClick={() => pick(r)} className="flex w-full items-center gap-3.5 p-3 text-left transition hover:bg-accent/5 active:bg-accent/10">
                   <div className="h-[72px] w-12 shrink-0 overflow-hidden rounded-sm bg-ink/10 shadow">
-                    {r.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.thumbnail} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-                    ) : (
-                      <GeneratedCover title={r.title} author="" color={defaultCoverColor(r.title)} />
-                    )}
+                    <ResultCover r={r} width={48} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 font-medium leading-snug">{r.title}</p>

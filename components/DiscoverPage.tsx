@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { coverSources, defaultCoverColor } from "@/lib/covers";
+import { defaultCoverColor } from "@/lib/covers";
 import { GENRE_SUBJECTS, MOODS, lookupBook, subjectBooks, subjectForGenre, trendingBooks, type Mood } from "@/lib/discover";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import { store } from "@/lib/store";
@@ -10,6 +10,7 @@ import type { Book, PublicShelfCard } from "@/lib/types";
 import { PageTitle } from "./AppNav";
 import { Avatar } from "./Avatar";
 import { GeneratedCover } from "./BookCover";
+import { ResultCover } from "./ResultCover";
 import { PlusIcon, SearchIcon, XIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 
@@ -209,37 +210,10 @@ function Strip({ title, sub, load, deps, has, onOpen, keepEmpty }: { title: stri
   );
 }
 
-/** Cover images to try, sharpest first: the catalogue's large covers, then its thumbnail. */
-function coverCandidates(r: SearchResult): string[] {
-  const all = [...r.covers, ...(r.thumbnail ? [r.thumbnail] : [])];
-  return [...new Set(all)].slice(0, 4);
-}
-
 function Cover({ r, width = 118 }: { r: SearchResult; width?: number }) {
-  const candidates = useMemo(() => coverCandidates(r), [r]);
-  const [i, setI] = useState(0);
-  useEffect(() => setI(0), [candidates]);
-  const url = candidates[i];
-  const { src, srcSet } = url ? coverSources(url, width) : { src: "", srcSet: undefined };
   return (
     <div className="aspect-[2/3] overflow-hidden rounded-[3px] bg-ink/5 shadow-[2px_4px_10px_-3px_rgba(0,0,0,.45)] transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-active:translate-y-0 motion-reduce:transform-none">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={url}
-          src={src}
-          srcSet={srcSet}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
-          onError={() => setI((n) => n + 1)}
-          // Open Library answers some missing covers with a 1×1 image.
-          onLoad={(e) => e.currentTarget.naturalWidth < 10 && setI((n) => n + 1)}
-        />
-      ) : (
-        <GeneratedCover title={r.title} author={r.author} color={defaultCoverColor(r.title)} />
-      )}
+      <ResultCover r={r} width={width} />
     </div>
   );
 }
