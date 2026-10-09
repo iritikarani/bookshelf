@@ -10,7 +10,7 @@ export interface SearchResult {
   genre: string | null;
   description: string | null;
   thumbnail: string | null;
-  /** Candidate cover URLs, best first. */
+  /** Candidate cover URLs, best first. Not all are guaranteed to exist — probe before showing. */
   covers: string[];
   olWorkKey: string | null;
   source: "google" | "openlibrary" | "both";
@@ -49,9 +49,7 @@ const GENRES: [RegExp, string][] = [
   [/fiction/i, "Fiction"],
 ];
 
-export function pickGenre(
-  subjects: string[] | undefined
-): string | null {
+export function pickGenre(subjects: string[] | undefined): string | null {
   if (!subjects?.length) return null;
 
   const clean = subjects.filter((s) => !NOISE_SUBJECTS.test(s));
@@ -67,17 +65,14 @@ export function pickGenre(
     : null;
 }
 
-/** Return a short, plain-text book description. */
+/** First sentence, trimmed, HTML stripped — a one-line description. */
 export function oneLine(
   text: string | null | undefined,
   max = 180
 ): string | null {
   if (!text) return null;
 
-  const plain = text
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const plain = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
   if (!plain) return null;
 
@@ -92,27 +87,29 @@ export function oneLine(
   return line;
 }
 
+/** Normalize image URLs and remove Google's curled-edge thumbnail effect. */
 const httpsify = (url: string) =>
-  url.replace(/^http:\/\//, "https://").replace(/&edge=curl/g, "");
+  url.replace(/^http:\/\//i, "https://").replace(/&edge=curl/gi, "");
 
 /**
- * Ask Google Books for a larger cover when supported.
- * This does not create detail missing from the original image.
+ * Request a larger Google Books image when supported.
+ * The provider may still return a smaller image for some editions.
  */
-function improveGoogleCoverUrl(url: string): string {
+function improveGoogleThumbnail(thumbnail: string): string {
   try {
-    const parsed = new URL(httpsify(url));
+    const url = new URL(httpsify(thumbnail));
 
     if (
-      parsed.hostname === "books.google.com" &&
-      parsed.pathname.includes("/books/content")
+      url.hostname === "books.google.com" &&
+      url.pathname.includes("/books/content")
     ) {
-      parsed.searchParams.set("zoom", "2");
+      // Google Books commonly uses zoom=1 for thumbnails.
+      url.searchParams.set("zoom", "2");
     }
 
-    return parsed.toString();
+    return url.toString();
   } catch {
-    return httpsify(url);
+    return httpsify(thumbnail);
   }
 }
 
@@ -137,6 +134,10 @@ interface GoogleVolume {
   };
 }
 
+/** How many results to ask each source for, and how many merged results to show. */
+const PER_SOURCE = 30;
+const MAX_RESULTS = 30;
+
 async function searchGoogle(
   query: string,
   signal: AbortSignal
@@ -154,30 +155,34 @@ async function searchGoogle(
   };
 
   return (json.items ?? [])
-    .filter((v) => v.volumeInfo?.title)
-    .map((v) => {
-      const info = v.volumeInfo;
+    .filter((volume) => volume.volumeInfo?.title)
+    .map((volume) => {
+      const info = volume.volumeInfo;
 
       const isbns = (info.industryIdentifiers ?? [])
-        .filter((i) => i.type.startsWith("ISBN"))
-        .sort((a) => (a.type === "ISBN_13" ? -1 : 1))
-        .map((i) => i.identifier);
+        .filter((item) => item.type.startsWith("ISBN"))
+        .sort((a, b) => {
+          if (a.type === "ISBN_13") return -1;
+          if (b.type === "ISBN_13") return 1;
+          return 0;
+        })
+        .map((item) => item.identifier);
 
       const thumb =
         info.imageLinks?.thumbnail ||
         info.imageLinks?.smallThumbnail;
 
       const thumbnail = thumb
-        ? improveGoogleCoverUrl(thumb)
+        ? improveGoogleThumbnail(thumb)
         : null;
 
       const covers = [
-        ...isbns.slice(0, 1).map((i) => olCoverByIsbn(i)),
+        ...isbns.slice(0, 1).map((isbn) => olCoverByIsbn(isbn)),
         ...(thumbnail ? [thumbnail] : []),
       ];
 
       return {
-        key: `g:${v.id}`,
+        key: `g:${volume.id}`,
         title: info.title!,
         author: (info.authors ?? []).join(", "),
         year: info.publishedDate
@@ -206,10 +211,6 @@ interface OLDoc {
   first_sentence?: string[];
 }
 
-/** Number of results requested from each source. */
-const PER_SOURCE = 30;
-const MAX_RESULTS = 30;
-
 async function searchOpenLibrary(
   title: string,
   author: string,
@@ -225,12 +226,14 @@ async function searchOpenLibrary(
 
   if (publisher) {
     params.set("publisher", publisher);
+
     if (title) params.set("title", title);
     if (author) params.set("author", author);
   } else if (author) {
     params.set("title", title);
     params.set("author", author);
   } else {
+    // Free text matches titles and author names, so "premchand" lists his books.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
 
@@ -245,48 +248,48 @@ async function searchOpenLibrary(
     docs?: OLDoc[];
   };
 
-  return (json.docs ?? []).map((d) => {
+  return (json.docs ?? []).map((doc) => {
     const covers = [
-      ...(d.cover_i ? [olCoverById(d.cover_i, "L")] : []),
-      ...(d.isbn ?? [])
+      ...(doc.cover_i ? [olCoverById(doc.cover_i, "L")] : []),
+      ...(doc.isbn ?? [])
         .slice(0, 4)
-        .map((i) => olCoverByIsbn(i)),
+        .map((isbn) => olCoverByIsbn(isbn, "L")),
     ];
 
     return {
-      key: `ol:${d.key}`,
-      title: d.title,
-      author: (d.author_name ?? []).slice(0, 2).join(", "),
-      year: d.first_publish_year ?? null,
-      pages: d.number_of_pages_median ?? null,
-      genre: pickGenre(d.subject),
-      description: oneLine(d.first_sentence?.[0]),
+      key: `ol:${doc.key}`,
+      title: doc.title,
+      author: (doc.author_name ?? []).slice(0, 2).join(", "),
+      year: doc.first_publish_year ?? null,
+      pages: doc.number_of_pages_median ?? null,
+      genre: pickGenre(doc.subject),
+      description: oneLine(doc.first_sentence?.[0]),
 
-      // CHANGED: request a large cover instead of a small thumbnail.
-      thumbnail: d.cover_i
-        ? olCoverById(d.cover_i, "L")
+      // CHANGED: request the large Open Library cover, not the small thumbnail.
+      thumbnail: doc.cover_i
+        ? olCoverById(doc.cover_i, "L")
         : null,
 
       covers,
-      olWorkKey: d.key,
+      olWorkKey: doc.key,
       source: "openlibrary" as const,
     };
   });
 }
 
-/** Allow Open Library to forgive one incorrect letter per word. */
-function fuzzyQuery(q: string): string {
-  return q
+/** "premchnd godan" → "premchnd~1 godan~1": forgive one wrong letter per word. */
+function fuzzyQuery(query: string): string {
+  return query
     .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter(Boolean)
-    .map((w) => (w.length >= 4 ? `${w}~1` : w))
+    .map((word) => (word.length >= 4 ? `${word}~1` : word))
     .join(" ");
 }
 
-const uniq = <T,>(xs: T[]) => Array.from(new Set(xs));
+const uniq = <T,>(items: T[]) => Array.from(new Set(items));
 
-/** Merge matching books from both catalogues. */
+/** Merge results from both APIs: same normalized title + first author → one entry. */
 export function mergeResults(
   ol: SearchResult[],
   google: SearchResult[]
@@ -294,9 +297,10 @@ export function mergeResults(
   const out: SearchResult[] = [];
   const index = new Map<string, SearchResult>();
 
-  const keyOf = (r: SearchResult) =>
-    `${norm(r.title)}|${norm(r.author.split(",")[0] ?? "")}`;
+  const keyOf = (result: SearchResult) =>
+    `${norm(result.title)}|${norm(result.author.split(",")[0] ?? "")}`;
 
+  // Interleave so both sources surface near the top.
   const order: SearchResult[] = [];
 
   for (let i = 0; i < Math.max(ol.length, google.length); i++) {
@@ -304,37 +308,38 @@ export function mergeResults(
     if (google[i]) order.push(google[i]);
   }
 
-  for (const r of order) {
-    const k = keyOf(r);
-    const existing = index.get(k);
+  for (const result of order) {
+    const key = keyOf(result);
+    const existing = index.get(key);
 
     if (!existing) {
-      const copy = { ...r, covers: [...r.covers] };
-      index.set(k, copy);
+      const copy = { ...result, covers: [...result.covers] };
+      index.set(key, copy);
       out.push(copy);
       continue;
     }
 
-    existing.covers = uniq([...existing.covers, ...r.covers]);
+    existing.covers = uniq([...existing.covers, ...result.covers]);
 
     existing.year =
-      existing.year && r.year
-        ? Math.min(existing.year, r.year)
-        : existing.year ?? r.year;
+      existing.year && result.year
+        ? Math.min(existing.year, result.year)
+        : existing.year ?? result.year;
 
-    existing.pages ??= r.pages;
-    existing.genre ??= r.genre;
+    existing.pages ??= result.pages;
+    existing.genre ??= result.genre;
 
-    if (r.source === "google" && r.description) {
-      existing.description = r.description;
+    // Prefer Google's blurb (a real description) over OL's first sentence.
+    if (result.source === "google" && result.description) {
+      existing.description = result.description;
     } else {
-      existing.description ??= r.description;
+      existing.description ??= result.description;
     }
 
-    existing.thumbnail ??= r.thumbnail;
-    existing.olWorkKey ??= r.olWorkKey;
+    existing.thumbnail ??= result.thumbnail;
+    existing.olWorkKey ??= result.olWorkKey;
 
-    if (existing.source !== r.source) {
+    if (existing.source !== result.source) {
       existing.source = "both";
     }
   }
@@ -342,7 +347,12 @@ export function mergeResults(
   return out.slice(0, MAX_RESULTS);
 }
 
-/** Cache recent searches so repeated queries can return quickly. */
+/**
+ * Search both catalogues. Any box can be left empty: a title, an author's name
+ * or a publisher on its own lists matching books.
+ */
+
+/** Recent searches, so typing back to an earlier query is instant. */
 const searchCache = new Map<string, SearchResult[]>();
 
 export async function searchBooks(
@@ -350,25 +360,24 @@ export async function searchBooks(
   author: string,
   signal: AbortSignal,
   publisher = "",
+  /** Called with the first results as soon as either catalogue answers. */
   onPartial?: (results: SearchResult[]) => void
 ): Promise<SearchResult[]> {
   let t = title.trim();
   let a = author.trim();
   const p = publisher.trim();
 
-  if (t.length < 2 && a.length < 2 && p.length < 2) {
-    return [];
-  }
+  if (t.length < 2 && a.length < 2 && p.length < 2) return [];
 
   if (t.length < 2) t = "";
   if (a.length < 2) a = "";
 
-  // If only an author is supplied, search for their books.
+  // Only the author typed (no publisher): list their books as free text.
   if (!t && a && !p) {
     [t, a] = [a, ""];
   }
 
-  // Search for an exact edition when the query is an ISBN.
+  // An ISBN (10 or 13 digits, dashes and spaces allowed) finds that edition.
   const isbn = !a && !p ? t.replace(/[\s-]/g, "") : "";
 
   if (/^(97[89])?\d{9}[\dXx]$/.test(isbn)) {
@@ -384,9 +393,11 @@ export async function searchBooks(
     return mergeResults(ol, google);
   }
 
-  const quote = (x: string) => `"${x.replace(/"/g, "")}"`;
+  const quote = (value: string) =>
+    `"${value.replace(/"/g, "")}"`;
 
-  const gq = p
+  // With multiple fields, search precisely; otherwise use free text.
+  const googleQuery = p
     ? [
         t && `intitle:${t}`,
         a && `inauthor:${a}`,
@@ -399,20 +410,17 @@ export async function searchBooks(
       : t;
 
   const cacheKey = [t, a, p].join("|").toLowerCase();
-  const hit = searchCache.get(cacheKey);
+  const cached = searchCache.get(cacheKey);
 
-  if (hit) return hit;
+  if (cached) return cached;
 
   let olDone: SearchResult[] | null = null;
   let googleDone: SearchResult[] | null = null;
 
-  const early = () => {
+  const sendPartial = () => {
     if (signal.aborted || !onPartial) return;
 
-    const partial = mergeResults(
-      olDone ?? [],
-      googleDone ?? []
-    );
+    const partial = mergeResults(olDone ?? [], googleDone ?? []);
 
     if (partial.length) onPartial(partial);
   };
@@ -420,24 +428,28 @@ export async function searchBooks(
   const [ol, google] = await Promise.all([
     searchOpenLibrary(t, a, signal, false, p)
       .catch(() => [] as SearchResult[])
-      .then((r) => {
-        olDone = r;
-        if (googleDone === null) early();
-        return r;
+      .then((results) => {
+        olDone = results;
+
+        if (googleDone === null) sendPartial();
+
+        return results;
       }),
 
-    searchGoogle(gq, signal)
+    searchGoogle(googleQuery, signal)
       .catch(() => [] as SearchResult[])
-      .then((r) => {
-        googleDone = r;
-        if (olDone === null) early();
-        return r;
+      .then((results) => {
+        googleDone = results;
+
+        if (olDone === null) sendPartial();
+
+        return results;
       }),
   ]);
 
   let merged = mergeResults(ol, google);
 
-  // Retry a small result set with a more forgiving query.
+  // Few matches may mean a typo: try again with a more forgiving query.
   if (merged.length < 3 && !p && !signal.aborted) {
     if (merged.length) onPartial?.(merged);
 
@@ -462,7 +474,7 @@ export async function searchBooks(
   return merged;
 }
 
-/** Fetch a description from an Open Library work record. */
+/** Fill in a description from the Open Library work record if needed. */
 export async function fetchWorkDescription(
   workKey: string
 ): Promise<string | null> {
