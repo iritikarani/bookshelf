@@ -429,10 +429,15 @@ export function DecorArt({ kind, className = "" }: { kind: DecorKind; className?
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-/** The flip calendar shows today's date on the reader's own clock, and turns over at midnight. */
+/**
+ * The flip calendar shows today's date in the viewer's own time zone, and turns over at their
+ * midnight. The date is only read in the browser (pages are built ahead of time on a server in
+ * another time zone, so a date baked into the page could be a day off).
+ */
 function TodayCalendar() {
-  const [today, setToday] = useState(() => new Date());
+  const [today, setToday] = useState<Date | null>(null);
   useEffect(() => {
+    setToday(new Date());
     let timer: number;
     const schedule = () => {
       const now = new Date();
@@ -456,11 +461,11 @@ function TodayCalendar() {
     <>
       <rect x="3" y="8" width="50" height="46" rx="4" fill="#f7f3ec" stroke="#d6cdc0" />
       <rect x="3" y="8" width="50" height="12" rx="4" fill="#2f2b28" />
-      <text x="28" y="17.5" textAnchor="middle" fontSize="8" fill="#f7f3ec" fontFamily="JetBrains Mono, monospace" suppressHydrationWarning>
-        {MONTHS[today.getMonth()]}
+      <text x="28" y="17.5" textAnchor="middle" fontSize="8" fill="#f7f3ec" fontFamily="JetBrains Mono, monospace">
+        {today ? MONTHS[today.getMonth()] : ""}
       </text>
-      <text x="28" y="46" textAnchor="middle" fontSize="24" fill="#2f2b28" fontFamily="JetBrains Mono, monospace" fontWeight="600" suppressHydrationWarning>
-        {String(today.getDate()).padStart(2, "0")}
+      <text x="28" y="46" textAnchor="middle" fontSize="24" fill="#2f2b28" fontFamily="JetBrains Mono, monospace" fontWeight="600">
+        {today ? String(today.getDate()).padStart(2, "0") : ""}
       </text>
       <path d="M3 33h50" stroke="#e3dbcf" />
       <path d="M16 4v8M40 4v8" stroke="#8a8178" strokeWidth="2.5" strokeLinecap="round" />
