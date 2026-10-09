@@ -196,8 +196,8 @@ function PublicBooks({ books, onOpen }: { books: import("@/lib/types").Book[]; o
     ["Books read", by((b) => b.status === "read").sort((a, b) => (b.date_finished ?? "").localeCompare(a.date_finished ?? ""))],
     ["Want to read", by((b) => b.status === "to_read")],
   ];
-  const genres = topCounts(books.map((b) => b.genre), 5);
-  const authors = topCounts(books.map(firstAuthor), 5);
+  const genres = topCounts(books.map((b) => b.genre), 500);
+  const authors = topCounts(books.map(firstAuthor), 500);
   return (
     <div className="space-y-10">
       {sections
