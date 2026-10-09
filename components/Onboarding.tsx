@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { defaultCoverColor, probeImage } from "@/lib/covers";
 import { useLibrary } from "@/lib/library";
 import { finishedCount, isUnlocked } from "@/lib/rewards";
-import { searchBooks, type SearchResult } from "@/lib/search";
+import { type SearchResult } from "@/lib/search";
+import { useBookSearch } from "@/lib/useBookSearch";
 import { AESTHETICS } from "@/lib/themes";
 import type { Book, DecorKind, ReadStatus } from "@/lib/types";
 import { StylePreview } from "./ArrangeSheet";
-import { BookCover, GeneratedCover } from "./BookCover";
+import { BookCover } from "./BookCover";
 import { DECOR, DecorArt } from "./Decor";
 import { SearchIcon } from "./Icons";
+import { ResultCover } from "./ResultCover";
 
 const STEPS = ["Choose your room", "Add your first books", "Name your shelf", "Decorate"] as const;
 const SHELF_IDEAS = ["Comfort Reads", "Books That Broke Me", `${new Date().getFullYear()} TBR`, "Fantasy Corner", "Romance", "Favourites"];
@@ -19,7 +21,7 @@ const FIRST_DECOR: DecorKind[] = ["plant", "candles", "cat", "chai", "frame", "g
 /** The first cover candidate that actually loads, best first. */
 async function bestCover(r: SearchResult): Promise<string | null> {
   const candidates = r.covers.slice(0, 4);
-  const ok = await Promise.all(candidates.map((u) => probeImage(u, 3500)));
+  const ok = await Promise.all(candidates.map((u) => probeImage(u)));
   return candidates.find((_, i) => ok[i]) ?? null;
 }
 
@@ -35,8 +37,6 @@ export function Onboarding({ name, onDone }: { name?: string | null; onDone: () 
 
   // step 2: books
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
   const [added, setAdded] = useState<Book[]>([]);
   const [adding, setAdding] = useState<string | null>(null);
   // step 3: shelf name
@@ -45,27 +45,7 @@ export function Onboarding({ name, onDone }: { name?: string | null; onDone: () 
   const [decor, setDecor] = useState<DecorKind[]>([]);
   const [finishing, setFinishing] = useState(false);
 
-  useEffect(() => {
-    if (step !== 1 || query.trim().length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    const ctrl = new AbortController();
-    setSearching(true);
-    const t = window.setTimeout(async () => {
-      try {
-        const r = await searchBooks(query, "", ctrl.signal, "", (partial) => setResults(partial.slice(0, 6)));
-        if (!ctrl.signal.aborted) setResults(r.slice(0, 6));
-      } finally {
-        if (!ctrl.signal.aborted) setSearching(false);
-      }
-    }, 250);
-    return () => {
-      ctrl.abort();
-      window.clearTimeout(t);
-    };
-  }, [query, step]);
+  const { results, searching, failed: searchFailed, retry: retrySearch } = useBookSearch(query, { enabled: step === 1, limit: 6 });
 
   const add = async (r: SearchResult) => {
     if (!firstShelf || adding) return;
@@ -222,18 +202,26 @@ export function Onboarding({ name, onDone }: { name?: string | null; onDone: () 
                       autoFocus
                     />
                   </div>
+                  {searchFailed && !searching && (
+                    <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-soft/30 px-4 py-3 text-sm text-ink-soft">
+                      <p>Couldn’t reach the book catalogues. Check your connection and try again.</p>
+                      <button type="button" className="btn-ghost bg-paper/70 py-1.5" onClick={retrySearch}>
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                  {!searchFailed && !searching && query.trim().length >= 2 && !results.length && (
+                    <p className="mt-3 px-1 text-sm text-ink-soft" aria-live="polite">
+                      No matches yet. Try fewer words, the author’s name, or the ISBN.
+                    </p>
+                  )}
                   {results.length > 0 && (
                     <ul className="mt-3 divide-y divide-line/70 overflow-hidden rounded-2xl ring-1 ring-line/70" aria-label="Matching books">
                       {results.map((r) => (
                         <li key={r.key}>
                           <button type="button" disabled={Boolean(adding)} onClick={() => add(r)} className="flex w-full items-center gap-3 p-2.5 text-left transition hover:bg-accent/5 disabled:opacity-60">
                             <div className="h-14 w-10 shrink-0 overflow-hidden rounded-sm bg-ink/10">
-                              {r.thumbnail ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={r.thumbnail} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-                              ) : (
-                                <GeneratedCover title={r.title} author="" color={defaultCoverColor(r.title)} />
-                              )}
+                              <ResultCover r={r} width={40} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-medium">{r.title}</p>
