@@ -60,7 +60,8 @@ module.exports = async function handler(req, res) {
     const body = await upstream.text();
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     if (!upstream.ok) {
-      res.statusCode = 502;
+      // "Too many requests" is passed on as it is, so the page knows to wait rather than retry.
+      res.statusCode = upstream.status === 429 ? 429 : 502;
       res.setHeader("Cache-Control", "no-store");
       return res.end(JSON.stringify({ error: `Catalogue answered ${upstream.status}` }));
     }

@@ -6,8 +6,12 @@ import { olCoverById, olCoverByIsbn } from "./covers";
  */
 let olActive = 0;
 const olQueue: (() => void)[] = [];
-export async function politeFetch(url: string, signal?: AbortSignal, ms = 12000): Promise<Response> {
-  if (olActive >= 2) await new Promise<void>((r) => olQueue.push(r));
+/**
+ * `first`: someone is waiting on this one (a search they typed), so it goes ahead of the
+ * background requests (Discover's shelves and look-ups) instead of queueing behind them.
+ */
+export async function politeFetch(url: string, signal?: AbortSignal, ms = 12000, first = false): Promise<Response> {
+  if (olActive >= 2) await new Promise<void>((r) => (first ? olQueue.unshift(r) : olQueue.push(r)));
   olActive++;
   try {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -41,7 +45,8 @@ export async function catalogFetch(url: string, signal?: AbortSignal, ms = 12000
   if (helper) {
     try {
       const res = await fetch(helper, { signal: withTimeout(signal, ms) });
-      if (res.ok) return res;
+      // A catalogue saying "too many requests" says the same to the phone: don't ask it twice.
+      if (res.ok || res.status === 429) return res;
       if (res.status === 404) helperMissing = true; // no helper on this host
     } catch (e) {
       if (signal?.aborted) throw e;
@@ -225,8 +230,11 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
     // Free text matches titles and author names, so "premchand" lists his books.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
-  const res = await politeFetch(`https://openlibrary.org/search.json?${params}`, signal);
-  if (!res.ok) return [];
+  const res = await politeFetch(`https://openlibrary.org/search.json?${params}`, signal, 12000, true);
+  // Open Library turning down the words typed (e.g. punctuation it can't read) just means no
+  // matches; being busy or unreachable is a failure the caller can offer to retry.
+  if (!res.ok && res.status >= 400 && res.status < 500 && res.status !== 429) return [];
+  if (!res.ok) throw new Error(`Open Library answered ${res.status}`);
   const json = (await res.json()) as { docs?: OLDoc[] };
   return (json.docs ?? []).map((d) => {
     const covers = [
@@ -251,12 +259,27 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
 
 /** "premchnd godan" → "premchnd~1 godan~1": lets Open Library forgive one wrong letter per word. */
 function fuzzyQuery(q: string): string {
-  return q
-    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
-    .split(/\s+/)
-    .filter(Boolean)
+  return words(q)
     .map((w) => (w.length >= 4 ? `${w}~1` : w))
     .join(" ");
+}
+
+const words = (q: string) => q.replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+/** "midnight libr" → "midnight libr*": a title typed only partway still finds the book. */
+function prefixQuery(q: string): string | null {
+  const w = words(q);
+  const last = w[w.length - 1];
+  if (!last || last.length < 2 || /\s$/.test(q)) return null;
+  return [...w.slice(0, -1), `${last}*`].join(" ");
+}
+
+/** The catalogues couldn't be reached (as opposed to: they answered, with no matches). */
+export class CatalogueUnavailable extends Error {
+  constructor() {
+    super("The book catalogues didn’t answer.");
+    this.name = "CatalogueUnavailable";
+  }
 }
 
 const uniq = <T,>(xs: T[]) => Array.from(new Set(xs));
@@ -322,11 +345,14 @@ export async function searchBooks(
   // An ISBN (10 or 13 digits, dashes and spaces allowed) finds that exact edition.
   const isbn = !a && !p ? t.replace(/[\s-]/g, "") : "";
   if (/^(97[89])?\d{9}[\dXx]$/.test(isbn)) {
+    let olFailed = false;
     const [ol, google] = await Promise.all([
-      searchOpenLibrary(`isbn:${isbn}`, "", signal).catch(() => [] as SearchResult[]),
+      searchOpenLibrary(`isbn:${isbn}`, "", signal).catch(() => ((olFailed = true), [] as SearchResult[])),
       searchGoogle(`isbn:${isbn}`, signal).catch(() => [] as SearchResult[]),
     ]);
-    return mergeResults(ol, google);
+    const found = mergeResults(ol, google);
+    if (!found.length && olFailed && !signal.aborted) throw new CatalogueUnavailable();
+    return found;
   }
 
   const quote = (x: string) => `"${x.replace(/"/g, "")}"`;
@@ -348,22 +374,31 @@ export async function searchBooks(
     const partial = mergeResults(olDone ?? [], googleDone ?? []);
     if (partial.length) onPartial(partial);
   };
+  let olFailed = false;
   const [ol, google] = await Promise.all([
     searchOpenLibrary(t, a, signal, false, p)
-      .catch(() => [] as SearchResult[])
+      .catch(() => ((olFailed = true), [] as SearchResult[]))
       .then((r) => ((olDone = r), googleDone === null && early(), r)),
     searchGoogle(gq, signal)
       .catch(() => [] as SearchResult[])
       .then((r) => ((googleDone = r), olDone === null && early(), r)),
   ]);
   let merged = mergeResults(ol, google);
-  // Few or no matches usually means a typo: try again, forgiving one wrong letter per word.
-  if (merged.length < 3 && !p && !signal.aborted) {
+  // Few or no matches usually means a typo or a word typed only partway: try again, forgiving
+  // one wrong letter per word, and with the last word as the start of a word.
+  if (merged.length < 3 && !p && !olFailed && !signal.aborted) {
     // Show what we have while the forgiving search runs.
     if (merged.length) onPartial?.(merged);
-    const loose = await searchOpenLibrary(a ? `${t} ${a}` : t, "", signal, true).catch(() => [] as SearchResult[]);
-    merged = mergeResults(merged, loose);
+    const free = a ? `${t} ${a}` : t;
+    const prefix = prefixQuery(free);
+    const [loose, partial] = await Promise.all([
+      searchOpenLibrary(free, "", signal, true).catch(() => [] as SearchResult[]),
+      prefix ? searchOpenLibrary(prefix, "", signal).catch(() => [] as SearchResult[]) : Promise.resolve([] as SearchResult[]),
+    ]);
+    merged = mergeResults(mergeResults(merged, partial), loose);
   }
+  // Nothing found because nothing answered: say so (with a retry), not "no matches".
+  if (!merged.length && olFailed && !signal.aborted) throw new CatalogueUnavailable();
   if (!signal.aborted && merged.length) {
     searchCache.set(cacheKey, merged);
     if (searchCache.size > 60) searchCache.delete(searchCache.keys().next().value!);
@@ -374,7 +409,7 @@ export async function searchBooks(
 /** Fill in a description from the Open Library work record if we don't have one. */
 export async function fetchWorkDescription(workKey: string): Promise<string | null> {
   try {
-    const res = await politeFetch(`https://openlibrary.org${workKey}.json`);
+    const res = await politeFetch(`https://openlibrary.org${workKey}.json`, undefined, 12000, true);
     if (!res.ok) return null;
     const json = (await res.json()) as { description?: string | { value: string } };
     const d = typeof json.description === "string" ? json.description : json.description?.value;

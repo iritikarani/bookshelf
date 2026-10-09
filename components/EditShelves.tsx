@@ -2,12 +2,45 @@
 
 import { useState } from "react";
 import { useLibrary } from "@/lib/library";
+import { authorKey, firstAuthor } from "@/lib/stats";
+import type { Book } from "@/lib/types";
 import { ChevronDown, ChevronUp, PlusIcon, TrashIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 
+const SORTS = {
+  title: "Title A–Z",
+  author: "Author A–Z",
+  finished: "Recently finished",
+  rating: "Highest rated",
+} as const;
+type SortKey = keyof typeof SORTS;
+
+const titleKey = (t: string) => t.toLowerCase().replace(/^(the|a|an)\s+/, "");
+const surname = (b: Book) => authorKey(firstAuthor(b)).split(" ").pop() ?? "";
+
+/** A shelf's books in a chosen order (ties keep their current order). */
+function sorted(books: Book[], by: SortKey): Book[] {
+  const cmp: Record<SortKey, (a: Book, b: Book) => number> = {
+    title: (a, b) => titleKey(a.title).localeCompare(titleKey(b.title)),
+    author: (a, b) => surname(a).localeCompare(surname(b)) || titleKey(a.title).localeCompare(titleKey(b.title)),
+    // Unfinished books go after the finished ones.
+    finished: (a, b) => (b.date_finished ?? "").localeCompare(a.date_finished ?? ""),
+    rating: (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
+  };
+  return [...books].sort(cmp[by]);
+}
+
 export function EditShelves({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { shelves, booksByShelf, renameShelf, moveShelf, deleteShelf, addShelf } = useLibrary();
+  const { shelves, booksByShelf, renameShelf, moveShelf, deleteShelf, addShelf, arrangeShelf } = useLibrary();
   const [newName, setNewName] = useState("");
+  // The order before the last sort, so it can be put back.
+  const [undo, setUndo] = useState<{ shelfId: string; name: string; by: SortKey; ids: string[] } | null>(null);
+
+  const sortShelf = (shelfId: string, name: string, by: SortKey) => {
+    const books = booksByShelf.get(shelfId) ?? [];
+    setUndo({ shelfId, name, by, ids: books.map((b) => b.id) });
+    void arrangeShelf(shelfId, sorted(books, by).map((b) => b.id));
+  };
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const commit = (id: string, original: string) => {
@@ -44,6 +77,21 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
                 onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
               />
               <span className="w-14 text-right font-mono text-xs text-ink-soft">{count} {count === 1 ? "book" : "books"}</span>
+              {count > 1 && (
+                <select
+                  className="w-[4.5rem] shrink-0 rounded-lg border border-line bg-paper px-1.5 py-2 text-xs text-ink-soft"
+                  aria-label={`Sort the books on ${s.name}`}
+                  value=""
+                  onChange={(e) => e.target.value && sortShelf(s.id, s.name, e.target.value as SortKey)}
+                >
+                  <option value="">Sort…</option>
+                  {Object.entries(SORTS).map(([k, label]) => (
+                    <option key={k} value={k}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 type="button"
                 className="rounded-full p-2 text-ink-soft hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-30"
@@ -58,7 +106,24 @@ export function EditShelves({ open, onClose }: { open: boolean; onClose: () => v
           );
         })}
       </ul>
-      <p className="mt-2 text-sm text-ink-soft">Tap a name to make it yours. Named shelves show their name on the wood.</p>
+      {undo && (
+        <p className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/10 px-3 py-2 text-sm" role="status">
+          <span>
+            Sorted {undo.name}: {SORTS[undo.by]}.
+          </span>
+          <button
+            type="button"
+            className="font-medium text-accent underline-offset-2 hover:underline"
+            onClick={() => {
+              void arrangeShelf(undo.shelfId, undo.ids);
+              setUndo(null);
+            }}
+          >
+            Undo
+          </button>
+        </p>
+      )}
+      <p className="mt-2 text-sm text-ink-soft">Tap a name to make it yours. Named shelves show their name on the wood. To place books by hand, drag them on the shelf.</p>
       <form
         className="mt-5 flex gap-2"
         onSubmit={(e) => {

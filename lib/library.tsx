@@ -58,6 +58,8 @@ interface LibraryContextValue {
   nudgeItem(id: string, dir: -1 | 1): Promise<void>;
   /** Move an item to the end of another shelf. */
   sendToShelf(id: string, shelfId: string): Promise<void>;
+  /** Put a shelf's books in this order (ids); objects keep their places among them. */
+  arrangeShelf(shelfId: string, bookIds: string[]): Promise<void>;
   uploadCover(blob: Blob, dataUrl: string): Promise<string>;
 
   addDecor(kind: DecorKind, shelfId: string): Promise<void>;
@@ -325,6 +327,28 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       await moveItem(id, shelfId, count);
     },
     [moveItem],
+  );
+
+  const arrangeShelf = useCallback(
+    async (shelfId: string, bookIds: string[]) => {
+      const d = dataRef.current;
+      if (!d) return;
+      const grouped = itemsNow();
+      const list = grouped.get(shelfId);
+      if (!list) return;
+      const rank = new Map(bookIds.map((id, i) => [id, i]));
+      // Books not named keep their relative order after the named ones.
+      const books = list.filter((x) => x.type === "book").sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
+      let n = 0;
+      grouped.set(
+        shelfId,
+        list.map((x) => (x.type === "book" ? books[n++] : x)),
+      );
+      const next = renumber(d, grouped);
+      if (!next.updates.length) return;
+      await run((cur) => ({ ...cur, books: next.books, decor: next.decor }), () => store.updatePositions(next.updates)).catch(() => {});
+    },
+    [run],
   );
 
   const nudgeItem = useCallback(
@@ -697,6 +721,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     moveItem,
     nudgeItem,
     sendToShelf,
+    arrangeShelf,
     uploadCover,
     addDecor,
     removeDecor,

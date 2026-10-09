@@ -20,6 +20,7 @@ export function EditProfile({ open, onClose, onSaved }: { open: boolean; onClose
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
   const [guestbook, setGuestbook] = useState(true);
+  const [shareJournal, setShareJournal] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export function EditProfile({ open, onClose, onSaved }: { open: boolean; onClose
     setAvatar(profile.avatar_url ?? null);
     setIsPublic(Boolean(profile.is_public));
     setGuestbook(profile.guestbook_enabled !== false);
+    setShareJournal(profile.share_journal !== false);
     setError(null);
     setBusy(false);
     // Only when the sheet opens: keep edits while it's open.
@@ -74,6 +76,8 @@ export function EditProfile({ open, onClose, onSaved }: { open: boolean; onClose
       avatar_url: avatar,
       ...(accounts ? { is_public: isPublic } : {}),
       guestbook_enabled: guestbook,
+      // Only sent when changed, so saving works before migration 0013 has been run.
+      ...(shareJournal !== (profile.share_journal !== false) ? { share_journal: shareJournal } : {}),
     });
     setBusy(false);
     if (err) return setError(err);
@@ -174,6 +178,12 @@ export function EditProfile({ open, onClose, onSaved }: { open: boolean; onClose
             <p className="text-sm text-ink-soft">A guest shelf is saved only in this browser. Create an account to share your shelf.</p>
           )}
           <Toggle checked={guestbook} onChange={setGuestbook} title="Guest book" text="Visitors to your public shelf can leave you a note or a heart. Only you can read them." />
+          <Toggle
+            checked={shareJournal}
+            onChange={setShareJournal}
+            title="Show my reviews and quotes"
+            text="Visitors to your public shelf can read what you liked about a book, your favourite lines and your quote wall. Turn off to keep them to yourself; your ratings still show."
+          />
         </fieldset>
 
         {error && (

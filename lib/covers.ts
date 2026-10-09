@@ -61,8 +61,13 @@ export const olCoverById = (id: number | string, size: "S" | "M" | "L" = "L") =>
 export const olCoverByIsbn = (isbn: string, size: "S" | "M" | "L" = "L") =>
   `https://covers.openlibrary.org/b/isbn/${isbn}-${size}.jpg?default=false`;
 
-/** Resolve whether an image URL actually yields a real cover (not a 1×1 placeholder). */
-export function probeImage(url: string, timeoutMs = 4000): Promise<boolean> {
+/**
+ * Resolve whether an image URL actually yields a real cover (not a 1×1 placeholder).
+ * Open Library covers are checked at the medium size: the same cover ID or ISBN has all sizes,
+ * and the large image (often 100 KB+) used to miss the time limit on phones, so real covers
+ * were wrongly treated as missing.
+ */
+export function probeImage(url: string, timeoutMs = 8000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new Image();
     const timer = setTimeout(() => resolve(false), timeoutMs);
@@ -74,7 +79,7 @@ export function probeImage(url: string, timeoutMs = 4000): Promise<boolean> {
       clearTimeout(timer);
       resolve(false);
     };
-    img.src = url;
+    img.src = sizedCover(url, "M");
   });
 }
 

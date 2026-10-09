@@ -9,7 +9,7 @@ import { topCounts } from "@/lib/stats";
 import type { Book, PublicShelfCard } from "@/lib/types";
 import { PageTitle } from "./AppNav";
 import { Avatar } from "./Avatar";
-import { GeneratedCover } from "./BookCover";
+import { BookCover } from "./BookCover";
 import { ResultCover } from "./ResultCover";
 import { PlusIcon, SearchIcon, XIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -146,6 +146,7 @@ export function DiscoverPage({ books, onAdd }: { books: Book[]; onAdd: (r: Searc
 function SearchResults({ query, has, onOpen }: { query: string; has: (r: SearchResult) => boolean; onOpen: (r: SearchResult) => void }) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [state, setState] = useState<Load>("idle");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const ctrl = new AbortController();
     setState("loading");
@@ -156,17 +157,20 @@ function SearchResults({ query, has, onOpen }: { query: string; has: (r: SearchR
         setResults(r);
         setState(!r.length && typeof navigator !== "undefined" && !navigator.onLine ? "error" : "done");
       } catch {
-        if (!ctrl.signal.aborted) setState("error");
+        if (ctrl.signal.aborted) return;
+        setResults([]);
+        // Nothing came back: "No matches", unless the phone is offline.
+        setState(typeof navigator !== "undefined" && !navigator.onLine ? "error" : "done");
       }
     }, 300);
     return () => {
       ctrl.abort();
       window.clearTimeout(t);
     };
-  }, [query]);
+  }, [query, attempt]);
   return (
     <section className="mt-8" aria-label="Search results">
-      {results.length ? <CoverGrid results={results} has={has} onOpen={onOpen} /> : <Status state={state} empty="No matches. Try fewer words, the author’s name, or the ISBN." />}
+      {results.length ? <CoverGrid results={results} has={has} onOpen={onOpen} /> : <Status state={state} empty="No matches. Try fewer words, the author’s name, or the ISBN." onRetry={() => setAttempt((n) => n + 1)} />}
     </section>
   );
 }
@@ -368,14 +372,10 @@ function ReaderShelves() {
               className="block overflow-hidden rounded-3xl bg-paper/85 ring-1 ring-line/70 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex h-28 items-end gap-1.5 overflow-hidden px-5 pt-5" aria-hidden>
-                {s.books.map((b) => (
-                  <div key={b.title} className="h-[84px] w-[56px] shrink-0 overflow-hidden rounded-[2px] shadow">
-                    {b.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={b.cover_url.replace(/-L\.jpg/, "-M.jpg")} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    ) : (
-                      <GeneratedCover title={b.title} author={b.author} color={b.cover_color || defaultCoverColor(b.title)} />
-                    )}
+                {s.books.map((b, i) => (
+                  <div key={`${i}:${b.title}`} className="h-[84px] w-[56px] shrink-0 overflow-hidden rounded-[2px] shadow">
+                    {/* The same cover as on their shelf, with a designed one if the image can't load. */}
+                    <BookCover book={{ title: b.title, author: b.author, cover_url: b.cover_url, uploaded_cover: null, cover_color: b.cover_color }} />
                   </div>
                 ))}
               </div>

@@ -146,8 +146,11 @@ export function readGoodreadsExport(text: string): GoodreadsImport {
 }
 
 /** Normalised title+author, for skipping books already on the shelf. */
-export const bookKey = (title: string, author: string) =>
-  `${title.toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/[^a-z0-9]+/g, " ").trim()}|${author.toLowerCase().replace(/[^a-z]+/g, "")}`;
+export const bookKey = (title: string, author: string) => {
+  // Letters in any script (so two Hindi titles never look alike), accents ignored.
+  const plain = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return `${plain(title).replace(/\s*\(.*?\)\s*/g, " ").replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim()}|${plain(author).replace(/[^\p{L}\p{M}]+/gu, "")}`;
+};
 
 /**
  * Find a book's cover on Open Library (through the site's catalogue helper): by ISBN when the

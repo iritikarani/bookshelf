@@ -1,7 +1,7 @@
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, GuestNote, Profile, PublicShelf, PublicShelfCard, Room, Shelf } from "../types";
 
 /** What the reader can change about their profile. */
-export type ProfilePatch = Partial<Pick<Profile, "shelf_style" | "is_public" | "room" | "display_name" | "username" | "bio" | "avatar_url" | "reading_goal" | "guestbook_enabled">>;
+export type ProfilePatch = Partial<Pick<Profile, "shelf_style" | "is_public" | "room" | "display_name" | "username" | "bio" | "avatar_url" | "reading_goal" | "guestbook_enabled" | "share_journal">>;
 
 export interface LibraryData {
   profile: Profile;
