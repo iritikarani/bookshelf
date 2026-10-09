@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { XIcon } from "./Icons";
 
 const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -65,7 +65,38 @@ export function Sheet({
     };
   }, [open]);
 
+  // Phones: keep the sheet above the on-screen keyboard. Browsers that cover the page with the
+  // keyboard (iOS Safari, some Android browsers) shrink the visual viewport; lift the sheet by
+  // the hidden part and cap its height to what's still visible.
+  const [kb, setKb] = useState<{ bottom: number; height: number } | null>(null);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!open || !vv) return;
+    const update = () => {
+      if (window.innerWidth >= 768) return setKb(null);
+      const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKb(hidden > 40 ? { bottom: hidden, height: vv.height } : null);
+    };
+    // A focused field scrolls into the part of the sheet that's still visible.
+    const onFocus = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el?.matches?.("input,textarea,select")) return;
+      window.setTimeout(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }), 300);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    ref.current?.addEventListener("focusin", onFocus);
+    const node = ref.current;
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      node?.removeEventListener("focusin", onFocus);
+    };
+  }, [open]);
+
   if (!open) return null;
+  const lift: CSSProperties | undefined = kb ? { bottom: kb.bottom, maxHeight: Math.max(240, kb.height - 12) } : undefined;
 
   const desktop =
     variant === "book"
@@ -82,6 +113,7 @@ export function Sheet({
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        style={lift}
         className={`absolute inset-x-0 bottom-0 flex max-h-[92dvh] animate-sheet-up flex-col rounded-t-2xl bg-paper text-ink shadow-2xl ${desktop}`}
       >
         <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-ink/15 md:hidden" aria-hidden />

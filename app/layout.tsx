@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Android Chrome: the on-screen keyboard shrinks the page instead of covering it.
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f5f1ea" },
     { media: "(prefers-color-scheme: dark)", color: "#1f2320" },
