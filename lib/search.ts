@@ -1,7 +1,26 @@
 import { olCoverById, olCoverByIsbn } from "./covers";
 
+/**
+ * Open Library asks apps to go gently: at most two of our requests at a time, the rest wait
+ * their turn (a burst of requests is what made it stop answering).
+ */
+let olActive = 0;
+const olQueue: (() => void)[] = [];
+export async function politeFetch(url: string, signal?: AbortSignal, ms = 12000): Promise<Response> {
+  if (olActive >= 2) await new Promise<void>((r) => olQueue.push(r));
+  olActive++;
+  try {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    // The clock starts once it's our turn, not while waiting in line.
+    return await fetch(url, { signal: withTimeout(signal, ms) });
+  } finally {
+    olActive--;
+    olQueue.shift()?.();
+  }
+}
+
 /** A catalogue that hasn't answered in `ms` is given up on, so nothing waits forever. */
-function withTimeout(signal?: AbortSignal, ms = 8000): AbortSignal {
+export function withTimeout(signal?: AbortSignal, ms = 12000): AbortSignal {
   const ctrl = new AbortController();
   const stop = () => ctrl.abort();
   signal?.addEventListener("abort", stop, { once: true });
@@ -93,9 +112,23 @@ interface GoogleVolume {
   };
 }
 
+/**
+ * Google Books without a key shares one daily allowance with everyone else, and it often runs
+ * out (HTTP 429). With NEXT_PUBLIC_GOOGLE_BOOKS_KEY set (a browser key restricted to this site),
+ * the site gets its own allowance. Once Google says the allowance is used up, stop asking it for
+ * the rest of the visit and let Open Library answer alone.
+ */
+const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_KEY ?? "";
+let googleOutUntil = 0;
+
 export async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books`;
+  if (Date.now() < googleOutUntil) return [];
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books${GOOGLE_KEY ? `&key=${encodeURIComponent(GOOGLE_KEY)}` : ""}`;
   const res = await fetch(url, { signal: withTimeout(signal) });
+  if (res.status === 429 || res.status === 403) {
+    googleOutUntil = Date.now() + 30 * 60 * 1000;
+    return [];
+  }
   if (!res.ok) return [];
   const json = (await res.json()) as { items?: GoogleVolume[] };
   return (json.items ?? [])
@@ -160,7 +193,7 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
     // Free text matches titles and author names, so "premchand" lists his books.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
-  const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal: withTimeout(signal) });
+  const res = await politeFetch(`https://openlibrary.org/search.json?${params}`, signal);
   if (!res.ok) return [];
   const json = (await res.json()) as { docs?: OLDoc[] };
   return (json.docs ?? []).map((d) => {
@@ -309,7 +342,7 @@ export async function searchBooks(
 /** Fill in a description from the Open Library work record if we don't have one. */
 export async function fetchWorkDescription(workKey: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://openlibrary.org${workKey}.json`, { signal: withTimeout() });
+    const res = await politeFetch(`https://openlibrary.org${workKey}.json`);
     if (!res.ok) return null;
     const json = (await res.json()) as { description?: string | { value: string } };
     const d = typeof json.description === "string" ? json.description : json.description?.value;

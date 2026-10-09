@@ -1,5 +1,5 @@
 import { olCoverById } from "./covers";
-import { searchBooks, searchGoogle, type SearchResult } from "./search";
+import { politeFetch, searchGoogle, type SearchResult } from "./search";
 
 /**
  * Discover's sources. Trending and genre shelves come straight from Open Library; mood
@@ -18,22 +18,35 @@ interface OLWork {
 
 const cache = new Map<string, SearchResult[]>();
 
-/** Give up on a slow catalogue after `ms`, so a section never waits forever. */
-async function fetchJson<T>(url: string, signal: AbortSignal, ms = 7000): Promise<T | null> {
-  const ctrl = new AbortController();
-  const stop = () => ctrl.abort();
-  signal.addEventListener("abort", stop);
-  const timer = setTimeout(stop, ms);
+/** Open Library JSON, politely queued and given up on after a while; null when it can't answer. */
+async function fetchJson<T>(url: string, signal: AbortSignal, ms = 12000): Promise<T | null> {
   try {
-    const res = await fetch(url, { signal: ctrl.signal });
+    const res = await politeFetch(url, signal, ms);
     return res.ok ? ((await res.json()) as T) : null;
   } catch {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
     return null;
-  } finally {
-    clearTimeout(timer);
-    signal.removeEventListener("abort", stop);
   }
+}
+
+// Discoveries are remembered on this device for half a day, so coming back is instant and
+// doesn't ask the catalogues again.
+const STORE_KEY = "exlibris:discover:v1";
+const TTL = 12 * 60 * 60 * 1000;
+function readStored(): Record<string, { at: number; r: SearchResult[] }> {
+  try {
+    return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+function remember(key: string, r: SearchResult[]) {
+  try {
+    const all = readStored();
+    all[key] = { at: Date.now(), r };
+    const fresh = Object.fromEntries(Object.entries(all).filter(([, v]) => Date.now() - v.at < TTL).slice(-80));
+    localStorage.setItem(STORE_KEY, JSON.stringify(fresh));
+  } catch {}
 }
 
 function fromWork(w: OLWork, genre: string | null = null): SearchResult | null {
@@ -58,8 +71,16 @@ function fromWork(w: OLWork, genre: string | null = null): SearchResult | null {
 async function cached(key: string, load: () => Promise<SearchResult[]>): Promise<SearchResult[]> {
   const hit = cache.get(key);
   if (hit) return hit;
+  const stored = typeof window === "undefined" ? undefined : readStored()[key];
+  if (stored && Date.now() - stored.at < TTL) {
+    cache.set(key, stored.r);
+    return stored.r;
+  }
   const r = await load();
-  if (r.length) cache.set(key, r);
+  if (r.length) {
+    cache.set(key, r);
+    remember(key, r);
+  }
   return r;
 }
 
@@ -86,12 +107,12 @@ export function subjectBooks(subject: string, label: string, signal: AbortSignal
   });
 }
 
-/** Find one known book (title + author) in the catalogues. */
+/** Find one known book (title + author) in Open Library: one small request per book. */
 export function lookupBook(title: string, author: string, signal: AbortSignal): Promise<SearchResult | null> {
   return cached(`book:${title}|${author}`, async () => {
-    const results = await searchBooks(title, author, signal);
-    const surname = author.split(" ").pop()?.toLowerCase() ?? "";
-    const best = results.find((r) => r.author.toLowerCase().includes(surname) && r.thumbnail) ?? results.find((r) => r.author.toLowerCase().includes(surname));
+    const params = new URLSearchParams({ title, author, limit: "3", fields: "key,title,author_name,cover_i,first_publish_year" });
+    const json = await fetchJson<{ docs?: OLWork[] }>(`https://openlibrary.org/search.json?${params}`, signal);
+    const best = (json?.docs ?? []).map((w) => fromWork(w)).find((r): r is SearchResult => Boolean(r?.thumbnail));
     return best ? [best] : [];
   }).then((r) => r[0] ?? null);
 }
