@@ -1,5 +1,14 @@
 import { olCoverById, olCoverByIsbn } from "./covers";
 
+/** A catalogue that hasn't answered in `ms` is given up on, so nothing waits forever. */
+function withTimeout(signal?: AbortSignal, ms = 8000): AbortSignal {
+  const ctrl = new AbortController();
+  const stop = () => ctrl.abort();
+  signal?.addEventListener("abort", stop, { once: true });
+  setTimeout(stop, ms);
+  return ctrl.signal;
+}
+
 export interface SearchResult {
   key: string;
   title: string;
@@ -84,9 +93,9 @@ interface GoogleVolume {
   };
 }
 
-async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
+export async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
   const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books`;
-  const res = await fetch(url, { signal });
+  const res = await fetch(url, { signal: withTimeout(signal) });
   if (!res.ok) return [];
   const json = (await res.json()) as { items?: GoogleVolume[] };
   return (json.items ?? [])
@@ -151,7 +160,7 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
     // Free text matches titles and author names, so "premchand" lists his books.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
-  const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal });
+  const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal: withTimeout(signal) });
   if (!res.ok) return [];
   const json = (await res.json()) as { docs?: OLDoc[] };
   return (json.docs ?? []).map((d) => {
@@ -300,7 +309,7 @@ export async function searchBooks(
 /** Fill in a description from the Open Library work record if we don't have one. */
 export async function fetchWorkDescription(workKey: string): Promise<string | null> {
   try {
-    const res = await fetch(`https://openlibrary.org${workKey}.json`);
+    const res = await fetch(`https://openlibrary.org${workKey}.json`, { signal: withTimeout() });
     if (!res.ok) return null;
     const json = (await res.json()) as { description?: string | { value: string } };
     const d = typeof json.description === "string" ? json.description : json.description?.value;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { defaultCoverColor } from "@/lib/covers";
+import { coverSources, defaultCoverColor } from "@/lib/covers";
 import { GENRE_SUBJECTS, MOODS, lookupBook, subjectBooks, subjectForGenre, trendingBooks, type Mood } from "@/lib/discover";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import { store } from "@/lib/store";
@@ -23,6 +23,7 @@ function useLazyList(load: (signal: AbortSignal) => Promise<SearchResult[]>, dep
   const [seen, setSeen] = useState(false);
   const [list, setList] = useState<SearchResult[]>([]);
   const [state, setState] = useState<Load>("idle");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const el = ref.current;
     if (!el || seen) return;
@@ -44,8 +45,8 @@ function useLazyList(load: (signal: AbortSignal) => Promise<SearchResult[]>, dep
       .catch(() => !ctrl.signal.aborted && setState("error"));
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seen, ...deps]);
-  return { ref, list, state };
+  }, [seen, attempt, ...deps]);
+  return { ref, list, state, retry: () => setAttempt((n) => n + 1) };
 }
 
 /**
@@ -164,12 +165,17 @@ function SearchResults({ query, has, onOpen }: { query: string; has: (r: SearchR
   );
 }
 
-function Status({ state, empty }: { state: Load; empty: string }) {
+function Status({ state, empty, onRetry }: { state: Load; empty: string; onRetry?: () => void }) {
   if (state === "loading" || state === "idle") return <SkeletonRow />;
   return (
-    <p className="rounded-2xl border border-dashed border-ink-soft/30 px-4 py-5 text-sm text-ink-soft" aria-live="polite">
-      {state === "error" ? "Couldn’t reach the book catalogues. Check your connection and try again." : empty}
-    </p>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-soft/30 px-4 py-4 text-sm text-ink-soft" aria-live="polite">
+      <p>{state === "error" ? "The book catalogues are slow to answer right now." : empty}</p>
+      {state === "error" && onRetry && (
+        <button type="button" className="btn-ghost bg-paper/70 py-1.5" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -187,24 +193,45 @@ function SkeletonRow() {
 }
 
 function Strip({ title, sub, load, deps, has, onOpen, keepEmpty }: { title: string; sub?: string; keepEmpty?: boolean; load: (s: AbortSignal) => Promise<SearchResult[]>; deps: unknown[]; has: (r: SearchResult) => boolean; onOpen: (r: SearchResult) => void }) {
-  const { ref, list, state } = useLazyList(load, deps);
+  const { ref, list, state, retry } = useLazyList(load, deps);
   if (state === "done" && !list.length && !keepEmpty) return <div ref={ref} />;
   return (
     <section ref={ref} aria-label={title || undefined}>
       {title && <h2 className="font-serif text-2xl">{title}</h2>}
       {sub && <p className="mb-4 text-sm text-ink-soft">{sub}</p>}
-      {list.length ? <CoverStrip results={list} has={has} onOpen={onOpen} /> : <Status state={state} empty="Nothing here right now." />}
+      {list.length ? <CoverStrip results={list} has={has} onOpen={onOpen} /> : <Status state={state} empty="Nothing here right now." onRetry={retry} />}
     </section>
   );
 }
 
-function Cover({ r }: { r: SearchResult }) {
-  const [broken, setBroken] = useState(false);
+/** Cover images to try, sharpest first: the catalogue's large covers, then its thumbnail. */
+function coverCandidates(r: SearchResult): string[] {
+  const all = [...r.covers, ...(r.thumbnail ? [r.thumbnail] : [])];
+  return [...new Set(all)].slice(0, 4);
+}
+
+function Cover({ r, width = 118 }: { r: SearchResult; width?: number }) {
+  const candidates = useMemo(() => coverCandidates(r), [r]);
+  const [i, setI] = useState(0);
+  useEffect(() => setI(0), [candidates]);
+  const url = candidates[i];
+  const { src, srcSet } = url ? coverSources(url, width) : { src: "", srcSet: undefined };
   return (
     <div className="aspect-[2/3] overflow-hidden rounded-[3px] bg-ink/5 shadow-[2px_4px_10px_-3px_rgba(0,0,0,.45)] transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-active:translate-y-0 motion-reduce:transform-none">
-      {r.thumbnail && !broken ? (
+      {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={r.thumbnail} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setBroken(true)} />
+        <img
+          key={url}
+          src={src}
+          srcSet={srcSet}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          onError={() => setI((n) => n + 1)}
+          // Open Library answers some missing covers with a 1×1 image.
+          onLoad={(e) => e.currentTarget.naturalWidth < 10 && setI((n) => n + 1)}
+        />
       ) : (
         <GeneratedCover title={r.title} author={r.author} color={defaultCoverColor(r.title)} />
       )}
@@ -411,7 +438,7 @@ function BookPreview({ result, owned, onClose, onAdd }: { result: SearchResult |
         <div>
           <div className="flex gap-5">
             <div className="w-28 shrink-0">
-              <Cover r={result} />
+              <Cover r={result} width={150} />
             </div>
             <div className="min-w-0">
               <p className="font-serif text-2xl leading-tight">{result.title}</p>

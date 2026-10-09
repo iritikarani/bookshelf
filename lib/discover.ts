@@ -1,5 +1,5 @@
 import { olCoverById } from "./covers";
-import { searchBooks, type SearchResult } from "./search";
+import { searchBooks, searchGoogle, type SearchResult } from "./search";
 
 /**
  * Discover's sources. Trending and genre shelves come straight from Open Library; mood
@@ -17,6 +17,24 @@ interface OLWork {
 }
 
 const cache = new Map<string, SearchResult[]>();
+
+/** Give up on a slow catalogue after `ms`, so a section never waits forever. */
+async function fetchJson<T>(url: string, signal: AbortSignal, ms = 7000): Promise<T | null> {
+  const ctrl = new AbortController();
+  const stop = () => ctrl.abort();
+  signal.addEventListener("abort", stop);
+  const timer = setTimeout(stop, ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    return null;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", stop);
+  }
+}
 
 function fromWork(w: OLWork, genre: string | null = null): SearchResult | null {
   if (!w.title) return null;
@@ -48,9 +66,8 @@ async function cached(key: string, load: () => Promise<SearchResult[]>): Promise
 /** What readers on Open Library are opening this week. */
 export function trendingBooks(signal: AbortSignal): Promise<SearchResult[]> {
   return cached("trending", async () => {
-    const res = await fetch("https://openlibrary.org/trending/weekly.json?limit=24", { signal });
-    if (!res.ok) return [];
-    const json = (await res.json()) as { works?: OLWork[] };
+    const json = await fetchJson<{ works?: OLWork[] }>("https://openlibrary.org/trending/weekly.json?limit=24", signal);
+    if (!json) throw new Error("unavailable");
     return (json.works ?? []).map((w) => fromWork(w)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
   });
 }
@@ -59,10 +76,13 @@ export function trendingBooks(signal: AbortSignal): Promise<SearchResult[]> {
 export function subjectBooks(subject: string, label: string, signal: AbortSignal): Promise<SearchResult[]> {
   const slug = subject.toLowerCase().trim().replace(/&/g, "and").replace(/\s+/g, "_");
   return cached(`subject:${slug}`, async () => {
-    const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=24`, { signal });
-    if (!res.ok) return [];
-    const json = (await res.json()) as { works?: OLWork[] };
-    return (json.works ?? []).map((w) => fromWork(w, label)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
+    const json = await fetchJson<{ works?: OLWork[] }>(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=24`, signal);
+    const fromOL = (json?.works ?? []).map((w) => fromWork(w, label)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
+    if (fromOL.length) return fromOL;
+    // Open Library slow or down: the same subject from Google Books.
+    const google = await searchGoogle(`subject:"${label}"`, signal).catch(() => [] as SearchResult[]);
+    if (!google.length && !json) throw new Error("unavailable");
+    return google.filter((r) => r.thumbnail).map((r) => ({ ...r, genre: r.genre ?? label }));
   });
 }
 
