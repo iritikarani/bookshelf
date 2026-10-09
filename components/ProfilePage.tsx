@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { yearOf } from "@/lib/date";
-import { firstAuthor, monthStreak, topCounts } from "@/lib/stats";
+import { authorCounts, monthStreak, topCounts } from "@/lib/stats";
 import type { Book, Profile, Shelf } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { CoverRow } from "./HomePage";
@@ -99,8 +99,8 @@ export function ProfilePage({
   onWrapped?: () => void;
   onGuestbook: () => void;
 }) {
-  const genres = topCounts(books.map((b) => b.genre));
-  const authors = topCounts(books.map(firstAuthor));
+  const genres = topCounts(books.map((b) => b.genre), 500);
+  const authors = authorCounts(books);
   const streak = monthStreak(books);
   const recent = books
     .filter((b) => b.status === "read")
@@ -172,14 +172,20 @@ export function ProfilePage({
   );
 }
 
-export function TopList({ title, items, empty }: { title: string; items: [string, number][]; empty: ReactNode }) {
+/** A ranked list with bars: the first few, and every one behind "Show all". */
+export function TopList({ title, items, empty, limit = 5 }: { title: string; items: [string, number][]; empty: ReactNode; limit?: number }) {
+  const [all, setAll] = useState(false);
   const max = Math.max(1, ...items.map(([, n]) => n));
+  const shown = all ? items : items.slice(0, limit);
   return (
     <div className="rounded-2xl bg-paper p-4 ring-1 ring-line/70 md:p-5">
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
+      <h3 className="mb-3 flex items-baseline justify-between gap-2 text-sm font-medium">
+        {title}
+        {items.length > 0 && <span className="font-mono text-xs font-normal text-ink-soft">{items.length}</span>}
+      </h3>
       {items.length ? (
         <ol className="space-y-2.5">
-          {items.map(([label, n]) => (
+          {shown.map(([label, n]) => (
             <li key={label}>
               <div className="flex justify-between gap-3 text-sm">
                 <span className="truncate">{label}</span>
@@ -193,6 +199,11 @@ export function TopList({ title, items, empty }: { title: string; items: [string
         </ol>
       ) : (
         <p className="text-sm text-ink-soft">{empty}</p>
+      )}
+      {items.length > limit && (
+        <button type="button" className="mt-3 text-sm font-medium text-accent underline-offset-2 hover:underline" aria-expanded={all} onClick={() => setAll((a) => !a)}>
+          {all ? "Show fewer" : `Show all ${items.length}`}
+        </button>
       )}
     </div>
   );

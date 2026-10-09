@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { slugFromLocation } from "@/lib/publicLink";
-import { firstAuthor, topCounts } from "@/lib/stats";
+import { authorCounts, topCounts } from "@/lib/stats";
 import { CountsRow, ReaderHeader, TopList } from "./ProfilePage";
 import { CoverRow } from "./HomePage";
 import { EmptyState } from "./AppNav";
@@ -196,8 +196,8 @@ function PublicBooks({ books, onOpen }: { books: import("@/lib/types").Book[]; o
     ["Books read", by((b) => b.status === "read").sort((a, b) => (b.date_finished ?? "").localeCompare(a.date_finished ?? ""))],
     ["Want to read", by((b) => b.status === "to_read")],
   ];
-  const genres = topCounts(books.map((b) => b.genre), 5);
-  const authors = topCounts(books.map(firstAuthor), 5);
+  const genres = topCounts(books.map((b) => b.genre), 500);
+  const authors = authorCounts(books);
   return (
     <div className="space-y-10">
       {sections
