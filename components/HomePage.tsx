@@ -31,6 +31,7 @@ export function HomePage({
   example,
   onOpen,
   onAdd,
+  onImport,
   onTab,
 }: {
   books: Book[];
@@ -41,6 +42,7 @@ export function HomePage({
   example: boolean;
   onOpen: (b: Book) => void;
   onAdd: () => void;
+  onImport?: () => void;
   onTab: (t: AppTab) => void;
 }) {
   const now = new Date();
@@ -71,9 +73,16 @@ export function HomePage({
         <EmptyState
           title="Your shelves are waiting for their first story."
           action={
-            <button type="button" className="btn-primary px-5 py-3" onClick={onAdd}>
-              <PlusIcon width={16} height={16} /> Add a Book
-            </button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button type="button" className="btn-primary px-5 py-3" onClick={onAdd}>
+                <PlusIcon width={16} height={16} /> Add a Book
+              </button>
+              {onImport && (
+                <button type="button" className="btn-ghost bg-paper px-5 py-3" onClick={onImport}>
+                  Import from Goodreads
+                </button>
+              )}
+            </div>
           }
         >
           Add the book you’re reading now, or one you loved. It goes straight onto the shelf in your room.

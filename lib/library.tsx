@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { store, type LibraryData, type PositionUpdate } from "./store";
 import type { ProfilePatch } from "./store/types";
 import { isUsernameAvailable, saveUsername } from "./store/supabase";
+import { bookKey } from "./goodreads";
 import { DECOR } from "@/components/Decor";
 import type { RoomSettings } from "./room";
 import type { AuthUser, Book, BookDraft, Decor, DecorKind, Profile, Room, Shelf, ShelfItem, ShelfStyle } from "./types";
@@ -75,6 +76,8 @@ interface LibraryContextValue {
   setPublic(isPublic: boolean): Promise<void>;
   /** Accounts only: choose or change the reader's username. Throws with a readable message. */
   setUsername(username: string): Promise<void>;
+  /** Add many books (an import), dealt across the given shelves, skipping ones already there. */
+  importBooks(books: Omit<BookDraft, "shelf_id">[], shelfIds: string[]): Promise<{ added: number; skipped: number }>;
   /** Save profile details (name, bio, picture, goal, guest book…). Resolves to an error message, or null when saved. */
   saveProfile(patch: ProfilePatch): Promise<string | null>;
 }
@@ -605,6 +608,41 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setData((d) => (d ? { ...d, profile: { ...d.profile, username, display_name: username } } : d));
   }, []);
 
+  const importBooks = useCallback(async (incoming: Omit<BookDraft, "shelf_id">[], shelfIds: string[]) => {
+    const u = requireUser();
+    const d = dataRef.current;
+    const shelves = (d?.shelves ?? []).filter((s) => shelfIds.includes(s.id)).sort((a, b) => a.position - b.position);
+    if (!d || !shelves.length) throw new Error("Add a shelf first.");
+    const have = new Set(d.books.map((b) => bookKey(b.title, b.author)));
+    const fresh: Omit<BookDraft, "shelf_id">[] = [];
+    for (const b of incoming) {
+      const k = bookKey(b.title, b.author);
+      if (have.has(k)) continue;
+      have.add(k);
+      fresh.push(b);
+    }
+    // Deal books out like cards so no single shelf gets all of them.
+    const grouped = groupItems(d.shelves, d.books, d.decor);
+    const next = new Map(shelves.map((s) => [s.id, (grouped.get(s.id) ?? []).length]));
+    const rows = fresh.map((b, i) => {
+      const shelf = shelves[i % shelves.length];
+      const position = next.get(shelf.id)!;
+      next.set(shelf.id, position + 1);
+      return { ...b, shelf_id: shelf.id, position };
+    });
+    if (rows.length) {
+      try {
+        const saved = await store.insertBooks(u.id, rows);
+        setData((cur) => (cur ? { ...cur, books: [...cur.books, ...saved] } : cur));
+      } catch (e) {
+        fail(e, "Couldn’t import those books.");
+        throw e;
+      }
+    }
+    return { added: rows.length, skipped: incoming.length - rows.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveProfile = useCallback(
     async (patch: ProfilePatch): Promise<string | null> => {
       const u = userRef.current;
@@ -671,6 +709,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setPublic,
     setUsername,
     saveProfile,
+    importBooks,
   };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
