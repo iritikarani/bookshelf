@@ -6,9 +6,11 @@ import { todayISO } from "@/lib/date";
 import { compressCover } from "@/lib/image";
 import { INDIAN_PUBLISHERS } from "@/lib/indianPublishers";
 import { useLibrary } from "@/lib/library";
-import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
+import { fetchWorkDescription, type SearchResult } from "@/lib/search";
+import { useBookSearch } from "@/lib/useBookSearch";
 import { placeBook } from "@/lib/shelfRoom";
 import { authorCounts } from "@/lib/stats";
+import { bookKey } from "@/lib/goodreads";
 import type { Book, BookDisplay, BookDraft, ReadStatus, Shelf } from "@/lib/types";
 import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
 import { MAX_TAGS, cleanTag } from "./BookJournal";
@@ -122,8 +124,6 @@ function AddBookForm({
   const [manual, setManual] = useState(Boolean(editing));
   const [query, setQuery] = useState("");
   const [showPublisher, setShowPublisher] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(Boolean(editing));
@@ -132,32 +132,12 @@ function AddBookForm({
 
   const finished = status === "read";
   const knownAuthors = useMemo(() => authorCounts(allBooks), [allBooks]);
+  // Books already on the shelves (same title and author), so a second copy is never added by accident.
+  const owned = useMemo(() => new Map(allBooks.map((b) => [bookKey(b.title, b.author), b])), [allBooks]);
+  const duplicate = editing ? undefined : owned.get(bookKey(title, author));
 
-  const searchable = query.trim().length >= 2 || publisher.trim().length >= 2;
-
-  // Debounced search across Google Books + Open Library: a title, an author or an ISBN.
-  useEffect(() => {
-    if (stage !== "find" || !searchable) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    const ctrl = new AbortController();
-    setSearching(true);
-    const t = window.setTimeout(async () => {
-      try {
-        // Show what's arrived so far; the full list replaces it moments later.
-        const r = await searchBooks(query, "", ctrl.signal, publisher, (partial) => setResults(partial));
-        if (!ctrl.signal.aborted) setResults(r);
-      } finally {
-        if (!ctrl.signal.aborted) setSearching(false);
-      }
-    }, 250);
-    return () => {
-      ctrl.abort();
-      window.clearTimeout(t);
-    };
-  }, [query, publisher, stage, searchable]);
+  // Search-as-you-type across Google Books + Open Library: a title, an author or an ISBN.
+  const { results, searching, failed: searchFailed, searchable, retry: retrySearch } = useBookSearch(query, { publisher, enabled: stage === "find" });
 
   // Picked on the Discover page: go straight to the details.
   useEffect(() => {
@@ -344,15 +324,24 @@ function AddBookForm({
             </datalist>
           </div>
         ) : null}
-        <p className="px-1 text-sm text-ink-soft" aria-live="polite">
-          {searching && !results.length
-            ? "Searching…"
-            : searchable && !searching && !results.length
-              ? "No matches yet. Try fewer words, the author’s name, or the ISBN."
-              : !searchable
-                ? "Tap a result to add it. The cover and details fill in for you."
-                : ""}
-        </p>
+        {searchFailed && !searching ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-soft/30 px-4 py-3 text-sm text-ink-soft">
+            <p>Couldn’t reach the book catalogues. Check your connection and try again.</p>
+            <button type="button" className="btn-ghost bg-paper/70 py-1.5" onClick={retrySearch}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          <p className="px-1 text-sm text-ink-soft" aria-live="polite">
+            {searching && !results.length
+              ? "Searching…"
+              : searchable && !searching && !results.length
+                ? "No matches yet. Try fewer words, the author’s name, or the ISBN."
+                : !searchable
+                  ? "Tap a result to add it. The cover and details fill in for you."
+                  : ""}
+          </p>
+        )}
 
         {results.length > 0 && (
           <ul className="divide-y divide-line/70 overflow-hidden rounded-2xl ring-1 ring-line/70" aria-label="Matching books">
@@ -369,7 +358,11 @@ function AddBookForm({
                       {r.year && <span className="font-mono"> · {r.year}</span>}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink">Add</span>
+                  {owned.has(bookKey(r.title, r.author)) ? (
+                    <span className="shrink-0 rounded-full bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent ring-1 ring-accent/25">✓ On shelf</span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink">Add</span>
+                  )}
                 </button>
               </li>
             ))}
@@ -621,11 +614,16 @@ function AddBookForm({
       {formError && (
         <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
       )}
+      {duplicate && (
+        <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent ring-1 ring-accent/25">
+          “{duplicate.title}” is already on your shelves{allShelves.find((sh) => sh.id === duplicate.shelf_id) ? ` (${roomShelfLabel(allShelves.find((sh) => sh.id === duplicate.shelf_id)!)})` : ""}. Add it again only if you have a second copy.
+        </p>
+      )}
 
       <div className="sticky -bottom-6 -mx-5 -mb-6 flex justify-end gap-2 border-t border-line bg-paper px-5 py-3">
         <button type="button" className="btn-ghost" onClick={() => onDone(null)}>Cancel</button>
         <button type="submit" className="btn-primary px-6" disabled={saving || !title.trim()}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Add to shelf"}
+          {saving ? "Saving…" : editing ? "Save changes" : duplicate ? "Add another copy" : "Add to shelf"}
         </button>
       </div>
     </form>
