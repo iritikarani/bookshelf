@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/date";
-import type { Book, BookDisplay, ReadStatus, Shelf } from "@/lib/types";
+import type { Book, BookDisplay, Quote, ReadStatus, Shelf } from "@/lib/types";
+import { BookDates, BookNotes, BookQuotes, BookTags, type BookPatch } from "./BookJournal";
 import { DISPLAY_OPTIONS, PoseIcon } from "./BookSpine";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { BookCover } from "./BookCover";
@@ -27,6 +28,10 @@ interface BookDetailProps {
   onRate?: (book: Book, rating: number) => void;
   onProgress?: (book: Book, patch: { current_page: number | null; pages: number | null }) => void;
   onRemove?: (book: Book) => Promise<void>;
+  /** Save journal details: dates, tags, notes, quotes. */
+  onUpdate?: (book: Book, patch: BookPatch) => void;
+  /** Share one saved quote as an image. */
+  onShareQuote?: (book: Book, quote: Quote) => void;
   ownerName?: string | null;
   readOnly?: boolean;
   example?: boolean;
@@ -34,7 +39,7 @@ interface BookDetailProps {
 
 /** Opening a book: a two-page spread. Left page is the book itself, right page is your journal. */
 export function BookDetail(props: BookDetailProps) {
-  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onProgress, onRemove, ownerName, readOnly, example } = props;
+  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onProgress, onRemove, onUpdate, onShareQuote, ownerName, readOnly, example } = props;
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const color = useCoverColor(book);
@@ -46,7 +51,8 @@ export function BookDetail(props: BookDetailProps) {
   const meta = [book.year_published, book.pages ? `${book.pages} pages` : null, book.genre].filter(Boolean);
   const canEdit = !readOnly && !example;
   const finished = book.status === "read";
-  const hasJournal = Boolean(book.what_i_liked?.trim() || book.favourite_line?.trim());
+  const save = canEdit && onUpdate ? (patch: BookPatch) => onUpdate(book, patch) : undefined;
+  const hasJournal = Boolean(book.what_i_liked?.trim() || book.favourite_line?.trim() || book.quotes?.length);
 
   return (
     <Sheet open onClose={onClose} title={book.title} variant="book" hideTitle>
@@ -80,10 +86,14 @@ export function BookDetail(props: BookDetailProps) {
                 ) : (
                   <p className="text-sm text-ink-soft">Not rated</p>
                 )}
-                {book.date_finished && (
-                  <p className="mt-2 text-sm">
-                    Finished <span className="font-mono">{formatDate(book.date_finished)}</span>
-                  </p>
+                {save ? (
+                  <BookDates book={book} onSave={save} />
+                ) : (
+                  book.date_finished && (
+                    <p className="mt-2 text-sm">
+                      Finished <span className="font-mono">{formatDate(book.date_finished)}</span>
+                    </p>
+                  )
                 )}
               </>
             ) : (
@@ -94,6 +104,7 @@ export function BookDetail(props: BookDetailProps) {
                 {book.status === "reading" && (
                   <ReadingProgress book={book} color={MARKS.reading.color} onSave={canEdit && onProgress ? (patch) => onProgress(book, patch) : undefined} />
                 )}
+                {book.status !== "to_read" && <BookDates book={book} onSave={save} />}
               </>
             )}
           </div>
@@ -104,6 +115,8 @@ export function BookDetail(props: BookDetailProps) {
               <p className="text-sm leading-relaxed text-ink-soft">{book.short_description}</p>
             </section>
           )}
+
+          <BookTags book={book} onSave={save} />
 
           {/* On phones the bookplate moves to the very end, after the journal */}
           <div className="mt-auto hidden pt-8 md:block">
@@ -118,32 +131,15 @@ export function BookDetail(props: BookDetailProps) {
         >
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink-soft">My journal</p>
 
-          {book.what_i_liked?.trim() && (
-            <section className="mt-5">
-              <h3 className="label">{book.status === "to_read" ? "Why I want to read it" : book.status === "reading" ? "Enjoying so far" : "What I liked"}</h3>
-              <p className="whitespace-pre-line font-serif text-lg leading-8">{book.what_i_liked}</p>
-            </section>
-          )}
+          <BookNotes book={book} onSave={save} />
+          <BookQuotes book={book} color={color} onSave={save} onShare={onShareQuote ? (q) => onShareQuote(book, q) : undefined} />
 
-          {book.favourite_line?.trim() && (
-            <section className="mt-6">
-              <h3 className="label">Favourite line</h3>
-              <blockquote className="border-l-4 py-1 pl-4 font-serif text-2xl leading-snug" style={{ borderColor: color }}>
-                “{book.favourite_line.trim()}”
-              </blockquote>
-            </section>
-          )}
-
-          {!hasJournal && (
-            <p className="mt-5 font-serif text-lg italic leading-8 text-ink-soft">
-              Nothing written yet.{canEdit ? " Tap Edit to add what stayed with you and a line worth keeping." : ""}
-            </p>
-          )}
+          {!hasJournal && !save && <p className="mt-5 font-serif text-lg italic leading-8 text-ink-soft">Nothing written yet.</p>}
 
           {canEdit && (
             <div className="mt-auto space-y-5 pt-8">
               <fieldset className="rounded-xl bg-paper/90 p-1">
-                <legend className="label">Marks</legend>
+                <legend className="label">Reading status</legend>
                 <MarkPicker
                   favourite={book.favourite}
                   status={book.status}

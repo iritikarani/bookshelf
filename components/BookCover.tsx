@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { coverColorOf, coverImageOf, sizedCover, textColorFor } from "@/lib/covers";
+import { coverColorOf, coverImageOf, coverSources, sizedCover, textColorFor } from "@/lib/covers";
 import type { Book } from "@/lib/types";
 
 type CoverBook = Pick<Book, "title" | "author" | "cover_url" | "uploaded_cover" | "cover_color">;
@@ -31,6 +31,8 @@ export function GeneratedCover({ title, author, color, className = "", style }: 
 export function BookCover({ book, className = "", sizes, size = "M" }: { book: CoverBook; className?: string; sizes?: string; size?: "M" | "L" }) {
   const full = coverImageOf(book);
   const src = full && sizedCover(full, size);
+  // Sharp on phones: the bigger image only where the screen has the pixels for it.
+  const srcSet = full && size === "M" && full.startsWith("https://covers.openlibrary.org/") ? coverSources(full, 90).srcSet : undefined;
   const [failed, setFailed] = useState<string | null>(null);
   const alt = `Cover of ${book.title}${book.author ? ` by ${book.author}` : ""}`;
 
@@ -45,6 +47,7 @@ export function BookCover({ book, className = "", sizes, size = "M" }: { book: C
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
+      srcSet={srcSet}
       alt={alt}
       sizes={sizes}
       loading="lazy"

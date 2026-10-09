@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useColorMode, type ColorMode } from "@/lib/colorMode";
 import { useLibrary } from "@/lib/library";
 import { useRouter } from "next/navigation";
-import { siteUrl } from "@/lib/basePath";
+import { publicUrlOf } from "@/lib/publicLink";
 import { hasSupabase, setGuest, store } from "@/lib/store";
 import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
@@ -16,7 +16,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
   const [copied, setCopied] = useState(false);
   const [usernameOpen, setUsernameOpen] = useState(false);
   const router = useRouter();
-  const publicUrl = profile && typeof window !== "undefined" ? siteUrl(`/s/?u=${profile.public_slug}`) : "";
+  const publicUrl = (profile && publicUrlOf({ ...profile, is_public: true })) ?? "";
 
   return (
     <>

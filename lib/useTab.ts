@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 /** The reader's own pages. "shelf" (the room) is the default, with no hash in the URL. */
 export type AppTab = "home" | "shelf" | "discover" | "journal" | "profile";
 /** A public shelf's pages. */
-export type PublicTab = "shelf" | "quotes" | "year";
+export type PublicTab = "shelf" | "books" | "quotes" | "year";
 
 const APP_TABS: readonly AppTab[] = ["home", "shelf", "discover", "journal", "profile"];
-const PUBLIC_TABS: readonly PublicTab[] = ["shelf", "quotes", "year"];
+const PUBLIC_TABS: readonly PublicTab[] = ["shelf", "books", "quotes", "year"];
 // Older links: the quote wall now lives in the journal, the reading year on the profile.
 const APP_OLD: Record<string, AppTab> = { quotes: "journal", year: "profile" };
 

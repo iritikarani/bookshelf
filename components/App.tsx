@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/examples";
 import { LibraryProvider, useLibrary } from "@/lib/library";
-import { siteUrl } from "@/lib/basePath";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
 import { finishedCount, newlyUnlocked } from "@/lib/rewards";
@@ -28,6 +27,8 @@ import { HomePage } from "./HomePage";
 import { JournalPage } from "./JournalPage";
 import { Landing } from "./Landing";
 import { ProfilePage } from "./ProfilePage";
+import { EditProfile } from "./EditProfile";
+import { publicUrlOf } from "@/lib/publicLink";
 import type { SearchResult } from "@/lib/search";
 import { MoreMenu } from "./MoreMenu";
 import { Onboarding } from "./Onboarding";
@@ -39,6 +40,8 @@ import { Settings } from "./Settings";
 import { WrappedSheet } from "./Wrapped";
 import { ShareDialog } from "./ShareDialog";
 import { ShelfWall } from "./ShelfWall";
+import { StatusShelves, type MarkPatch } from "./StatusShelves";
+import { QuoteShareSheet, type QuoteItem } from "./QuoteWall";
 
 export function App() {
   return (
@@ -57,6 +60,8 @@ function AppInner() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [sharingQuote, setSharingQuote] = useState<QuoteItem | null>(null);
   // A book picked on the Discover page, opened straight to its details.
   const [discovered, setDiscovered] = useState<SearchResult | null>(null);
   // A short message after adding, e.g. "your bookcase was full, so a new one was added".
@@ -139,6 +144,19 @@ function AppInner() {
   const structure = structureOf(aesthetic, profile?.room);
 
   const [filter, setFilter] = useState<MarkFilter>("all");
+  // My Shelf as the room, or as status shelves (Reading / Want to Read / Finished / Favourites).
+  const [shelfView, setShelfView] = useState<"room" | "status">("room");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("exlibris:shelfView") === "status") setShelfView("status");
+    } catch {}
+  }, []);
+  const pickShelfView = (v: "room" | "status") => {
+    setShelfView(v);
+    try {
+      localStorage.setItem("exlibris:shelfView", v);
+    } catch {}
+  };
   // Accounts made with Google have no username yet: ask once per visit.
   const [usernameSkipped, setUsernameSkipped] = useState(false);
   const showExamples = !loading && books.length === 0 && lib.decor.length === 0;
@@ -191,12 +209,15 @@ function AppInner() {
   const openDecor = decorId ? (lib.decor.find((d) => d.id === decorId) ?? null) : null;
   const openIndex = openBook ? openList.findIndex((b) => b.id === openBook.id) : 0;
 
+  // Status changes keep the rating and finish date honest: only finished books keep a rating.
+  const markBook = (b: Book, patch: MarkPatch) =>
+    lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch);
   const startAdd = () => {
     setEditing(null);
     setDiscovered(null);
     setAddOpen(true);
   };
-  const publicUrl = store.mode === "supabase" && profile?.is_public ? siteUrl(`/s/?u=${profile.public_slug}`) : null;
+  const publicUrl = store.mode === "supabase" ? publicUrlOf(profile) : null;
   const quoteLook = { styleId: aesthetic.id, room: profile?.room, publicUrl };
 
   return (
@@ -230,7 +251,7 @@ function AppInner() {
         {loading ? (
           <ShelfSkeleton />
         ) : tab === "home" ? (
-          <HomePage books={books} name={profile?.display_name ?? ownerName} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
+          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
         ) : tab === "discover" ? (
           <DiscoverPage
             books={books}
@@ -243,18 +264,18 @@ function AppInner() {
         ) : tab === "journal" ? (
           <>
             {showExamples && <ExampleNote />}
-            <JournalPage books={viewBooks} look={quoteLook} onOpen={(b) => setOpenId(b.id)} onShelf={() => setTab("shelf")} />
+            <JournalPage books={viewBooks} look={quoteLook} onOpen={(b) => setOpenId(b.id)} onShelf={() => setTab("shelf")} onUpdate={showExamples ? undefined : (b, patch) => lib.updateBook(b.id, patch)} />
           </>
         ) : tab === "profile" ? (
           <>
             {showExamples && <ExampleNote />}
             <ProfilePage
-              name={profile?.display_name ?? ownerName}
-              username={profile?.username}
+              profile={profile}
               books={viewBooks}
               shelves={viewShelves}
               newNotes={newNotes}
               onOpen={(b) => setOpenId(b.id)}
+              onEdit={() => setEditProfileOpen(true)}
               onSettings={() => setSettingsOpen(true)}
               onShare={books.length ? () => setShareOpen(true) : undefined}
               onWrapped={showExamples ? undefined : () => setWrappedOpen(true)}
@@ -263,7 +284,27 @@ function AppInner() {
           </>
         ) : (
           <>
-            <PageTitle title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"} sub={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)} />
+            <PageTitle title={ownerName ? `${ownerName}’s bookshelf` : "My bookshelf"} sub={showExamples ? "Your shelf is ready for its first book" : shelfSummary(books)}>
+              <div role="radiogroup" aria-label="Show my shelf" className="inline-flex gap-1 rounded-full bg-paper/70 p-1 ring-1 ring-line/70 backdrop-blur">
+                {(
+                  [
+                    ["room", "My room"],
+                    ["status", "By status"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={shelfView === id}
+                    onClick={() => pickShelfView(id)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${shelfView === id ? "bg-ink text-wall" : "text-ink-soft hover:text-ink"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </PageTitle>
             {showExamples && (
               <div className="mb-5 flex flex-col gap-3 rounded-xl border border-dashed border-ink-soft/40 bg-paper/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-ink-soft">These are example books. They disappear when you add your first one.</p>
@@ -272,34 +313,40 @@ function AppInner() {
                 </button>
               </div>
             )}
-            {!showExamples && <RoomSwitcher />}
-            <MarkFilterBar value={filter} onChange={setFilter} books={roomBooks} />
-            <RoomScene standing={structure === "case"}>
-              {showExamples ? (
-                <ShelfWall
-                  shelves={[EXAMPLE_SHELF]}
-                  itemsByShelf={exampleMap}
-                  structure={structure}
-                  onOpenBook={(b) => setOpenId(b.id)}
-                  filter={filter}
-                  floor={false}
-                  readOnly
-                />
-              ) : (
-                <ShelfWall
-                  shelves={shelves}
-                  itemsByShelf={itemsByShelf}
-                  structure={structure}
-                  onOpenBook={(b) => setOpenId(b.id)}
-                  onOpenDecor={(d) => setDecorId(d.id)}
-                  perCase={perCaseOf(profile?.room)}
-                  onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
-                  justAddedId={lib.justAddedId}
-                  filter={filter}
-                  floor={false}
-                />
-              )}
-            </RoomScene>
+            {shelfView === "status" ? (
+              <StatusShelves books={showExamples ? EXAMPLE_BOOKS : books} onOpen={(b) => setOpenId(b.id)} onMark={markBook} readOnly={showExamples} />
+            ) : (
+              <>
+                {!showExamples && <RoomSwitcher />}
+                <MarkFilterBar value={filter} onChange={setFilter} books={roomBooks} />
+                <RoomScene standing={structure === "case"}>
+                  {showExamples ? (
+                    <ShelfWall
+                      shelves={[EXAMPLE_SHELF]}
+                      itemsByShelf={exampleMap}
+                      structure={structure}
+                      onOpenBook={(b) => setOpenId(b.id)}
+                      filter={filter}
+                      floor={false}
+                      readOnly
+                    />
+                  ) : (
+                    <ShelfWall
+                      shelves={shelves}
+                      itemsByShelf={itemsByShelf}
+                      structure={structure}
+                      onOpenBook={(b) => setOpenId(b.id)}
+                      onOpenDecor={(d) => setDecorId(d.id)}
+                      perCase={perCaseOf(profile?.room)}
+                      onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
+                      justAddedId={lib.justAddedId}
+                      filter={filter}
+                      floor={false}
+                    />
+                  )}
+                </RoomScene>
+              </>
+            )}
 
           </>
         )}
@@ -320,10 +367,12 @@ function AppInner() {
         onMove={(b, shelfId) => lib.sendToShelf(b.id, shelfId)}
         onNudge={(b, dir) => lib.nudgeItem(b.id, dir)}
         onDisplay={(b, display) => lib.updateBook(b.id, { display })}
-        onMarks={(b, patch) => lib.updateBook(b.id, patch.status && patch.status !== "read" ? { ...patch, rating: 0, date_finished: null } : patch.status === "read" && !b.date_finished ? { ...patch, date_finished: todayISO() } : patch)}
+        onMarks={markBook}
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
         onProgress={(b, patch) => lib.updateBook(b.id, patch)}
         onRemove={(b) => lib.removeBook(b.id)}
+        onUpdate={(b, patch) => lib.updateBook(b.id, patch)}
+        onShareQuote={(b, quote) => setSharingQuote({ book: b, quote })}
       />
 
       <AddBookDialog
@@ -368,6 +417,7 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <EditProfile open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSaved={setNotice} />
       {!loading && tab === "shelf" && <SoundButton room={profile?.room} season={season} />}
       <BottomNav tab={tab} onTab={setTab} />
 
@@ -395,6 +445,7 @@ function AppInner() {
         publicUrl={publicUrl}
       />
 
+      <QuoteShareSheet item={sharingQuote} look={quoteLook} onClose={() => setSharingQuote(null)} />
       <WrappedSheet
         open={wrappedOpen}
         onClose={() => setWrappedOpen(false)}

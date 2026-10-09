@@ -3,5 +3,15 @@
   "framework": null,
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "out"
+  "outputDirectory": "out",
+  "rewrites": [
+    {
+      "source": "/s/@:user",
+      "destination": "/s/index.html"
+    },
+    {
+      "source": "/s/@:user/",
+      "destination": "/s/index.html"
+    }
+  ]
 }

@@ -2,11 +2,13 @@
 
 import type { ReactNode } from "react";
 import { yearOf } from "@/lib/date";
-import { averageRating, hasLine } from "@/lib/stats";
+import { averageRating, monthStreak } from "@/lib/stats";
+import { quotesOf } from "@/lib/quotes";
 import type { Book } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
 import type { AppTab } from "@/lib/useTab";
 import { EmptyState } from "./AppNav";
+import { GoalProgress } from "./ProfilePage";
 import { BookCover } from "./BookCover";
 import { PlusIcon } from "./Icons";
 import { ProgressBar, progressPercent } from "./ReadingProgress";
@@ -24,6 +26,8 @@ export function HomePage({
   books,
   name,
   rooms,
+  goal,
+  onSetGoal,
   example,
   onOpen,
   onAdd,
@@ -32,6 +36,8 @@ export function HomePage({
   books: Book[];
   name?: string | null;
   rooms: number;
+  goal?: number | null;
+  onSetGoal?: () => void;
   example: boolean;
   onOpen: (b: Book) => void;
   onAdd: () => void;
@@ -47,6 +53,9 @@ export function HomePage({
   const pages = thisYear.reduce((s, b) => s + (b.pages ?? 0), 0);
   const avg = averageRating(thisYear);
   const recent = [...books].sort(newest).slice(0, 12);
+  const streak = monthStreak(books);
+  // The favourite to show: the most recently finished favourite, else any favourite.
+  const favourite = books.filter((b) => b.favourite).sort((a, b) => (b.date_finished ?? b.updated_at).localeCompare(a.date_finished ?? a.updated_at))[0];
 
   return (
     <div className="space-y-10 md:space-y-12">
@@ -60,7 +69,7 @@ export function HomePage({
 
       {example ? (
         <EmptyState
-          title="Your shelf is waiting."
+          title="Your shelves are waiting for their first story."
           action={
             <button type="button" className="btn-primary px-5 py-3" onClick={onAdd}>
               <PlusIcon width={16} height={16} /> Add a Book
@@ -84,7 +93,7 @@ export function HomePage({
               </ul>
             ) : (
               <Quiet>
-                Nothing on the go. Open a book from <em>Up next</em> and mark it <strong>Reading</strong> to see it here.
+                <span className="font-serif text-lg text-ink">Pick a story for tonight.</span> Open a book from <em>Up next</em> and mark it <strong>Reading</strong>.
               </Quiet>
             )}
           </Section>
@@ -97,22 +106,27 @@ export function HomePage({
             {finished.length ? <CoverRow books={finished.slice(0, 16)} onOpen={onOpen} rated /> : <Quiet>Finish a book and it’ll show up here, with your rating.</Quiet>}
           </Section>
 
-          <section aria-labelledby="home-year" className="rounded-3xl bg-paper/80 p-5 ring-1 ring-line/70 md:p-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 id="home-year" className="font-serif text-2xl">
-                {now.getFullYear()} so far
-              </h2>
-              <button type="button" className="text-sm font-medium text-accent hover:underline" onClick={() => onTab("profile")}>
-                All my stats ›
-              </button>
-            </div>
-            <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Stat label="Books finished" value={thisYear.length} />
-              <Stat label="Pages read" value={pages.toLocaleString()} />
-              <Stat label="Average rating" value={avg === null ? "–" : `${avg.toFixed(1)}★`} />
-              <Stat label="Lines saved" value={books.filter(hasLine).length} />
-            </dl>
-          </section>
+          <div className="grid gap-4 md:grid-cols-2">
+            <section aria-labelledby="home-year" className="rounded-3xl bg-paper/80 p-5 ring-1 ring-line/70 md:p-6">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="home-year" className="font-serif text-2xl">
+                  {now.getFullYear()} so far
+                </h2>
+                <button type="button" className="text-sm font-medium text-accent hover:underline" onClick={() => onTab("profile")}>
+                  All my stats ›
+                </button>
+              </div>
+              <div className="mt-4">
+                <GoalProgress goal={goal} books={books} onSet={onSetGoal} />
+              </div>
+              <dl className="mt-5 grid grid-cols-3 gap-3">
+                <Stat label="Pages" value={pages.toLocaleString()} />
+                <Stat label="Avg rating" value={avg === null ? "–" : `${avg.toFixed(1)}★`} />
+                <Stat label="Streak" value={`${streak} mo`} />
+              </dl>
+            </section>
+            <FavouriteCard book={favourite} onOpen={onOpen} />
+          </div>
         </>
       )}
     </div>
@@ -224,5 +238,38 @@ export function CoverRow({ books, onOpen, rated }: { books: Book[]; onOpen: (b: 
         </li>
       ))}
     </ul>
+  );
+}
+
+function FavouriteCard({ book, onOpen }: { book?: Book; onOpen: (b: Book) => void }) {
+  if (!book) {
+    return (
+      <section aria-label="Favourite book" className="flex flex-col justify-center rounded-3xl border border-dashed border-ink-soft/35 p-5 text-center md:p-6">
+        <p className="text-2xl" aria-hidden>
+          ❤
+        </p>
+        <p className="mt-2 font-serif text-xl">Your favourite stories will live here.</p>
+        <p className="mt-1 text-sm text-ink-soft">Tap ❤ on a book you love.</p>
+      </section>
+    );
+  }
+  const line = quotesOf(book)[0]?.text;
+  return (
+    <section aria-labelledby="home-fav" className="rounded-3xl bg-paper/80 p-5 ring-1 ring-line/70 md:p-6">
+      <h2 id="home-fav" className="font-serif text-2xl">
+        A favourite
+      </h2>
+      <button type="button" onClick={() => onOpen(book)} className="group mt-4 flex w-full gap-4 text-left">
+        <div className="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-[3px] shadow-md transition group-hover:-translate-y-0.5">
+          <BookCover book={book} />
+        </div>
+        <div className="min-w-0">
+          <p className="font-medium leading-snug group-hover:underline">{book.title}</p>
+          {book.author && <p className="text-sm text-ink-soft">{book.author}</p>}
+          {book.rating > 0 && <StarDisplay rating={book.rating} size={13} className="mt-1" />}
+          {line && <p className="mt-2 line-clamp-3 font-book text-[17px] italic leading-snug">“{line}”</p>}
+        </div>
+      </button>
+    </section>
   );
 }

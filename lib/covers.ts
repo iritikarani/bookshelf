@@ -86,6 +86,32 @@ export function sizedCover(url: string, size: "S" | "M" | "L"): string {
   return url.startsWith("https://covers.openlibrary.org/") ? url.replace(/-[SML]\.jpg/, `-${size}.jpg`) : url;
 }
 
+const isOL = (url: string) => url.startsWith("https://covers.openlibrary.org/");
+const isGoogle = (url: string) => /^https:\/\/books\.google(apis)?\.com\/books\/(content|publisher)/.test(url);
+
+/** A Google Books thumbnail asked for at a given width (they default to ~128px, blurry on phones). */
+export function googleAtWidth(url: string, width: number): string {
+  const u = url.replace(/&zoom=\d/, "").replace(/&fife=[^&]*/, "");
+  return `${u}${u.includes("?") ? "&" : "?"}fife=w${width}`;
+}
+
+/**
+ * src + srcset for a cover drawn about `cssWidth` px wide: sharp on high-density phone screens
+ * (2× and 3×) without making ordinary screens download the big image.
+ */
+export function coverSources(url: string, cssWidth = 100): { src: string; srcSet?: string } {
+  if (isOL(url)) {
+    // Open Library: M is ~180px wide, L ~500px.
+    const m = sizedCover(url, "M");
+    return cssWidth <= 90 ? { src: m, srcSet: `${m} 1x, ${sizedCover(url, "L")} 2x` } : { src: m, srcSet: `${sizedCover(url, "L")} 1.5x` };
+  }
+  if (isGoogle(url)) {
+    const w = Math.max(200, Math.round(cssWidth));
+    return { src: googleAtWidth(url, w), srcSet: `${googleAtWidth(url, w)} 1x, ${googleAtWidth(url, w * 2)} 2x, ${googleAtWidth(url, w * 3)} 3x` };
+  }
+  return { src: url };
+}
+
 export interface Palette {
   /** The cover's main colour, used for the spine. */
   base: string;

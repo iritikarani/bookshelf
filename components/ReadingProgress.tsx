@@ -78,10 +78,22 @@ export function ReadingProgress({ book, color, onSave }: { book: Book; color: st
           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget.blur())}
         />
       </div>
-      {percent !== null && (
+      {Number(total) > 0 && (
         <div className="mt-3 flex items-center gap-3">
-          <ProgressBar percent={percent} color={color} className="flex-1" />
-          <span className="font-mono text-xs text-ink-soft">{percent}%</span>
+          <input
+            type="range"
+            min={0}
+            max={Number(total)}
+            value={Math.min(Number(page) || 0, Number(total))}
+            aria-label="Pages read"
+            className="h-6 flex-1 cursor-pointer"
+            style={{ accentColor: color }}
+            onChange={(e) => setPage(e.target.value)}
+            onPointerUp={save}
+            onKeyUp={save}
+            onBlur={save}
+          />
+          <span className="w-10 text-right font-mono text-xs text-ink-soft">{Math.round(((Number(page) || 0) / Number(total)) * 100)}%</span>
         </div>
       )}
     </div>
