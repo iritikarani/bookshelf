@@ -103,6 +103,24 @@ export const supabaseStore: Store = {
   async insertBook(userId, draft, position) {
     return check(await getSupabase().from("books").insert({ ...withoutEmptyPage(draft), user_id: userId, position }).select().single()) as Book;
   },
+  async insertBooks(userId, books) {
+    const sb = getSupabase();
+    // Every row carries the same columns: tags only when some book has them (so a database
+    // without the tags column still takes imports without any).
+    const anyTags = books.some((b) => b.tags?.length);
+    const out: Book[] = [];
+    // Chunks keep each request small for big libraries.
+    for (let i = 0; i < books.length; i += 100) {
+      const chunk = books.slice(i, i + 100).map(({ tags, current_page, ...b }) => ({
+        ...b,
+        ...(current_page != null ? { current_page } : {}),
+        ...(anyTags ? { tags: tags ?? [] } : {}),
+        user_id: userId,
+      }));
+      out.push(...(check(await sb.from("books").insert(chunk).select()) as Book[]));
+    }
+    return out;
+  },
   async updateBook(id, patch) {
     // A progress update ({current_page, pages}) may clear the page; full edits drop an empty one.
     const isProgress = Object.keys(patch).every((k) => k === "current_page" || k === "pages");

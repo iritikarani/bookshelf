@@ -28,6 +28,7 @@ import { JournalPage } from "./JournalPage";
 import { Landing } from "./Landing";
 import { ProfilePage } from "./ProfilePage";
 import { EditProfile } from "./EditProfile";
+import { ImportGoodreads } from "./ImportGoodreads";
 import { publicUrlOf } from "@/lib/publicLink";
 import type { SearchResult } from "@/lib/search";
 import { MoreMenu } from "./MoreMenu";
@@ -61,6 +62,7 @@ function AppInner() {
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [sharingQuote, setSharingQuote] = useState<QuoteItem | null>(null);
   // A book picked on the Discover page, opened straight to its details.
   const [discovered, setDiscovered] = useState<SearchResult | null>(null);
@@ -237,6 +239,7 @@ function AppInner() {
               items={[
                 { label: "Decorate room", icon: <BrushIcon width={18} height={18} />, onSelect: () => (setTab("shelf"), setArrangeOpen(true)) },
                 { label: "Edit shelves", icon: <ShelvesIcon width={18} height={18} />, onSelect: () => setShelvesOpen(true) },
+                { label: "Import from Goodreads", icon: <span className="inline-block w-[18px] text-center font-serif font-bold" aria-hidden>g</span>, onSelect: () => setImportOpen(true) },
                 { label: "Share shelf", icon: <ShareIcon width={18} height={18} />, onSelect: () => setShareOpen(true), disabled: books.length === 0 },
                 { label: "Your year, wrapped", icon: <span className="inline-block w-[18px] text-center" aria-hidden>✨</span>, onSelect: () => setWrappedOpen(true) },
                 { label: newNotes ? `Guest book · ${newNotes} new` : "Guest book", icon: <MailIcon width={18} height={18} />, onSelect: openGuestbook },
@@ -251,7 +254,7 @@ function AppInner() {
         {loading ? (
           <ShelfSkeleton />
         ) : tab === "home" ? (
-          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onTab={setTab} />
+          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onImport={() => setImportOpen(true)} onTab={setTab} />
         ) : tab === "discover" ? (
           <DiscoverPage
             books={books}
@@ -417,6 +420,7 @@ function AppInner() {
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ImportGoodreads open={importOpen} onClose={() => setImportOpen(false)} onDone={() => setTab("shelf")} />
       <EditProfile open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSaved={setNotice} />
       {!loading && tab === "shelf" && <SoundButton room={profile?.room} season={season} />}
       <BottomNav tab={tab} onTab={setTab} />

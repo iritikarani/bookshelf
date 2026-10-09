@@ -97,6 +97,12 @@ export const localStore: Store = {
     mutate((d) => d.books.push(book));
     return book;
   },
+  async insertBooks(userId, books) {
+    const now = new Date().toISOString();
+    const rows: Book[] = books.map((b) => ({ ...b, id: uid(), user_id: userId, created_at: now, updated_at: now }));
+    mutate((d) => d.books.push(...rows));
+    return rows;
+  },
   async updateBook(id, patch) {
     return mutate((d) => {
       const b = d.books.find((x) => x.id === id);
