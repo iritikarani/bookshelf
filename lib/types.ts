@@ -134,6 +134,8 @@ export interface Profile {
   reading_goal?: number | null;
   /** Visitors may sign the guest book (on by default). */
   guestbook_enabled?: boolean;
+  /** Visitors see what you wrote about books and your saved quotes (on by default; migration 0013). */
+  share_journal?: boolean;
 }
 
 /** A public shelf as listed on Discover. */
@@ -154,6 +156,7 @@ export interface PublicShelf {
     bio?: string | null;
     avatar_url?: string | null;
     guestbook_enabled?: boolean;
+    share_journal?: boolean;
     shelf_style: ShelfStyle;
     room?: RoomSettings | null;
   };

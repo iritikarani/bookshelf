@@ -193,12 +193,14 @@ export const localStore: Store = {
         bio: d.profile.bio ?? null,
         avatar_url: d.profile.avatar_url ?? null,
         guestbook_enabled: d.profile.guestbook_enabled !== false,
+        share_journal: d.profile.share_journal !== false,
         shelf_style: d.profile.shelf_style,
         room: d.profile.room ?? null,
       },
       rooms: d.rooms ?? [],
       shelves: d.shelves,
-      books: d.books,
+      // Kept private when the owner chose not to share what they wrote.
+      books: d.profile.share_journal === false ? d.books.map((b) => ({ ...b, what_i_liked: null, favourite_line: null, quotes: [] })) : d.books,
       decor: d.decor,
     };
   },

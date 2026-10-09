@@ -130,7 +130,10 @@ export function PublicShelfView({ slug }: { slug: string }) {
                 ["quotes", "Quote wall"],
                 ["year", "Reading year"],
               ] as const
-            ).map(([id, label]) => (
+            )
+              // The owner keeps their quotes to themselves.
+              .filter(([id]) => id !== "quotes" || data.profile.share_journal !== false)
+              .map(([id, label]) => (
               <button
                 key={id}
                 type="button"
