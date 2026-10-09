@@ -1,3 +1,4 @@
+
 import { olCoverById, olCoverByIsbn } from "./covers";
 
 export interface SearchResult {
@@ -9,7 +10,7 @@ export interface SearchResult {
   genre: string | null;
   description: string | null;
   thumbnail: string | null;
-  /** Candidate cover URLs, best first. Not all are guaranteed to exist — probe before showing. */
+  /** Candidate cover URLs, best first. */
   covers: string[];
   olWorkKey: string | null;
   source: "google" | "openlibrary" | "both";
@@ -19,13 +20,14 @@ const norm = (s: string) =>
   s
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\b(the|a|an)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-const NOISE_SUBJECTS = /accessible book|protected daisy|in library|lending library|large type|open library|staff picks|fiction, general|nyt:|reading level|overdrive|internet archive/i;
+const NOISE_SUBJECTS =
+  /accessible book|protected daisy|in library|lending library|large type|open library|staff picks|fiction, general|nyt:|reading level|overdrive|internet archive/i;
 
 const GENRES: [RegExp, string][] = [
   [/science fiction|sci-fi/i, "Science fiction"],
@@ -47,27 +49,72 @@ const GENRES: [RegExp, string][] = [
   [/fiction/i, "Fiction"],
 ];
 
-export function pickGenre(subjects: string[] | undefined): string | null {
+export function pickGenre(
+  subjects: string[] | undefined
+): string | null {
   if (!subjects?.length) return null;
+
   const clean = subjects.filter((s) => !NOISE_SUBJECTS.test(s));
-  for (const [re, label] of GENRES) if (clean.some((s) => re.test(s))) return label;
+
+  for (const [re, label] of GENRES) {
+    if (clean.some((s) => re.test(s))) return label;
+  }
+
   const first = clean[0];
-  return first && first.length <= 30 ? first.replace(/\s*\/.*$/, "") : null;
+
+  return first && first.length <= 30
+    ? first.replace(/\s*\/.*$/, "")
+    : null;
 }
 
-/** First sentence, trimmed, HTML stripped — a one-line description. */
-export function oneLine(text: string | null | undefined, max = 180): string | null {
+/** Return a short, plain-text book description. */
+export function oneLine(
+  text: string | null | undefined,
+  max = 180
+): string | null {
   if (!text) return null;
-  const plain = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  const plain = text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
   if (!plain) return null;
-  const m = plain.match(/^(.{20,}?[.!?])(\s|$)/);
-  let line = m ? m[1] : plain;
-  if (line.length > max) line = line.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
+
+  const match = plain.match(/^(.{20,}?[.!?])(\s|$)/);
+  let line = match ? match[1] : plain;
+
+  if (line.length > max) {
+    line =
+      line.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
+  }
+
   return line;
 }
 
 const httpsify = (url: string) =>
   url.replace(/^http:\/\//, "https://").replace(/&edge=curl/g, "");
+
+/**
+ * Ask Google Books for a larger cover when supported.
+ * This does not create detail missing from the original image.
+ */
+function improveGoogleCoverUrl(url: string): string {
+  try {
+    const parsed = new URL(httpsify(url));
+
+    if (
+      parsed.hostname === "books.google.com" &&
+      parsed.pathname.includes("/books/content")
+    ) {
+      parsed.searchParams.set("zoom", "2");
+    }
+
+    return parsed.toString();
+  } catch {
+    return httpsify(url);
+  }
+}
 
 interface GoogleVolume {
   id: string;
@@ -79,35 +126,63 @@ interface GoogleVolume {
     pageCount?: number;
     categories?: string[];
     description?: string;
-    imageLinks?: { smallThumbnail?: string; thumbnail?: string };
-    industryIdentifiers?: { type: string; identifier: string }[];
+    imageLinks?: {
+      smallThumbnail?: string;
+      thumbnail?: string;
+    };
+    industryIdentifiers?: {
+      type: string;
+      identifier: string;
+    }[];
   };
 }
 
-async function searchGoogle(query: string, signal: AbortSignal): Promise<SearchResult[]> {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${PER_SOURCE}&printType=books`;
+async function searchGoogle(
+  query: string,
+  signal: AbortSignal
+): Promise<SearchResult[]> {
+  const url =
+    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}` +
+    `&maxResults=${PER_SOURCE}&printType=books`;
+
   const res = await fetch(url, { signal });
+
   if (!res.ok) return [];
-  const json = (await res.json()) as { items?: GoogleVolume[] };
+
+  const json = (await res.json()) as {
+    items?: GoogleVolume[];
+  };
+
   return (json.items ?? [])
     .filter((v) => v.volumeInfo?.title)
     .map((v) => {
       const info = v.volumeInfo;
+
       const isbns = (info.industryIdentifiers ?? [])
         .filter((i) => i.type.startsWith("ISBN"))
         .sort((a) => (a.type === "ISBN_13" ? -1 : 1))
         .map((i) => i.identifier);
-      const thumb = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail;
-      const thumbnail = thumb ? httpsify(thumb) : null;
+
+      const thumb =
+        info.imageLinks?.thumbnail ||
+        info.imageLinks?.smallThumbnail;
+
+      const thumbnail = thumb
+        ? improveGoogleCoverUrl(thumb)
+        : null;
+
       const covers = [
         ...isbns.slice(0, 1).map((i) => olCoverByIsbn(i)),
         ...(thumbnail ? [thumbnail] : []),
       ];
+
       return {
         key: `g:${v.id}`,
         title: info.title!,
         author: (info.authors ?? []).join(", "),
-        year: info.publishedDate ? Number(info.publishedDate.slice(0, 4)) || null : null,
+        year: info.publishedDate
+          ? Number(info.publishedDate.slice(0, 4)) || null
+          : null,
         pages: info.pageCount || null,
         genre: pickGenre(info.categories),
         description: oneLine(info.description),
@@ -131,15 +206,23 @@ interface OLDoc {
   first_sentence?: string[];
 }
 
-/** How many results to ask each source for, and how many merged results to show. */
+/** Number of results requested from each source. */
 const PER_SOURCE = 30;
 const MAX_RESULTS = 30;
 
-async function searchOpenLibrary(title: string, author: string, signal: AbortSignal, fuzzy = false, publisher = ""): Promise<SearchResult[]> {
+async function searchOpenLibrary(
+  title: string,
+  author: string,
+  signal: AbortSignal,
+  fuzzy = false,
+  publisher = ""
+): Promise<SearchResult[]> {
   const params = new URLSearchParams({
     limit: String(PER_SOURCE),
-    fields: "key,title,author_name,first_publish_year,cover_i,isbn,number_of_pages_median,subject,first_sentence",
+    fields:
+      "key,title,author_name,first_publish_year,cover_i,isbn,number_of_pages_median,subject,first_sentence",
   });
+
   if (publisher) {
     params.set("publisher", publisher);
     if (title) params.set("title", title);
@@ -148,17 +231,28 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
     params.set("title", title);
     params.set("author", author);
   } else {
-    // Free text matches titles and author names, so "premchand" lists his books.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
-  const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal });
+
+  const res = await fetch(
+    `https://openlibrary.org/search.json?${params}`,
+    { signal }
+  );
+
   if (!res.ok) return [];
-  const json = (await res.json()) as { docs?: OLDoc[] };
+
+  const json = (await res.json()) as {
+    docs?: OLDoc[];
+  };
+
   return (json.docs ?? []).map((d) => {
     const covers = [
-      ...(d.cover_i ? [olCoverById(d.cover_i)] : []),
-      ...(d.isbn ?? []).slice(0, 4).map((i) => olCoverByIsbn(i)),
+      ...(d.cover_i ? [olCoverById(d.cover_i, "L")] : []),
+      ...(d.isbn ?? [])
+        .slice(0, 4)
+        .map((i) => olCoverByIsbn(i)),
     ];
+
     return {
       key: `ol:${d.key}`,
       title: d.title,
@@ -167,7 +261,12 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
       pages: d.number_of_pages_median ?? null,
       genre: pickGenre(d.subject),
       description: oneLine(d.first_sentence?.[0]),
-      thumbnail: d.cover_i ? olCoverById(d.cover_i, "S") : null,
+
+      // CHANGED: request a large cover instead of a small thumbnail.
+      thumbnail: d.cover_i
+        ? olCoverById(d.cover_i, "L")
+        : null,
+
       covers,
       olWorkKey: d.key,
       source: "openlibrary" as const,
@@ -175,7 +274,7 @@ async function searchOpenLibrary(title: string, author: string, signal: AbortSig
   });
 }
 
-/** "premchnd godan" → "premchnd~1 godan~1": lets Open Library forgive one wrong letter per word. */
+/** Allow Open Library to forgive one incorrect letter per word. */
 function fuzzyQuery(q: string): string {
   return q
     .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
@@ -187,45 +286,63 @@ function fuzzyQuery(q: string): string {
 
 const uniq = <T,>(xs: T[]) => Array.from(new Set(xs));
 
-/** Merge results from both APIs: same normalised title + first author → one entry with pooled covers. */
-export function mergeResults(ol: SearchResult[], google: SearchResult[]): SearchResult[] {
+/** Merge matching books from both catalogues. */
+export function mergeResults(
+  ol: SearchResult[],
+  google: SearchResult[]
+): SearchResult[] {
   const out: SearchResult[] = [];
   const index = new Map<string, SearchResult>();
-  const keyOf = (r: SearchResult) => `${norm(r.title)}|${norm(r.author.split(",")[0] ?? "")}`;
-  // Interleave so both sources surface near the top.
+
+  const keyOf = (r: SearchResult) =>
+    `${norm(r.title)}|${norm(r.author.split(",")[0] ?? "")}`;
+
   const order: SearchResult[] = [];
+
   for (let i = 0; i < Math.max(ol.length, google.length); i++) {
     if (ol[i]) order.push(ol[i]);
     if (google[i]) order.push(google[i]);
   }
+
   for (const r of order) {
     const k = keyOf(r);
     const existing = index.get(k);
+
     if (!existing) {
       const copy = { ...r, covers: [...r.covers] };
       index.set(k, copy);
       out.push(copy);
       continue;
     }
+
     existing.covers = uniq([...existing.covers, ...r.covers]);
-    existing.year = existing.year && r.year ? Math.min(existing.year, r.year) : existing.year ?? r.year;
+
+    existing.year =
+      existing.year && r.year
+        ? Math.min(existing.year, r.year)
+        : existing.year ?? r.year;
+
     existing.pages ??= r.pages;
     existing.genre ??= r.genre;
-    // Prefer Google's blurb (a real description) over OL's first sentence.
-    if (r.source === "google" && r.description) existing.description = r.description;
-    else existing.description ??= r.description;
+
+    if (r.source === "google" && r.description) {
+      existing.description = r.description;
+    } else {
+      existing.description ??= r.description;
+    }
+
     existing.thumbnail ??= r.thumbnail;
     existing.olWorkKey ??= r.olWorkKey;
-    if (existing.source !== r.source) existing.source = "both";
+
+    if (existing.source !== r.source) {
+      existing.source = "both";
+    }
   }
+
   return out.slice(0, MAX_RESULTS);
 }
 
-/**
- * Search both catalogues. Any box can be left empty: a title, an author's name or a publisher
- * on its own lists matching books, and filling more boxes narrows the results.
- */
-/** Recent searches, so typing back to an earlier query (or retyping it) is instant. */
+/** Cache recent searches so repeated queries can return quickly. */
 const searchCache = new Map<string, SearchResult[]>();
 
 export async function searchBooks(
@@ -233,78 +350,139 @@ export async function searchBooks(
   author: string,
   signal: AbortSignal,
   publisher = "",
-  /** Called with the first results as soon as either catalogue answers, before the other has. */
-  onPartial?: (results: SearchResult[]) => void,
+  onPartial?: (results: SearchResult[]) => void
 ): Promise<SearchResult[]> {
   let t = title.trim();
   let a = author.trim();
   const p = publisher.trim();
-  if (t.length < 2 && a.length < 2 && p.length < 2) return [];
+
+  if (t.length < 2 && a.length < 2 && p.length < 2) {
+    return [];
+  }
+
   if (t.length < 2) t = "";
   if (a.length < 2) a = "";
-  // Only the author typed (no publisher): list their books as free text.
-  if (!t && a && !p) [t, a] = [a, ""];
 
-  // An ISBN (10 or 13 digits, dashes and spaces allowed) finds that exact edition.
+  // If only an author is supplied, search for their books.
+  if (!t && a && !p) {
+    [t, a] = [a, ""];
+  }
+
+  // Search for an exact edition when the query is an ISBN.
   const isbn = !a && !p ? t.replace(/[\s-]/g, "") : "";
+
   if (/^(97[89])?\d{9}[\dXx]$/.test(isbn)) {
     const [ol, google] = await Promise.all([
-      searchOpenLibrary(`isbn:${isbn}`, "", signal).catch(() => [] as SearchResult[]),
-      searchGoogle(`isbn:${isbn}`, signal).catch(() => [] as SearchResult[]),
+      searchOpenLibrary(`isbn:${isbn}`, "", signal).catch(
+        () => [] as SearchResult[]
+      ),
+      searchGoogle(`isbn:${isbn}`, signal).catch(
+        () => [] as SearchResult[]
+      ),
     ]);
+
     return mergeResults(ol, google);
   }
 
   const quote = (x: string) => `"${x.replace(/"/g, "")}"`;
-  // With more than one box filled, search fields precisely; with only a title (or only an
-  // author), treat it as free text so it matches titles and author names alike.
+
   const gq = p
-    ? [t && `intitle:${t}`, a && `inauthor:${a}`, `inpublisher:${quote(p)}`].filter(Boolean).join(" ")
+    ? [
+        t && `intitle:${t}`,
+        a && `inauthor:${a}`,
+        `inpublisher:${quote(p)}`,
+      ]
+        .filter(Boolean)
+        .join(" ")
     : a
       ? `intitle:${t} inauthor:${a}`
       : t;
+
   const cacheKey = [t, a, p].join("|").toLowerCase();
   const hit = searchCache.get(cacheKey);
+
   if (hit) return hit;
 
   let olDone: SearchResult[] | null = null;
   let googleDone: SearchResult[] | null = null;
+
   const early = () => {
     if (signal.aborted || !onPartial) return;
-    const partial = mergeResults(olDone ?? [], googleDone ?? []);
+
+    const partial = mergeResults(
+      olDone ?? [],
+      googleDone ?? []
+    );
+
     if (partial.length) onPartial(partial);
   };
+
   const [ol, google] = await Promise.all([
     searchOpenLibrary(t, a, signal, false, p)
       .catch(() => [] as SearchResult[])
-      .then((r) => ((olDone = r), googleDone === null && early(), r)),
+      .then((r) => {
+        olDone = r;
+        if (googleDone === null) early();
+        return r;
+      }),
+
     searchGoogle(gq, signal)
       .catch(() => [] as SearchResult[])
-      .then((r) => ((googleDone = r), olDone === null && early(), r)),
+      .then((r) => {
+        googleDone = r;
+        if (olDone === null) early();
+        return r;
+      }),
   ]);
+
   let merged = mergeResults(ol, google);
-  // Few or no matches usually means a typo: try again, forgiving one wrong letter per word.
+
+  // Retry a small result set with a more forgiving query.
   if (merged.length < 3 && !p && !signal.aborted) {
-    // Show what we have while the forgiving search runs.
     if (merged.length) onPartial?.(merged);
-    const loose = await searchOpenLibrary(a ? `${t} ${a}` : t, "", signal, true).catch(() => [] as SearchResult[]);
+
+    const loose = await searchOpenLibrary(
+      a ? `${t} ${a}` : t,
+      "",
+      signal,
+      true
+    ).catch(() => [] as SearchResult[]);
+
     merged = mergeResults(merged, loose);
   }
+
   if (!signal.aborted && merged.length) {
     searchCache.set(cacheKey, merged);
-    if (searchCache.size > 60) searchCache.delete(searchCache.keys().next().value!);
+
+    if (searchCache.size > 60) {
+      searchCache.delete(searchCache.keys().next().value!);
+    }
   }
+
   return merged;
 }
 
-/** Fill in a description from the Open Library work record if we don't have one. */
-export async function fetchWorkDescription(workKey: string): Promise<string | null> {
+/** Fetch a description from an Open Library work record. */
+export async function fetchWorkDescription(
+  workKey: string
+): Promise<string | null> {
   try {
-    const res = await fetch(`https://openlibrary.org${workKey}.json`);
+    const res = await fetch(
+      `https://openlibrary.org${workKey}.json`
+    );
+
     if (!res.ok) return null;
-    const json = (await res.json()) as { description?: string | { value: string } };
-    const d = typeof json.description === "string" ? json.description : json.description?.value;
-    return oneLine(d);
+
+    const json = (await res.json()) as {
+      description?: string | { value: string };
+    };
+
+    const description =
+      typeof json.description === "string"
+        ? json.description
+        : json.description?.value;
+
+    return oneLine(description);
   } catch {
     return null;
   }
