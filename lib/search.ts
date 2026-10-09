@@ -1,4 +1,3 @@
-
 import { olCoverById, olCoverByIsbn } from "./covers";
 
 export interface SearchResult {
@@ -80,8 +79,7 @@ export function oneLine(
   let line = match ? match[1] : plain;
 
   if (line.length > max) {
-    line =
-      line.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
+    line = line.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
   }
 
   return line;
@@ -92,8 +90,8 @@ const httpsify = (url: string) =>
   url.replace(/^http:\/\//i, "https://").replace(/&edge=curl/gi, "");
 
 /**
- * Request a larger Google Books image when supported.
- * The provider may still return a smaller image for some editions.
+ * Ask Google Books for a larger image when the URL supports it.
+ * The provider may still return a low-resolution image for some editions.
  */
 function improveGoogleThumbnail(thumbnail: string): string {
   try {
@@ -103,7 +101,6 @@ function improveGoogleThumbnail(thumbnail: string): string {
       url.hostname === "books.google.com" &&
       url.pathname.includes("/books/content")
     ) {
-      // Google Books commonly uses zoom=1 for thumbnails.
       url.searchParams.set("zoom", "2");
     }
 
@@ -111,6 +108,42 @@ function improveGoogleThumbnail(thumbnail: string): string {
   } catch {
     return httpsify(thumbnail);
   }
+}
+
+/** Remove duplicate URLs while preserving their order. */
+const uniq = <T,>(items: T[]) => Array.from(new Set(items));
+
+/** Put Open Library cover URLs before Google thumbnail URLs. */
+function prioritizeCovers(covers: string[]): string[] {
+  const unique = uniq(covers.filter(Boolean));
+
+  return unique.sort((a, b) => {
+    const aOpenLibrary = a.includes("covers.openlibrary.org");
+    const bOpenLibrary = b.includes("covers.openlibrary.org");
+
+    if (aOpenLibrary && !bOpenLibrary) return -1;
+    if (!aOpenLibrary && bOpenLibrary) return 1;
+
+    return 0;
+  });
+}
+
+/** Prefer an Open Library cover URL when one is available. */
+function preferredThumbnail(
+  current: string | null,
+  incoming: string | null
+): string | null {
+  if (!incoming) return current;
+  if (!current) return incoming;
+
+  const currentIsOpenLibrary = current.includes("covers.openlibrary.org");
+  const incomingIsOpenLibrary = incoming.includes("covers.openlibrary.org");
+
+  if (incomingIsOpenLibrary && !currentIsOpenLibrary) {
+    return incoming;
+  }
+
+  return current;
 }
 
 interface GoogleVolume {
@@ -176,10 +209,10 @@ async function searchGoogle(
         ? improveGoogleThumbnail(thumb)
         : null;
 
-      const covers = [
-        ...isbns.slice(0, 1).map((isbn) => olCoverByIsbn(isbn)),
+      const covers = prioritizeCovers([
+        ...isbns.slice(0, 1).map((isbn) => olCoverByIsbn(isbn, "L")),
         ...(thumbnail ? [thumbnail] : []),
-      ];
+      ]);
 
       return {
         key: `g:${volume.id}`,
@@ -233,7 +266,7 @@ async function searchOpenLibrary(
     params.set("title", title);
     params.set("author", author);
   } else {
-    // Free text matches titles and author names, so "premchand" lists his books.
+    // Free text matches titles and author names.
     params.set("q", fuzzy ? fuzzyQuery(title) : title);
   }
 
@@ -249,12 +282,12 @@ async function searchOpenLibrary(
   };
 
   return (json.docs ?? []).map((doc) => {
-    const covers = [
+    const covers = prioritizeCovers([
       ...(doc.cover_i ? [olCoverById(doc.cover_i, "L")] : []),
       ...(doc.isbn ?? [])
         .slice(0, 4)
         .map((isbn) => olCoverByIsbn(isbn, "L")),
-    ];
+    ]);
 
     return {
       key: `ol:${doc.key}`,
@@ -264,12 +297,9 @@ async function searchOpenLibrary(
       pages: doc.number_of_pages_median ?? null,
       genre: pickGenre(doc.subject),
       description: oneLine(doc.first_sentence?.[0]),
-
-      // CHANGED: request the large Open Library cover, not the small thumbnail.
       thumbnail: doc.cover_i
         ? olCoverById(doc.cover_i, "L")
-        : null,
-
+        : covers[0] ?? null,
       covers,
       olWorkKey: doc.key,
       source: "openlibrary" as const,
@@ -286,8 +316,6 @@ function fuzzyQuery(query: string): string {
     .map((word) => (word.length >= 4 ? `${word}~1` : word))
     .join(" ");
 }
-
-const uniq = <T,>(items: T[]) => Array.from(new Set(items));
 
 /** Merge results from both APIs: same normalized title + first author → one entry. */
 export function mergeResults(
@@ -313,13 +341,20 @@ export function mergeResults(
     const existing = index.get(key);
 
     if (!existing) {
-      const copy = { ...result, covers: [...result.covers] };
+      const copy = {
+        ...result,
+        covers: prioritizeCovers([...result.covers]),
+      };
+
       index.set(key, copy);
       out.push(copy);
       continue;
     }
 
-    existing.covers = uniq([...existing.covers, ...result.covers]);
+    existing.covers = prioritizeCovers([
+      ...existing.covers,
+      ...result.covers,
+    ]);
 
     existing.year =
       existing.year && result.year
@@ -336,7 +371,11 @@ export function mergeResults(
       existing.description ??= result.description;
     }
 
-    existing.thumbnail ??= result.thumbnail;
+    existing.thumbnail = preferredThumbnail(
+      existing.thumbnail,
+      result.thumbnail
+    );
+
     existing.olWorkKey ??= result.olWorkKey;
 
     if (existing.source !== result.source) {
@@ -412,7 +451,16 @@ export async function searchBooks(
   const cacheKey = [t, a, p].join("|").toLowerCase();
   const cached = searchCache.get(cacheKey);
 
-  if (cached) return cached;
+  if (cached) {
+    const copied = cached.map((result) => ({
+      ...result,
+      covers: [...result.covers],
+    }));
+
+    if (!signal.aborted) onPartial?.(copied);
+
+    return copied;
+  }
 
   let olDone: SearchResult[] | null = null;
   let googleDone: SearchResult[] | null = null;
@@ -464,7 +512,13 @@ export async function searchBooks(
   }
 
   if (!signal.aborted && merged.length) {
-    searchCache.set(cacheKey, merged);
+    searchCache.set(
+      cacheKey,
+      merged.map((result) => ({
+        ...result,
+        covers: [...result.covers],
+      }))
+    );
 
     if (searchCache.size > 60) {
       searchCache.delete(searchCache.keys().next().value!);
