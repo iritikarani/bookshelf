@@ -42,7 +42,12 @@ function useLazyList(load: (signal: AbortSignal) => Promise<SearchResult[]>, dep
         setList(r);
         setState("done");
       })
-      .catch(() => !ctrl.signal.aborted && setState("error"));
+      .catch(() => {
+        if (ctrl.signal.aborted) return;
+        // One quiet second try before saying anything.
+        if (attempt === 0) window.setTimeout(() => setAttempt((n) => (n === 0 ? 1 : n)), 2500);
+        else setState("error");
+      });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seen, attempt, ...deps]);
@@ -123,7 +128,7 @@ export function DiscoverPage({ books, onAdd }: { books: Book[]; onAdd: (r: Searc
             </ul>
           </section>
 
-          <Strip title="Trending this week" sub="What readers on Open Library are opening right now" load={trendingBooks} deps={[]} has={has} onOpen={open} />
+          <Strip title="Trending now" sub="What readers on Open Library are reading and saving" load={trendingBooks} deps={[]} has={has} onOpen={open} />
 
           <GenreShelves has={has} onOpen={open} />
 

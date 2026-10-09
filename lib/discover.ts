@@ -84,26 +84,51 @@ async function cached(key: string, load: () => Promise<SearchResult[]>): Promise
   return r;
 }
 
-/** What readers on Open Library are opening this week. */
+const FIELDS = "key,title,author_name,cover_i,first_publish_year";
+
+/**
+ * Open Library's book search (the same one "Add a book" uses, which answers reliably from
+ * phones), trying each sort in turn: an older or busier server may not know a newer sort.
+ */
+async function olSearch(q: string, sorts: (string | null)[], signal: AbortSignal, genre: string | null = null): Promise<SearchResult[] | null> {
+  let answered = false;
+  for (const sort of sorts) {
+    const params = new URLSearchParams({ q, limit: "30", fields: FIELDS });
+    if (sort) params.set("sort", sort);
+    const json = await fetchJson<{ docs?: OLWork[] }>(`https://openlibrary.org/search.json?${params}`, signal);
+    if (!json) continue;
+    answered = true;
+    const list = (json.docs ?? []).map((w) => fromWork(w, genre)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
+    // One book per title (editions of the same work often repeat).
+    const seen = new Set<string>();
+    const unique = list.filter((r) => {
+      const k = r.title.toLowerCase();
+      return seen.has(k) ? false : (seen.add(k), true);
+    });
+    if (unique.length >= 4) return unique.slice(0, 24);
+  }
+  return answered ? [] : null;
+}
+
+/** What readers on Open Library are reading and saving right now. */
 export function trendingBooks(signal: AbortSignal): Promise<SearchResult[]> {
-  return cached("trending", async () => {
-    const json = await fetchJson<{ works?: OLWork[] }>("https://openlibrary.org/trending/weekly.json?limit=24", signal);
-    if (!json) throw new Error("unavailable");
-    return (json.works ?? []).map((w) => fromWork(w)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
+  return cached("trending:v2", async () => {
+    const r = await olSearch("subject:fiction", ["trending", "currently_reading", "readinglog"], signal);
+    if (r === null) throw new Error("unavailable");
+    return r;
   });
 }
 
 /** Well-loved books in a subject, e.g. "fantasy". */
 export function subjectBooks(subject: string, label: string, signal: AbortSignal): Promise<SearchResult[]> {
-  const slug = subject.toLowerCase().trim().replace(/&/g, "and").replace(/\s+/g, "_");
-  return cached(`subject:${slug}`, async () => {
-    const json = await fetchJson<{ works?: OLWork[] }>(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=24`, signal);
-    const fromOL = (json?.works ?? []).map((w) => fromWork(w, label)).filter((r): r is SearchResult => Boolean(r?.thumbnail));
-    if (fromOL.length) return fromOL;
-    // Open Library slow or down: the same subject from Google Books.
+  const name = subject.toLowerCase().trim().replace(/_/g, " ");
+  return cached(`subject:v2:${name}`, async () => {
+    const r = await olSearch(`subject:"${name}"`, ["readinglog", "rating", null], signal, label);
+    if (r?.length) return r;
+    // Open Library slow or down: the same subject from Google Books (when it has quota).
     const google = await searchGoogle(`subject:"${label}"`, signal).catch(() => [] as SearchResult[]);
-    if (!google.length && !json) throw new Error("unavailable");
-    return google.filter((r) => r.thumbnail).map((r) => ({ ...r, genre: r.genre ?? label }));
+    if (!google.length && r === null) throw new Error("unavailable");
+    return google.filter((x) => x.thumbnail).map((x) => ({ ...x, genre: x.genre ?? label }));
   });
 }
 
