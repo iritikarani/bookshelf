@@ -3,6 +3,15 @@ import type { AuthUser, Book, Decor, GuestNote, Profile, PublicShelf, PublicShel
 import type { Store } from "./types";
 import { siteUrl } from "../basePath";
 
+/** Supabase's sign-in errors, said kindly and with what to do next. */
+function friendlySignInError(message: string): string {
+  if (/invalid login credentials/i.test(message))
+    return "That email and password don’t match. Check for a typo (passwords care about capital letters), or tap “Forgot password?” to set a new one.";
+  if (/email not confirmed/i.test(message))
+    return "Almost there: please confirm your email first. Tap the link in the email we sent you (check spam too), then sign in.";
+  return message;
+}
+
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
@@ -50,7 +59,7 @@ export const supabaseStore: Store = {
   },
   async signInWithEmail(email, password) {
     const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendlySignInError(error.message));
   },
   async signUpWithEmail(email, password, username) {
     const { data, error } = await getSupabase().auth.signUp({
@@ -59,7 +68,14 @@ export const supabaseStore: Store = {
       options: { emailRedirectTo: siteUrl("/"), data: username ? { username } : undefined },
     });
     // The profile insert fails if someone took the username a moment earlier.
-    if (error) throw new Error(/database error saving new user/i.test(error.message) ? "That username was just taken. Try another." : error.message);
+    if (error)
+      throw new Error(
+        /database error saving new user/i.test(error.message)
+          ? "That username was just taken. Try another."
+          : /already registered|already exists/i.test(error.message)
+            ? "There’s already an account with this email. Sign in instead, or tap “Forgot password?” if you can’t remember it."
+            : error.message,
+      );
     return { needsConfirmation: !data.session };
   },
   async signInWithGoogle() {
