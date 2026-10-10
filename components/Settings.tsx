@@ -146,7 +146,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             </div>
           ) : (
             <p className="text-sm text-ink-soft">
-              Your shelf is saved in this browser. Accounts, Google sign-in and syncing switch on once the site is connected to Supabase (see the README).
+              Your shelf is saved in this browser. Accounts and syncing switch on once the site is connected to Supabase (see the README).
             </p>
           )}
         </fieldset>

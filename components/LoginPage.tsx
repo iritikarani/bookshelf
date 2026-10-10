@@ -7,7 +7,6 @@ import { hasSupabase, setGuest, store } from "@/lib/store";
 import { sendPasswordReset, setNewPassword } from "@/lib/store/supabase";
 import type { ShelfItem } from "@/lib/types";
 import { normalizeUsername } from "@/lib/username";
-import { GoogleIcon } from "./Icons";
 import { UsernameField, usernameOk, type UsernameStatus } from "./UsernameField";
 import { RoomWindow } from "./RoomScene";
 import { ShelfWall } from "./ShelfWall";
@@ -91,7 +90,7 @@ function NoAccounts({ onEnter }: { onEnter: () => void }) {
     <div>
       <h2 className="font-serif text-3xl">Come on in</h2>
       <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-        Your shelf is saved in this browser. Accounts (email and Google sign-in, syncing across devices) switch on once this site is connected to Supabase.
+        Your shelf is saved in this browser. Accounts (email sign-in, syncing across devices) switch on once this site is connected to Supabase.
       </p>
       <button type="button" className="btn-primary mt-6 w-full py-3 text-base" onClick={onEnter}>
         Open my shelf
@@ -180,22 +179,8 @@ function AuthCard({ mode, setMode, onGuest, onDone }: { mode: Mode; setMode: (m:
       <h2 className="font-serif text-3xl leading-tight">{title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>
 
-      {(mode === "signin" || mode === "signup") && (
-        <>
-          <button
-            type="button"
-            className="btn-ghost mt-6 w-full bg-paper py-3"
-            onClick={() => store.signInWithGoogle().catch((e) => setError(e instanceof Error ? e.message : "Google sign-in failed."))}
-          >
-            <GoogleIcon /> Continue with Google
-          </button>
-          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-ink-soft">
-            <span className="h-px flex-1 bg-line" /> or with email <span className="h-px flex-1 bg-line" />
-          </div>
-        </>
-      )}
-
-      <form onSubmit={submit} className={`space-y-3 ${mode === "forgot" || mode === "reset" ? "mt-6" : ""}`}>
+      {/* Email and password only: Google sign-in isn't switched on for this site. */}
+      <form onSubmit={submit} className="mt-6 space-y-3">
         {mode === "signup" && (
           <UsernameField id="signup-username" value={username} onChange={setUsername} onStatus={setUsernameStatus} />
         )}
