@@ -151,9 +151,24 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   const aesthetic = aestheticOf(styleId);
   const season = useSeason(room);
 
-  // Up to 4 shelves that hold books (read shelves first), trimmed to what fits across the image.
+  // The room's bookcases (its shelves in groups, as on screen), with how many books each holds.
+  const perCase = perCaseOf(room);
+  const bookcases = useMemo(() => {
+    const cases: { shelves: Shelf[]; books: number }[] = [];
+    for (let i = 0; i < shelves.length; i += perCase) {
+      const group = shelves.slice(i, i + perCase);
+      cases.push({ shelves: group, books: group.reduce((n, s) => n + (itemsByShelf.get(s.id) ?? []).filter((x) => x.type === "book").length, 0) });
+    }
+    return cases;
+  }, [shelves, itemsByShelf, perCase]);
+  // Which bookcase goes in the picture: the first one with books, until you pick another.
+  const [caseIndex, setCaseIndex] = useState<number | null>(null);
+  const firstWithBooks = Math.max(0, bookcases.findIndex((c) => c.books > 0));
+  const chosen = caseIndex !== null && caseIndex < bookcases.length ? caseIndex : firstWithBooks;
+
+  // The chosen bookcase's shelves that hold books (up to 4), trimmed to what fits across the image.
   const picked = useMemo(() => {
-    const withBooks = [...shelves]
+    const withBooks = (bookcases[chosen]?.shelves ?? [])
       .filter((s) => (itemsByShelf.get(s.id) ?? []).some((i) => i.type === "book"))
       .slice(0, 4);
     return withBooks.map((shelf) => {
@@ -167,16 +182,18 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       }
       return { shelf, items };
     });
-  }, [shelves, itemsByShelf]);
+  }, [bookcases, chosen, itemsByShelf]);
 
   const stats = summary(books);
   const reading = books.find((b) => b.status === "reading");
 
   useEffect(() => {
+    // A new picture each time the sheet opens or another bookcase is picked.
+    setImages(null);
+    setPng(null);
+    setError(null);
     if (!open) {
-      setImages(null);
-      setPng(null);
-      setError(null);
+      setCaseIndex(null);
       return;
     }
     let alive = true;
@@ -194,7 +211,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, picked]);
 
   // Books with covers swapped for inlined data URLs, so html-to-image can draw them.
   const itemsForImage = useMemo(() => {
@@ -239,6 +256,26 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   return (
     <Sheet open={open} onClose={onClose} title="Share my shelf">
       <p className="text-sm text-ink-soft">A 1080 × 1920 image of your shelf in its current room, sized for Instagram stories.</p>
+      {bookcases.length > 1 && (
+        <div className="mt-3">
+          <p className="label">Which bookcase?</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Bookcase in the picture">
+            {bookcases.map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                role="radio"
+                aria-checked={chosen === i}
+                disabled={!c.books}
+                onClick={() => setCaseIndex(i)}
+                className={`rounded-full px-3.5 py-1.5 text-sm ring-1 transition disabled:opacity-40 ${chosen === i ? "bg-accent text-accent-ink ring-accent" : "ring-line hover:ring-accent"}`}
+              >
+                Bookcase {i + 1} <span className="font-mono text-xs opacity-80">· {c.books ? `${c.books} ${c.books === 1 ? "book" : "books"}` : "empty"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="mx-auto mt-4 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-ink/5 shadow-inner ring-1 ring-line">
         {png ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -291,7 +328,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
           type="button"
           className="btn-ghost py-3"
           disabled={!publicUrl}
-          title={publicUrl ? undefined : "Turn on Public shelf in Settings to get a link"}
+          title={publicUrl ? undefined : "Turn on Public shelf in Edit profile to get a link"}
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(publicUrl!);
@@ -305,7 +342,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
         </button>
       </div>
       <p className="mt-2 h-5 text-center text-sm text-accent" role="status">
-        {done ?? (!publicUrl ? <span className="text-ink-soft">To share a link, turn on Public shelf in Settings.</span> : null)}
+        {done ?? (!publicUrl ? <span className="text-ink-soft">To share a link, turn on Public shelf in Edit profile.</span> : null)}
       </p>
 
       {/* Off-screen render target */}
