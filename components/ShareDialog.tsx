@@ -154,10 +154,11 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   // The room's bookcases (its shelves in groups, as on screen), with how many books each holds.
   const perCase = perCaseOf(room);
   const bookcases = useMemo(() => {
-    const cases: { shelves: Shelf[]; books: number }[] = [];
+    const cases: { shelves: Shelf[]; books: number; titles: string[] }[] = [];
     for (let i = 0; i < shelves.length; i += perCase) {
       const group = shelves.slice(i, i + perCase);
-      cases.push({ shelves: group, books: group.reduce((n, s) => n + (itemsByShelf.get(s.id) ?? []).filter((x) => x.type === "book").length, 0) });
+      const titles = group.flatMap((s) => (itemsByShelf.get(s.id) ?? []).flatMap((x) => (x.type === "book" ? [x.book.title] : [])));
+      cases.push({ shelves: group, books: titles.length, titles });
     }
     return cases;
   }, [shelves, itemsByShelf, perCase]);
@@ -165,6 +166,8 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
   const [caseIndex, setCaseIndex] = useState<number | null>(null);
   const firstWithBooks = Math.max(0, bookcases.findIndex((c) => c.books > 0));
   const chosen = caseIndex !== null && caseIndex < bookcases.length ? caseIndex : firstWithBooks;
+  // With books on more than one bookcase, ask which one before making the picture.
+  const mustAsk = caseIndex === null && bookcases.filter((c) => c.books > 0).length > 1;
 
   // The chosen bookcase's shelves that hold books (up to 4), trimmed to what fits across the image.
   const picked = useMemo(() => {
@@ -196,6 +199,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       setCaseIndex(null);
       return;
     }
+    if (mustAsk) return;
     let alive = true;
     (async () => {
       const shownBooks = picked.flatMap((p) => p.items).flatMap((i) => (i.type === "book" ? [i.book] : []));
@@ -211,7 +215,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, picked]);
+  }, [open, picked, mustAsk]);
 
   // Books with covers swapped for inlined data URLs, so html-to-image can draw them.
   const itemsForImage = useMemo(() => {
@@ -253,12 +257,41 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
 
   const vars = { "--cover-h": `${COVER_H}px`, "--cover-w": `${COVER_W}px`, "--spine-scale": SPINE_SCALE, width: W, height: H, backgroundAttachment: "scroll" } as CSSProperties;
 
+  if (mustAsk) {
+    return (
+      <Sheet open={open} onClose={onClose} title="Share my shelf">
+        <p className="font-serif text-2xl leading-snug">Which bookcase would you like to share?</p>
+        <p className="mt-1 text-sm text-ink-soft">The picture shows one bookcase. Your shelf link always shows all of them.</p>
+        <ul className="mt-4 space-y-2">
+          {bookcases.map((c, i) =>
+            c.books ? (
+              <li key={i}>
+                <button type="button" onClick={() => setCaseIndex(i)} className="w-full rounded-2xl bg-paper px-4 py-3 text-left ring-1 ring-line transition hover:ring-accent active:bg-accent/10">
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="font-medium">Bookcase {i + 1}</span>
+                    <span className="font-mono text-xs text-ink-soft">
+                      {c.books} {c.books === 1 ? "book" : "books"}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm text-ink-soft">
+                    {c.titles.slice(0, 3).join(" · ")}
+                    {c.titles.length > 3 ? " …" : ""}
+                  </span>
+                </button>
+              </li>
+            ) : null,
+          )}
+        </ul>
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet open={open} onClose={onClose} title="Share my shelf">
       <p className="text-sm text-ink-soft">A 1080 × 1920 image of your shelf in its current room, sized for Instagram stories.</p>
       {bookcases.length > 1 && (
         <div className="mt-3">
-          <p className="label">Which bookcase?</p>
+          <p className="label">Bookcase in the picture</p>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Bookcase in the picture">
             {bookcases.map((c, i) => (
               <button
