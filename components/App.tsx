@@ -419,7 +419,7 @@ function AppInner() {
         onRemove={(id) => lib.removeDecor(id)}
       />
       <EditShelves open={shelvesOpen} onClose={() => setShelvesOpen(false)} />
-      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} onEditProfile={() => setEditProfileOpen(true)} />
       <ImportGoodreads open={importOpen} onClose={() => setImportOpen(false)} onDone={() => setTab("shelf")} />
       <EditProfile open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSaved={setNotice} />
       {!loading && tab === "shelf" && <SoundButton room={profile?.room} season={season} />}

@@ -10,7 +10,7 @@ import { LinkIcon } from "./Icons";
 import { Sheet } from "./Sheet";
 import { UsernameDialog } from "./UsernameDialog";
 
-export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Settings({ open, onClose, onEditProfile }: { open: boolean; onClose: () => void; onEditProfile?: () => void }) {
   const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
   const [copied, setCopied] = useState(false);
@@ -65,6 +65,27 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             </div>
           ) : (
             <>
+            {store.mode === "supabase" && onEditProfile ? (
+              // One place for sharing: the public switch, guest book and reviews all live in Edit profile.
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <span>
+                  <span className="block font-medium">Public shelf: {profile?.is_public ? "On" : "Off"}</span>
+                  <span className="block text-sm text-ink-soft">
+                    {profile?.is_public ? "Anyone with the link can view your shelf, but cannot make changes." : "Your shelf is private: only you can see it."} Sharing, the guest book and your reviews are all set in Edit profile.
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    onClose();
+                    onEditProfile();
+                  }}
+                >
+                  Change in Edit profile
+                </button>
+              </div>
+            ) : (
             <label className="flex cursor-pointer items-start justify-between gap-4">
               <span>
                 <span className="block font-medium">Public shelf</span>
@@ -79,6 +100,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
               />
               <span aria-hidden className="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-accent peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2" />
             </label>
+            )}
             {profile?.is_public && (
               <div className="mt-3 flex items-center gap-2">
                 <input readOnly className="field flex-1 font-mono text-xs" value={publicUrl} aria-label="Public link" onFocus={(e) => e.currentTarget.select()} />
