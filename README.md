@@ -16,7 +16,7 @@ npm run dev                  # http://localhost:3000
 
 **Without Supabase keys** the app runs entirely in the browser and saves to `localStorage`. Everything works except real accounts and cross-device sharing.
 
-**With Supabase keys** visitors land on the sign-in page (`/login/`): Google, email and password, password reset, or *continue as a guest* (a guest shelf lives in that browser; a guest can sign up later from Settings).
+**With Supabase keys** visitors land on the sign-in page (`/login/`): email and password, password reset, or *continue as a guest* (a guest shelf lives in that browser; a guest can sign up later from Settings).
 
 `npm run build` writes a fully static site to `out/`; `npm run preview` builds and serves it locally.
 
