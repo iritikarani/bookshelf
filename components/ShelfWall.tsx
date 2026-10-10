@@ -370,9 +370,10 @@ function ShelfRow({
           aria-label={`${shelf.name} shelf`}
         >
           {items.length === 0 && (
-            <p className="relative self-center pb-3 text-sm italic opacity-70">
+            // An empty shelf is left bare; only screen readers are told it's empty.
+            <p className="relative self-center pb-3">
               {insertion === 0 && <Marker side="left" />}
-              {readOnly ? "Empty shelf" : "This shelf is waiting for something 📚"}
+              <span className="sr-only">Empty shelf</span>
             </p>
           )}
           {toSegments(items).map((segment) => {
