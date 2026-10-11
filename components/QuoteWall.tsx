@@ -250,7 +250,7 @@ export function QuoteShareSheet({ item, look, onClose }: { item: QuoteItem | nul
               </div>
             </div>
             <div className="pt-12 text-center text-ink-soft">
-              <p className="font-serif text-[34px]">Cosmic Space</p>
+              <p className="font-serif text-[34px]">SelfShelf</p>
               {link && <p className="mt-1 text-[26px]">{link}</p>}
             </div>
           </div>

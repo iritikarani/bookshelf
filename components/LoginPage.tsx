@@ -13,7 +13,7 @@ import { ShelfWall } from "./ShelfWall";
 
 type Mode = "signin" | "signup" | "forgot" | "reset";
 
-/** The front door: what Cosmic Space is, and a card to sign in, sign up or come in as a guest. */
+/** The front door: what SelfShelf is, and a card to sign in, sign up or come in as a guest. */
 export function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -42,7 +42,7 @@ export function LoginPage() {
         <section>
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">A reading journal</p>
           <h1 className="mt-3 font-serif text-5xl leading-[1.02] md:text-6xl">
-            Cosmic Space<span className="text-accent">.</span>
+            SelfShelf<span className="text-accent">.</span>
           </h1>
           <p className="mt-4 max-w-md text-lg leading-relaxed text-ink-soft">
             A shelf for every book you’ve finished, in a room that feels like home. Tap a book and it opens to what you wrote about it.

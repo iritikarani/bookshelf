@@ -109,7 +109,7 @@ const Kicker = ({ children }: { children: ReactNode }) => <p className="text-[34
 const Footer = ({ year, link }: { year: number; link: string }) => (
   <div className="relative mt-auto text-ink-soft">
     <Ornament className="mb-8" />
-    <p className="text-[34px] font-semibold uppercase tracking-[0.3em]">Cosmic Space</p>
+    <p className="text-[34px] font-semibold uppercase tracking-[0.3em]">SelfShelf</p>
     {link && <p className="mt-2 break-all text-[28px] italic tracking-[0.04em]">{link}</p>}
     <p className="sr-only">{year}</p>
   </div>

@@ -105,7 +105,7 @@ export function PublicShelfView({ slug }: { slug: string }) {
     <div data-style={aesthetic.id} {...roomAttrs(look, undefined, season)} style={roomStyle(look)} className="room min-h-dvh pb-16">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 pt-4 md:px-8 md:pt-6">
         <Link href="/" className="whitespace-nowrap font-serif text-xl leading-none tracking-tight md:text-2xl">
-          Cosmic Space<span className="text-accent">.</span>
+          SelfShelf<span className="text-accent">.</span>
         </Link>
         <Link href="/login/?signup=1" className="btn-ghost bg-paper/70 text-sm">
           Make your own shelf

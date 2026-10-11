@@ -16,8 +16,8 @@ export const NAV: { id: AppTab; label: string; icon: (p: { width: number; height
 export function TopBar({ tab, onTab, actions }: { tab: AppTab; onTab: (t: AppTab) => void; actions?: ReactNode }) {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 pt-4 md:px-8 md:pt-6">
-      <button type="button" onClick={() => onTab("home")} className="whitespace-nowrap font-serif text-xl leading-none tracking-tight md:text-2xl" aria-label="Cosmic Space, home">
-        Cosmic Space<span className="text-accent">.</span>
+      <button type="button" onClick={() => onTab("home")} className="whitespace-nowrap font-serif text-xl leading-none tracking-tight md:text-2xl" aria-label="SelfShelf, home">
+        SelfShelf<span className="text-accent">.</span>
       </button>
       <nav aria-label="Main" className="hidden items-center gap-1 rounded-full bg-paper/70 p-1 shadow-sm ring-1 ring-line/70 backdrop-blur md:flex">
         {NAV.map((n) => {

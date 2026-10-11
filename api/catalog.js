@@ -1,5 +1,5 @@
 /**
- * Cosmic Space's book-catalogue helper (a Vercel Function at /api/catalog).
+ * SelfShelf's book-catalogue helper (a Vercel Function at /api/catalog).
  *
  * Phones ask this instead of Open Library / Google Books directly, so Discover and search work
  * even when a phone's network can't reach the catalogues, a browser blocks the request, or a
@@ -13,7 +13,7 @@
 
 const SORTS = new Set(["trending", "currently_reading", "readinglog", "rating", "want_to_read", "new"]);
 const SEARCH_KEYS = ["q", "title", "author", "publisher", "fields", "sort", "limit"];
-const UA = "CosmicSpace/1.0 (personal bookshelf; https://bookshelf-three-woad.vercel.app)";
+const UA = "SelfShelf/1.0 (personal bookshelf; https://www.selfshelf.in)";
 
 const clip = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
 
