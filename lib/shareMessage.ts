@@ -9,11 +9,11 @@ export function shareMessage(opts: { publicUrl?: string | null; visitorOf?: stri
   const { publicUrl, visitorOf } = opts;
   if (visitorOf !== undefined) {
     const url = publicUrl || siteUrl("/");
-    return { url, text: `📚 From ${visitorOf ? `${visitorOf}’s` : "a"} bookshelf on Cosmic Space. Have a look, and make your own!\n${url}` };
+    return { url, text: `📚 From ${visitorOf ? `${visitorOf}’s` : "a"} bookshelf on SelfShelf. Have a look, and make your own!\n${url}` };
   }
-  if (publicUrl) return { url: publicUrl, text: `📚 This is my bookshelf on Cosmic Space. Come have a look, and create yours!\n${publicUrl}` };
+  if (publicUrl) return { url: publicUrl, text: `📚 This is my bookshelf on SelfShelf. Come have a look, and create yours!\n${publicUrl}` };
   const url = siteUrl("/");
-  return { url, text: `📚 Make your own cosy bookshelf on Cosmic Space!\n${url}` };
+  return { url, text: `📚 Make your own cosy bookshelf on SelfShelf!\n${url}` };
 }
 
 /** Share image files with the message; if files can't be shared, share the message alone. */

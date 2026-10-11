@@ -141,7 +141,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
     setDone(msg);
     window.setTimeout(() => setDone((m) => (m === msg ? null : m)), 1800);
   };
-  const pngFile = async () => new File([await (await fetch(png!)).blob()], "cosmic-space-shelf.png", { type: "image/png" });
+  const pngFile = async () => new File([await (await fetch(png!)).blob()], "selfshelf-shelf.png", { type: "image/png" });
   const canShareFiles = typeof navigator !== "undefined" && "canShare" in navigator;
   const canCopyImage = typeof window !== "undefined" && "ClipboardItem" in window;
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -320,7 +320,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
         )}
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <a className={`btn-primary py-3 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="cosmic-space-shelf.png" aria-disabled={!png}>
+        <a className={`btn-primary py-3 ${png ? "" : "pointer-events-none opacity-50"}`} href={png ?? undefined} download="selfshelf-shelf.png" aria-disabled={!png}>
           <DownloadIcon width={16} height={16} /> Download story
         </a>
         {canShareFiles && (
@@ -382,7 +382,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
       {open && itemsForImage && (
         <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
           <div ref={nodeRef} data-style={aesthetic.id} {...roomAttrs(room, undefined, season)} className="share-art room flex flex-col overflow-hidden px-[80px] pt-[100px] text-ink" style={{ ...roomStyle(room), ...vars }}>
-            <p className="font-mono text-[26px] tracking-[6px] text-accent">COSMIC SPACE</p>
+            <p className="font-mono text-[26px] tracking-[6px] text-accent">SELFSHELF</p>
             <h1 className="mt-[18px] font-serif text-[96px] leading-none">{owner ? `${owner}’s bookshelf` : "My bookshelf"}</h1>
             <p className="mt-[16px] font-mono text-[28px] text-ink-soft">
               {new Date().getFullYear()} · {shelfSummary(books)}
@@ -421,7 +421,7 @@ export function ShareDialog({ open, onClose, shelves, itemsByShelf, books, style
                 />
               </RoomScene>
               <p className="absolute inset-x-0 bottom-[36px] text-center font-mono text-[22px] tracking-[2px] text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
-                {aesthetic.name} · {stats.booksRead} finished · made with Cosmic Space
+                {aesthetic.name} · {stats.booksRead} finished · made with SelfShelf
                 {shownLink(publicUrl) && <span className="mt-1 block text-[20px] tracking-[1px]">{shownLink(publicUrl)}</span>}
               </p>
             </div>

@@ -98,3 +98,54 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* First paint, before sign-in is known: newcomers (and search engines) see the front door,
+   returning readers the splash. app/layout.tsx sets .has-session before anything is drawn. */
+.first-splash {
+  display: none;
+}
+html.has-session .first-splash {
+  display: block;
+}
+html.has-session .first-landing {
+  display: none;
+}
+
+/* Guide pages: readable article text in the site's own type. */
+.guide h2 {
+  margin-top: 2.25rem;
+  font-family: "Gloock", "DM Serif Display", Georgia, serif;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+.guide h3 {
+  margin-top: 1.5rem;
+  font-weight: 600;
+}
+.guide p,
+.guide li {
+  line-height: 1.7;
+}
+.guide > p,
+.guide section > p {
+  margin-top: 0.85rem;
+}
+.guide ol,
+.guide ul.list {
+  margin-top: 0.85rem;
+  padding-left: 1.4rem;
+}
+.guide ol {
+  list-style: decimal;
+}
+.guide ul.list {
+  list-style: disc;
+}
+.guide li + li {
+  margin-top: 0.4rem;
+}
+.guide a.inline {
+  color: rgb(var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -1,4 +1,4 @@
-# Cosmic Space
+# SelfShelf
 
 An online bookshelf for the books you've finished, with a personal journal entry for each one.
 

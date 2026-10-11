@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
 import { EXAMPLE_ITEMS, EXAMPLE_SHELF } from "@/lib/examples";
+import { GUIDES } from "@/lib/site";
 import type { ShelfItem } from "@/lib/types";
 import { BooksIcon, BrushIcon, JournalIcon } from "./Icons";
 import { RoomWindow } from "./RoomScene";
@@ -29,7 +30,7 @@ export function Landing() {
     <div data-style="pastel" className="room min-h-dvh">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 pt-5 md:px-8 md:pt-7">
         <p className="font-serif text-xl tracking-tight md:text-2xl">
-          Cosmic Space<span className="text-accent">.</span>
+          SelfShelf<span className="text-accent">.</span>
         </p>
         <nav aria-label="Account" className="flex items-center gap-2">
           <Link href="/login/" className="btn px-3 text-ink-soft hover:text-ink">
@@ -45,6 +46,7 @@ export function Landing() {
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-12 md:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
           <div>
             <h1 className="font-serif text-[52px] leading-[0.98] tracking-tight sm:text-7xl lg:text-[84px]">
+              <span className="mb-5 block font-mono text-xs uppercase leading-normal tracking-[0.2em] text-accent sm:text-sm">Virtual bookshelf · Reading tracker</span>
               Your books.
               <br />
               Your shelf.
@@ -52,7 +54,7 @@ export function Landing() {
               <span className="text-accent">Your space.</span>
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-soft">
-              Create your own digital bookshelf, organise the books you love, track your reading, and keep your thoughts in one place.
+              SelfShelf is a free virtual bookshelf and reading tracker. Put the books you love on your own shelves, track what you’re reading, and keep a journal for every book.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/login/?signup=1" className="btn-primary px-6 py-3 text-base">
@@ -65,10 +67,10 @@ export function Landing() {
           </div>
 
           {/* A real shelf, in a real room: the product itself, not a picture of it. */}
-          <div className="relative overflow-hidden rounded-[28px] bg-paper/40 p-4 shadow-[0_40px_80px_-40px_rgba(60,40,30,0.55)] ring-1 ring-line/70 sm:p-6" aria-label="A bookshelf in Cosmic Space">
+          <div className="relative overflow-hidden rounded-[28px] bg-paper/40 p-4 shadow-[0_40px_80px_-40px_rgba(60,40,30,0.55)] ring-1 ring-line/70 sm:p-6" role="img" aria-label="An example bookshelf on SelfShelf, with Pride and Prejudice, Jane Eyre and other classics">
             <div className="flex items-end gap-5">
               <RoomWindow className="mb-8 hidden h-[200px] w-[130px] shrink-0 sm:block" />
-              <div className="pointer-events-none min-w-0 flex-1 [--cover-h:112px] [--cover-w:76px] [--spine-scale:0.88] [&_.shelf-cell_h2]:hidden" aria-hidden>
+              <div className="pointer-events-none min-w-0 flex-1 [--cover-h:112px] [--cover-w:76px] [--spine-scale:0.88] [&_.shelf-cell_h2]:hidden" aria-hidden inert>
                 <ShelfWall shelves={[EXAMPLE_SHELF]} itemsByShelf={examples} structure="case" onOpenBook={() => {}} readOnly floor={false} />
               </div>
             </div>
@@ -108,8 +110,15 @@ export function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-line/70 py-8 text-center text-sm text-ink-soft">
-        Cosmic Space<span className="text-accent">.</span> Your books. Your shelf. Your space.
+      <footer className="border-t border-line/70 px-5 py-8 text-center text-sm text-ink-soft">
+        <nav aria-label="Guides" className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          {GUIDES.map((g) => (
+            <Link key={g.path} href={g.path} className="underline-offset-2 hover:text-ink hover:underline">
+              {g.title}
+            </Link>
+          ))}
+        </nav>
+        SelfShelf<span className="text-accent">.</span> Your books. Your shelf. Your space.
       </footer>
     </div>
   );

@@ -49,7 +49,7 @@ export function Header({
     <header className="mx-auto w-full max-w-6xl px-4 pt-4 md:px-8 md:pt-6">
       <div className="flex items-center justify-between gap-3">
         <p className="whitespace-nowrap font-serif text-xl leading-none tracking-tight md:text-2xl">
-          Cosmic Space<span className="text-accent">.</span>
+          SelfShelf<span className="text-accent">.</span>
         </p>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
