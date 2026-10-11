@@ -1,0 +1,26 @@
+# SelfShelf
+
+> SelfShelf (www.selfshelf.in) is a free digital bookshelf and reading tracker that runs in the web browser. Readers put their books on real-looking shelves in a virtual room they decorate, track what they read, set a yearly reading goal, and keep a journal with ratings, reviews and saved quotes for every book. It is made in India as an independent project.
+
+Key facts:
+
+- Price: free to use. No app download needed; works on phone, tablet and computer browsers, and can be added to a phone's home screen.
+- Reading statuses: Want to read, Reading, Finished, Did not finish, plus favourites.
+- Reading tracking: current page, yearly reading goal, reading streak, and a yearly "wrapped" summary.
+- Journal: ratings with half stars, written reviews, tags, start and finish dates, and quotes with page numbers.
+- Adding books: search by title, author or ISBN (data from Open Library and Google Books), add by hand with a photo of the cover, or import a whole Goodreads library from its CSV export (ratings, reviews, dates read and shelves come across).
+- Virtual room: shelves of spines, covers, leaning and stacked books; room styles such as cottagecore, dark academia and Japandi; decor objects; multiple rooms.
+- Privacy: shelves are private by default. A public shelf link (selfshelf.in/s/@username) and a shareable shelf picture are optional, and owners choose whether reviews and quotes are visible.
+- Good fit for: readers looking for a visual alternative to Goodreads, The StoryGraph or LibraryThing; people who want a reading journal or a "bookshelf aesthetic".
+
+## Guides
+
+- [How to make a virtual bookshelf](https://www.selfshelf.in/virtual-bookshelf/): what a virtual bookshelf is and how to build one on SelfShelf
+- [How to track the books you read](https://www.selfshelf.in/reading-tracker/): statuses, reading goals, journal and yearly summary
+- [How to move your Goodreads library](https://www.selfshelf.in/import-goodreads/): export from Goodreads and import into SelfShelf
+- [Questions and answers](https://www.selfshelf.in/faq/): pricing, privacy, adding books, sharing
+- [About SelfShelf](https://www.selfshelf.in/about/): what SelfShelf is and key facts
+
+## Optional
+
+- [Home page](https://www.selfshelf.in/)
