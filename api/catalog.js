@@ -13,7 +13,7 @@
 
 const SORTS = new Set(["trending", "currently_reading", "readinglog", "rating", "want_to_read", "new"]);
 const SEARCH_KEYS = ["q", "title", "author", "publisher", "fields", "sort", "limit"];
-const UA = "CosmicSpace/1.0 (personal bookshelf; https://bookshelf-three-woad.vercel.app)";
+const UA = "CosmicSpace/1.0 (personal bookshelf; https://selfshelf.in)";
 
 const clip = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
 

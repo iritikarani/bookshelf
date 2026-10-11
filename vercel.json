@@ -4,6 +4,30 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "out",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "bookshelf-three-woad.vercel.app"
+        }
+      ],
+      "destination": "https://selfshelf.in/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.selfshelf.in"
+        }
+      ],
+      "destination": "https://selfshelf.in/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/s/@:user",
