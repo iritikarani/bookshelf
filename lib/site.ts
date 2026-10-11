@@ -11,4 +11,5 @@ export const GUIDES = [
   { path: "/reading-tracker/", title: "Track the books you read" },
   { path: "/import-goodreads/", title: "Move your Goodreads library" },
   { path: "/faq/", title: "Questions and answers" },
+  { path: "/about/", title: "About SelfShelf" },
 ] as const;
