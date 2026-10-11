@@ -8,7 +8,7 @@ const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 /** Lets phones add SelfShelf to the home screen with its own icon. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${SITE_NAME}: your virtual bookshelf`,
+    name: `${SITE_NAME}: your digital bookshelf`,
     short_name: SITE_NAME,
     description: SITE_DESCRIPTION,
     start_url: `${base}/`,
