@@ -202,9 +202,12 @@ function AppInner() {
   }, [welcomeKey, loading, welcomed, books.length]);
   const ownerName = profile?.username ?? (store.mode === "supabase" ? profile?.display_name : null) ?? null;
 
-  if (!authReady) return <Splash />;
+  // Before sign-in is known, the front door is already in the page (so search engines and
+  // first-time visitors see it at once); returning readers see the splash instead, chosen
+  // before first paint by the script in app/layout.tsx.
+  if (!authReady) return <FrontDoor ready={false} />;
   // Signed out with accounts switched on: the front door.
-  if (!user && store.mode === "supabase") return <Landing />;
+  if (!user && store.mode === "supabase") return <FrontDoor ready />;
 
   const openBook = openId ? (viewBooks.find((b) => b.id === openId) ?? null) : null;
   const openList = openBook ? (isExample(openBook) ? exampleMap.get(EXAMPLE_SHELF.id) : itemsByShelf.get(openBook.shelf_id)) ?? [] : [];
@@ -516,10 +519,26 @@ function ExampleNote() {
   return <p className="mb-5 rounded-xl border border-dashed border-ink-soft/40 bg-paper/50 p-3 text-sm text-ink-soft">Showing the example books. Add your first book to make this page yours.</p>;
 }
 
+/** The landing page, with the splash beside it until we know whether someone is signed in. */
+function FrontDoor({ ready }: { ready: boolean }) {
+  return (
+    <>
+      {!ready && (
+        <div className="first-splash">
+          <Splash />
+        </div>
+      )}
+      <div className={ready ? undefined : "first-landing"}>
+        <Landing />
+      </div>
+    </>
+  );
+}
+
 function Splash() {
   return (
     <div className="flex min-h-dvh items-center justify-center">
-      <p className="animate-pulse font-serif text-3xl">Cosmic Space</p>
+      <p className="animate-pulse font-serif text-3xl">SelfShelf</p>
     </div>
   );
 }
