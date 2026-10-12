@@ -309,7 +309,8 @@ export function RoomScene({ children, standing }: { children: ReactNode; standin
         </div>
       </div>
 
-      <div className="room-floor" aria-hidden>
+      {/* runs on through the page's bottom padding (kept clear for the phone menu) so no strip of wall shows under it */}
+      <div className="room-floor -mb-28 md:-mb-12" aria-hidden>
         <div className="skirting" />
         <div className="floor-plane">
           <div className="floor-sun" />
