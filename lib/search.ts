@@ -74,7 +74,7 @@ export interface SearchResult {
   genre: string | null;
   description: string | null;
   thumbnail: string | null;
-  /** Candidate cover URLs, best first. Not all are guaranteed to exist — probe before showing. */
+  /** Candidate cover URLs, best first. Not all are guaranteed to exist; probe before showing. */
   covers: string[];
   olWorkKey: string | null;
   source: "google" | "openlibrary" | "both";
@@ -120,7 +120,7 @@ export function pickGenre(subjects: string[] | undefined): string | null {
   return first && first.length <= 30 ? first.replace(/\s*\/.*$/, "") : null;
 }
 
-/** First sentence, trimmed, HTML stripped — a one-line description. */
+/** First sentence, trimmed, HTML stripped: a one-line description. */
 export function oneLine(text: string | null | undefined, max = 180): string | null {
   if (!text) return null;
   const plain = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

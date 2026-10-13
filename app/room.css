@@ -64,7 +64,7 @@
   --floor: #ead6c0;
 }
 
-/* 2 · Modern black — the classic black bookcase in a bright panelled room */
+/* 2 · Modern black: the classic black bookcase in a bright panelled room */
 [data-style="modern"] {
   /* black wood grain, like a real black oak bookcase */
   --frame-tex-v: var(--tex-grain-v-light), var(--tex-grain-v);
@@ -86,7 +86,7 @@
   --grain: rgba(255, 255, 255, 0.03);
 }
 
-/* 3 · Scandi — white case with pale oak shelves */
+/* 3 · Scandi: white case with pale oak shelves */
 [data-style="scandi"] {
   --board-tex: var(--tex-grain-h);
   --curtain: #f3f1ec;
@@ -103,7 +103,7 @@
   --grain: rgba(120, 80, 30, 0.12);
 }
 
-/* 4 · Japandi — floating ash boards on a limewashed wall */
+/* 4 · Japandi: floating ash boards on a limewashed wall */
 [data-style="japandi"] {
   --frame-tex-v: var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h);
@@ -123,7 +123,7 @@
   --grain: rgba(90, 60, 30, 0.12);
 }
 
-/* 5 · Dark academia — walnut, forest green, brass. A dark room, so the ink flips. */
+/* 5 · Dark academia: walnut, forest green, brass. A dark room, so the ink flips. */
 [data-style="academia"] {
   --frame-tex-v: var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h);
@@ -151,7 +151,7 @@
   color-scheme: dark;
 }
 
-/* 6 · Cottagecore — sage-painted case, sprigged wallpaper */
+/* 6 · Cottagecore: sage-painted case, sprigged wallpaper */
 [data-style="cottage"] {
   --curtain: #f0d7d9;
   --window-frame: #ffffff;
@@ -170,7 +170,7 @@
   --floor: #d5a66d;
 }
 
-/* 7 · Mid-century — floating teak on a mustard wall */
+/* 7 · Mid-century: floating teak on a mustard wall */
 [data-style="midcentury"] {
   --frame-tex-v: var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h);
@@ -188,7 +188,7 @@
   --grain: rgba(0, 0, 0, 0.16);
 }
 
-/* 8 · Coastal — whitewashed case, pale blue beadboard */
+/* 8 · Coastal: whitewashed case, pale blue beadboard */
 [data-style="coastal"] {
   --board-tex: var(--tex-grain-h);
   --curtain: #f7f5ef;
@@ -205,7 +205,7 @@
   --floor: #e2d1b2;
 }
 
-/* 9 · Boho — rope-hung boards on a terracotta arch */
+/* 9 · Boho: rope-hung boards on a terracotta arch */
 [data-style="boho"] {
   --frame-tex-v: var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h);
@@ -224,7 +224,7 @@
   --grain: rgba(90, 50, 20, 0.12);
 }
 
-/* 10 · Industrial — iron pipe, reclaimed boards, painted brick */
+/* 10 · Industrial: iron pipe, reclaimed boards, painted brick */
 [data-style="industrial"] {
   --frame-tex-v: var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h);
@@ -284,7 +284,7 @@
   background-attachment: fixed;
 }
 
-/* ★ Reading reward · Starlit library — midnight walls scattered with stars, navy bookcase */
+/* ★ Reading reward · Starlit library: midnight walls scattered with stars, navy bookcase */
 [data-style="starlit"] {
   --frame-tex-v: var(--tex-grain-v-light), var(--tex-grain-v);
   --frame-tex-h: var(--tex-grain-h-light), var(--tex-grain-h);
@@ -317,7 +317,7 @@
   color-scheme: dark;
 }
 
-/* ★ Reading reward · Gilded study — oxblood velvet walls, black lacquer bookcase with gold edges */
+/* ★ Reading reward · Gilded study: oxblood velvet walls, black lacquer bookcase with gold edges */
 [data-style="gilded"] {
   --curtain: #1f3a30;
   --window-frame: #1c1714;
