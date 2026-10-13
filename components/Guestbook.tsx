@@ -170,7 +170,7 @@ export function GuestbookSheet({
                 )}
                 {n.message ? <p className="whitespace-pre-line pr-6 font-serif text-lg leading-snug text-[#3a302a]">{n.message}</p> : <p className="font-serif text-lg italic text-[#3a302a]/70">Left you a heart</p>}
                 <p className="mt-3 text-sm text-[#3a302a]/70">
-                  — {n.name} · {when(n.created_at)}
+                  {n.name} · {when(n.created_at)}
                 </p>
                 <div className="mt-2 text-right">
                   {confirm === n.id ? (
