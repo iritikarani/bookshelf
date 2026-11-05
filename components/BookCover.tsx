@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { findStandInCover, noteOpenLibraryCover, openLibraryLooksDown } from "@/lib/coverFallback";
 import { coverColorOf, coverImageOf, coverSources, googleAtWidth, isGoogleCover, sizedCover, textColorFor } from "@/lib/covers";
 import type { Book } from "@/lib/types";
 
@@ -43,15 +44,35 @@ const TRIM_LIMIT = 0.2;
 /** size: "M" for shelves and lists (fast); "L" where the cover is shown big. */
 export function BookCover({ book, className = "", sizes, size = "M" }: { book: CoverBook; className?: string; sizes?: string; size?: "M" | "L" }) {
   const full = coverImageOf(book);
-  const candidates = useMemo(() => (full ? coverCandidates(full, size) : []), [full, size]);
+  const own = useMemo(() => (full ? coverCandidates(full, size) : []), [full, size]);
+  // When the book's own cover won't load (Open Library down, say), the same book's cover from Google Books.
+  const [standIn, setStandIn] = useState<{ full: string; url: string | null } | null>(null);
+  const standInUrl = standIn?.full === full ? standIn.url : null;
+  const candidates = useMemo(() => (standInUrl ? [...own, ...coverCandidates(standInUrl, size)] : own), [own, standInUrl, size]);
   // Which candidate is showing, per cover (so a new cover starts again from the best one).
   const [state, setState] = useState<{ full: string | null; i: number; fit: boolean }>({ full, i: 0, fit: false });
-  const current = state.full === full ? state : { full, i: 0, fit: false };
+  const fromOL = Boolean(full && !book.uploaded_cover && full.startsWith("https://covers.openlibrary.org/"));
+  // While Open Library is down, don't make every cover wait for it to fail first.
+  const startAt = fromOL && openLibraryLooksDown() ? own.length : 0;
+  const current = state.full === full ? state : { full, i: startAt, fit: false };
   const src = candidates[current.i];
+  const ownFailed = Boolean(full) && current.i >= own.length;
+  const { title, author, cover_url } = book;
+  useEffect(() => {
+    if (!ownFailed || !full || standIn?.full === full || book.uploaded_cover) return;
+    let live = true;
+    findStandInCover({ title, author, cover_url }).then((url) => live && setStandIn({ full, url }));
+    return () => {
+      live = false;
+    };
+  }, [ownFailed, full, standIn, title, author, cover_url, book.uploaded_cover]);
   // Sharp on phones: the bigger image only where the screen has the pixels for it.
   const srcSet = src && size === "M" && src.startsWith("https://covers.openlibrary.org/") ? coverSources(src, 90).srcSet : undefined;
   const alt = `Cover of ${book.title}${book.author ? ` by ${book.author}` : ""}`;
-  const next = () => setState({ full, i: current.i + 1, fit: false });
+  const next = () => {
+    if (fromOL && current.i < own.length) noteOpenLibraryCover(false);
+    setState({ full, i: current.i + 1, fit: false });
+  };
 
   if (!src) {
     return (
@@ -76,6 +97,7 @@ export function BookCover({ book, className = "", sizes, size = "M" }: { book: C
         const el = e.currentTarget;
         // Open Library returns a 1×1 gif for some missing covers.
         if (el.naturalWidth < 10) return next();
+        if (fromOL && current.i < own.length) noteOpenLibraryCover(true);
         // A cover much wider or narrower than its box is shown whole, not cropped.
         const box = el.clientWidth / Math.max(1, el.clientHeight);
         const shape = el.naturalWidth / el.naturalHeight;
