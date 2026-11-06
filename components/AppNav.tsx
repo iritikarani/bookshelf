@@ -5,7 +5,7 @@ import type { AppTab } from "@/lib/useTab";
 import { BooksIcon, CompassIcon, HomeIcon, JournalIcon, UserIcon } from "./Icons";
 
 export const NAV: { id: AppTab; label: string; icon: (p: { width: number; height: number }) => ReactNode }[] = [
-  { id: "home", label: "Home", icon: HomeIcon },
+  { id: "home", label: "Universe", icon: HomeIcon },
   { id: "shelf", label: "My Shelf", icon: BooksIcon },
   { id: "discover", label: "Discover", icon: CompassIcon },
   { id: "journal", label: "Journal", icon: JournalIcon },

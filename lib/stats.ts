@@ -1,4 +1,4 @@
-import { quotesOf } from "./quotes";
+import { linesOf } from "./quotes";
 import type { Book } from "./types";
 
 export function splitByReadState(books: Book[]) {
@@ -15,7 +15,7 @@ export function averageRating(books: Book[]): number | null {
   return rated.reduce((s, b) => s + b.rating, 0) / rated.length;
 }
 
-export const hasLine = (b: Book) => quotesOf(b).length > 0;
+export const hasLine = (b: Book) => linesOf(b).length > 0;
 
 export function summary(books: Book[]) {
   const { read, toRead } = splitByReadState(books);

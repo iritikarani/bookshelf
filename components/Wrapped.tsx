@@ -7,7 +7,7 @@ import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
 import { shareFiles, shareMessage } from "@/lib/shareMessage";
 import { averageRating, bestMonthRun, authorCounts, hasLine, topCounts } from "@/lib/stats";
-import { quotesOf } from "@/lib/quotes";
+import { linesOf } from "@/lib/quotes";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { BookSpine, spineWidthPx } from "./BookSpine";
@@ -47,7 +47,7 @@ function yearStats(books: Book[], year: number) {
     [...done].sort((a, b) => b.rating - a.rating || Number(b.favourite) - Number(a.favourite) || Number(hasLine(b)) - Number(hasLine(a)) || (b.date_finished ?? "").localeCompare(a.date_finished ?? ""))[0] ?? null;
   const line = (favourite && hasLine(favourite) ? favourite : done.find(hasLine)) ?? null;
   // The most memorable quote: the one with a note, else the longest-kept line, from the best-rated book.
-  const quotes = [...done].sort((a, b) => b.rating - a.rating).flatMap((b) => quotesOf(b).map((q) => ({ book: b, q })));
+  const quotes = [...done].sort((a, b) => b.rating - a.rating).flatMap((b) => linesOf(b).map((q) => ({ book: b, q })));
   const memorable = quotes.find((x) => x.q.note) ?? quotes[0] ?? null;
   const authorsAll = authorCounts(done, 1)[0];
   return {
@@ -161,7 +161,7 @@ function IntroCard({ s, year, owner }: { s: Stats; year: number; owner?: string 
 
 function FavouriteCard({ s }: { s: Stats }) {
   const b = s.favourite!;
-  const quote = s.line ? quotesOf(s.line)[0]?.text : undefined;
+  const quote = s.line ? linesOf(s.line)[0]?.text : undefined;
   return (
     <>
       <Kicker>{b.rating > 0 ? "Book of the year" : "A book to remember"}</Kicker>

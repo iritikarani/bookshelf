@@ -113,8 +113,13 @@ export interface Quote {
   text: string;
   page?: number | null;
   note?: string | null;
+  /** What kind of memory this is (lib/quotes.ts). Missing on older entries, which are quotes. */
+  kind?: MemoryKind | null;
   created_at: string;
 }
+
+/** A line from the book, or something of your own that the book left you with. */
+export type MemoryKind = "quote" | "passage" | "reflection" | "character" | "scene" | "lesson" | "memory";
 
 export type BookDraft = Omit<Book, "id" | "user_id" | "position" | "created_at" | "updated_at">;
 

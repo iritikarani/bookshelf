@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, todayISO } from "@/lib/date";
-import { quotesOf } from "@/lib/quotes";
-import type { Book, BookDraft, Quote } from "@/lib/types";
+import { MEMORY_KINDS, kindInfo, kindOf, quotesOf } from "@/lib/quotes";
+import type { Book, BookDraft, MemoryKind, Quote } from "@/lib/types";
 import { PencilIcon, PlusIcon, ShareIcon, TrashIcon, XIcon } from "./Icons";
 
 export type BookPatch = Partial<BookDraft>;
@@ -175,7 +175,7 @@ export function BookNotes({ book, onSave }: { book: Book; onSave?: Save }) {
 /** Saved quotes: each with an optional page number and a note. */
 export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color: string; onSave?: Save; onShare?: (q: Quote) => void }) {
   const all = quotesOf(book);
-  const [form, setForm] = useState<{ id: string | null; text: string; page: string; note: string } | null>(null);
+  const [form, setForm] = useState<{ id: string | null; text: string; page: string; note: string; kind: MemoryKind } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   // The quote just saved is tucked into the page like a slip of paper.
   const [tucked, setTucked] = useState<string | null>(null);
@@ -192,17 +192,18 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
     const page = form.page.trim() ? Math.max(1, Math.min(99999, parseInt(form.page, 10) || 0)) || null : null;
     const note = form.note.trim().slice(0, 500) || null;
     const text = form.text.trim().slice(0, 1000);
+    const kind = form.kind === "quote" ? undefined : form.kind;
     if (form.id === "favourite-line") {
       // Turn the old single line into a full quote so it can carry a page and note.
       const id = newId();
-      onSave?.({ favourite_line: null, quotes: [{ id, text, page, note, created_at: book.date_finished ?? book.created_at }, ...(book.quotes ?? [])] });
+      onSave?.({ favourite_line: null, quotes: [{ id, text, page, note, ...(kind ? { kind } : {}), created_at: book.date_finished ?? book.created_at }, ...(book.quotes ?? [])] });
       setTucked(id);
     } else if (form.id) {
-      onSave?.({ quotes: (book.quotes ?? []).map((q) => (q.id === form.id ? { ...q, text, page, note } : q)) });
+      onSave?.({ quotes: (book.quotes ?? []).map((q) => (q.id === form.id ? { ...q, text, page, note, kind: kind ?? null } : q)) });
       setTucked(form.id);
     } else {
       const id = newId();
-      onSave?.({ quotes: [...(book.quotes ?? []), { id, text, page, note, created_at: new Date().toISOString() }] });
+      onSave?.({ quotes: [...(book.quotes ?? []), { id, text, page, note, ...(kind ? { kind } : {}), created_at: new Date().toISOString() }] });
       setTucked(id);
     }
     setForm(null);
@@ -216,10 +217,10 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
   return (
     <section className="mt-6">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="label">Quotes{all.length > 1 ? ` · ${all.length}` : ""}</h3>
+        <h3 className="label">Quotes &amp; memories{all.length > 1 ? ` · ${all.length}` : ""}</h3>
         {onSave && !form && (
-          <button type="button" className="flex items-center gap-1 text-xs font-medium text-accent hover:underline" onClick={() => setForm({ id: null, text: "", page: "", note: "" })}>
-            <PlusIcon width={13} height={13} /> Save a quote
+          <button type="button" className="flex items-center gap-1 text-xs font-medium text-accent hover:underline" onClick={() => setForm({ id: null, text: "", page: "", note: "", kind: "quote" })}>
+            <PlusIcon width={13} height={13} /> Save a memory
           </button>
         )}
       </div>
@@ -227,9 +228,7 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
         {all.map((q) =>
           form?.id === q.id ? null : (
             <li key={q.id} className={tucked === q.id ? "note-tuck" : undefined} onAnimationEnd={() => tucked === q.id && setTucked(null)}>
-              <blockquote className="border-l-4 py-1 pl-4 font-serif text-xl leading-snug md:text-2xl" style={{ borderColor: color }}>
-                “{q.text}”
-              </blockquote>
+              <MemoryText quote={q} color={color} />
               {(q.page || q.note) && (
                 <p className="mt-1 pl-5 text-sm text-ink-soft">
                   {q.page ? <span className="font-mono">p. {q.page}</span> : null}
@@ -246,7 +245,7 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
                   )}
                   {onSave && (
                     <>
-                      <button type="button" className="flex items-center gap-1 rounded-full px-2 py-1 text-ink-soft hover:bg-ink/5 hover:text-ink" onClick={() => setForm({ id: q.id, text: q.text, page: q.page ? String(q.page) : "", note: q.note ?? "" })}>
+                      <button type="button" className="flex items-center gap-1 rounded-full px-2 py-1 text-ink-soft hover:bg-ink/5 hover:text-ink" onClick={() => setForm({ id: q.id, text: q.text, page: q.page ? String(q.page) : "", note: q.note ?? "", kind: kindOf(q) })}>
                         <PencilIcon width={13} height={13} /> Edit
                       </button>
                       {confirm === q.id ? (
@@ -272,23 +271,24 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
         )}
       </ul>
       {!all.length && !form && onSave && (
-        <button type="button" onClick={() => setForm({ id: null, text: "", page: "", note: "" })} className="w-full rounded-lg border border-dashed border-ink-soft/40 bg-paper/80 px-4 py-3 text-left font-serif text-lg italic text-ink-soft hover:border-accent hover:text-ink">
-          A line worth keeping? Save it here…
+        <button type="button" onClick={() => setForm({ id: null, text: "", page: "", note: "", kind: "quote" })} className="w-full rounded-lg border border-dashed border-ink-soft/40 bg-paper/80 px-4 py-3 text-left font-serif text-lg italic text-ink-soft hover:border-accent hover:text-ink">
+          A line, a scene, a character worth keeping? Save it here…
         </button>
       )}
       {form && (
         <form onSubmit={save} className="mt-3 space-y-2 rounded-xl bg-paper/95 p-3 ring-1 ring-line">
+          <KindPicker value={form.kind} onChange={(kind) => setForm({ ...form, kind })} />
           <label htmlFor={`q-${book.id}`} className="label">
-            {form.id ? "Edit quote" : "New quote"}
+            {form.id ? `Edit ${kindInfo(form.kind).label.toLowerCase()}` : `New ${kindInfo(form.kind).label.toLowerCase()}`}
           </label>
-          <textarea id={`q-${book.id}`} autoFocus rows={3} maxLength={1000} className="field resize-y font-serif text-lg" placeholder="The line, as it’s written" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} />
+          <textarea id={`q-${book.id}`} autoFocus rows={3} maxLength={1000} className="field resize-y font-serif text-lg" placeholder={kindInfo(form.kind).placeholder} value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} />
           <div className="grid grid-cols-[96px_1fr] gap-2">
             <input aria-label="Page number" inputMode="numeric" className="field font-mono" placeholder="Page" value={form.page} onChange={(e) => setForm({ ...form, page: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
             <input aria-label="Your note (optional)" maxLength={500} className="field" placeholder="Your note (optional)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
           </div>
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={!form.text.trim()}>
-              Save quote
+              Save {kindInfo(form.kind).label.toLowerCase()}
             </button>
             <button type="button" className="btn-ghost" onClick={() => setForm(null)}>
               Cancel
@@ -297,5 +297,47 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
         </form>
       )}
     </section>
+  );
+}
+
+/** Choose what you're keeping: a quote, a passage, a reflection, a character, a scene, a lesson or a memory. */
+export function KindPicker({ value, onChange }: { value: MemoryKind; onChange: (k: MemoryKind) => void }) {
+  return (
+    <div role="radiogroup" aria-label="What are you keeping?" className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      {MEMORY_KINDS.map((k) => {
+        const on = value === k.id;
+        return (
+          <button
+            key={k.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(k.id)}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-sm transition ${on ? "border-accent bg-accent/10 text-ink" : "border-line text-ink-soft hover:text-ink"}`}
+          >
+            <span aria-hidden>{k.icon}</span> {k.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A saved entry as it reads on the journal page: the book's words in quotation marks, your own words plainly, with what kind it is. */
+export function MemoryText({ quote, color }: { quote: Pick<Quote, "text" | "kind">; color: string }) {
+  const info = kindInfo(kindOf(quote));
+  return (
+    <div className="border-l-4 py-1 pl-4" style={{ borderColor: color }}>
+      {info.id !== "quote" && (
+        <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft">
+          <span aria-hidden>{info.icon}</span> {info.label}
+        </p>
+      )}
+      {info.quoted ? (
+        <blockquote className="font-serif text-xl leading-snug md:text-2xl">“{quote.text}”</blockquote>
+      ) : (
+        <p className="whitespace-pre-line font-book text-lg leading-snug">{quote.text}</p>
+      )}
+    </div>
   );
 }

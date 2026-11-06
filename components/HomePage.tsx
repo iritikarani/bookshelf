@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { yearOf } from "@/lib/date";
 import { averageRating, monthStreak } from "@/lib/stats";
-import { quotesOf } from "@/lib/quotes";
+import { linesOf } from "@/lib/quotes";
 import type { Book } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
 import type { AppTab } from "@/lib/useTab";
@@ -13,6 +13,8 @@ import { BookCover } from "./BookCover";
 import { PlusIcon } from "./Icons";
 import { ProgressBar, progressPercent } from "./ReadingProgress";
 import { StarDisplay } from "./StarRating";
+import { MemoryNotes, ReadingIdentity, ReadingTimeline } from "./Universe";
+import { openJournalAt } from "./JournalPage";
 
 function greeting(now = new Date()) {
   const h = now.getHours();
@@ -21,7 +23,10 @@ function greeting(now = new Date()) {
 
 const newest = (a: Book, b: Book) => b.created_at.localeCompare(a.created_at);
 
-/** Home: what you're reading, what's next, and the way into your room. Never anything made up. */
+/**
+ * My Universe (the home page): the way into your room, what you’re reading and what’s next, the
+ * memories you’ve kept, who you are as a reader and the path your reading has taken. Never anything made up.
+ */
 export function HomePage({
   books,
   name,
@@ -62,7 +67,9 @@ export function HomePage({
   return (
     <div className="space-y-10 md:space-y-12">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink-soft">{now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink-soft">
+          My universe · {now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        </p>
         <h1 className="mt-2 font-serif text-[34px] leading-[1.05] tracking-tight md:text-5xl">
           {greeting(now)}
           {name ? `, ${name}` : ""}.
@@ -111,9 +118,15 @@ export function HomePage({
             {next.length ? <CoverRow books={next} onOpen={onOpen} /> : <Quiet>Books you want to read will wait for you here.</Quiet>}
           </Section>
 
-          <Section title="Recently finished" count={finished.length}>
-            {finished.length ? <CoverRow books={finished.slice(0, 16)} onOpen={onOpen} rated /> : <Quiet>Finish a book and it’ll show up here, with your rating.</Quiet>}
-          </Section>
+          <MemoryNotes books={books} onOpen={onOpen} onArchive={() => (openJournalAt("quotes"), onTab("journal"))} />
+
+          {finished.length ? (
+            <ReadingTimeline books={books} onOpen={onOpen} />
+          ) : (
+            <Section title="Your reading path" count={0}>
+              <Quiet>Finish a book and it’ll start your reading path here, month by month.</Quiet>
+            </Section>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <section aria-labelledby="home-year" className="rounded-3xl bg-paper/80 p-5 ring-1 ring-line/70 md:p-6">
@@ -134,7 +147,7 @@ export function HomePage({
                 <Stat label="Streak" value={`${streak} mo`} />
               </dl>
             </section>
-            <FavouriteCard book={favourite} onOpen={onOpen} />
+            <ReadingIdentity books={books} onOpen={onOpen} fallback={<FavouriteCard book={favourite} onOpen={onOpen} />} />
           </div>
         </>
       )}
@@ -262,7 +275,7 @@ function FavouriteCard({ book, onOpen }: { book?: Book; onOpen: (b: Book) => voi
       </section>
     );
   }
-  const line = quotesOf(book)[0]?.text;
+  const line = linesOf(book)[0]?.text;
   return (
     <section aria-labelledby="home-fav" className="rounded-3xl bg-paper/80 p-5 ring-1 ring-line/70 md:p-6">
       <h2 id="home-fav" className="font-serif text-2xl">
