@@ -177,9 +177,12 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
   const all = quotesOf(book);
   const [form, setForm] = useState<{ id: string | null; text: string; page: string; note: string } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  // The quote just saved is tucked into the page like a slip of paper.
+  const [tucked, setTucked] = useState<string | null>(null);
   useEffect(() => {
     setForm(null);
     setConfirm(null);
+    setTucked(null);
   }, [book.id]);
   if (!onSave && !all.length) return null;
 
@@ -191,11 +194,16 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
     const text = form.text.trim().slice(0, 1000);
     if (form.id === "favourite-line") {
       // Turn the old single line into a full quote so it can carry a page and note.
-      onSave?.({ favourite_line: null, quotes: [{ id: newId(), text, page, note, created_at: book.date_finished ?? book.created_at }, ...(book.quotes ?? [])] });
+      const id = newId();
+      onSave?.({ favourite_line: null, quotes: [{ id, text, page, note, created_at: book.date_finished ?? book.created_at }, ...(book.quotes ?? [])] });
+      setTucked(id);
     } else if (form.id) {
       onSave?.({ quotes: (book.quotes ?? []).map((q) => (q.id === form.id ? { ...q, text, page, note } : q)) });
+      setTucked(form.id);
     } else {
-      onSave?.({ quotes: [...(book.quotes ?? []), { id: newId(), text, page, note, created_at: new Date().toISOString() }] });
+      const id = newId();
+      onSave?.({ quotes: [...(book.quotes ?? []), { id, text, page, note, created_at: new Date().toISOString() }] });
+      setTucked(id);
     }
     setForm(null);
   };
@@ -218,7 +226,7 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
       <ul className="space-y-4">
         {all.map((q) =>
           form?.id === q.id ? null : (
-            <li key={q.id}>
+            <li key={q.id} className={tucked === q.id ? "note-tuck" : undefined} onAnimationEnd={() => tucked === q.id && setTucked(null)}>
               <blockquote className="border-l-4 py-1 pl-4 font-serif text-xl leading-snug md:text-2xl" style={{ borderColor: color }}>
                 “{q.text}”
               </blockquote>

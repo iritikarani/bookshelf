@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { SunMotes } from "./Living";
 import { WindowView } from "./WindowView";
 
 const LAMP_KEY = "exlibris:lamp";
@@ -293,6 +294,7 @@ export function RoomScene({ children, standing }: { children: ReactNode; standin
     <div className="room-stage relative flex flex-1 flex-col" data-lamp={lampOn ? "on" : "off"}>
       <div aria-hidden className="lamp-glow pointer-events-none absolute inset-0 -z-0" />
       <div aria-hidden className="window-beam hidden lg:block" />
+      <SunMotes />
       <FairyLights />
 
       {/* phones & tablets: window and pendant above the shelves */}

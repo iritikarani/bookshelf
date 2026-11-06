@@ -12,6 +12,7 @@ import { aestheticOf } from "@/lib/themes";
 import type { Book, GuestNote, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
 import { todayISO } from "@/lib/date";
+import { motionLevel, startMotion } from "@/lib/motion";
 import { MARKS, matchesFilter, type MarkFilter } from "./Marks";
 import { RoomScene } from "./RoomScene";
 import { AddBookDialog } from "./AddBookDialog";
@@ -59,6 +60,9 @@ function AppInner() {
   useRoomClock(profile?.room);
   const season = useSeason(profile?.room);
   const [openId, setOpenId] = useState<string | null>(null);
+  // A book being removed lifts off the shelf for a moment before it goes.
+  const [leavingId, setLeavingId] = useState<string | null>(null);
+  useEffect(() => startMotion(), []);
   const [editing, setEditing] = useState<Book | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -332,6 +336,7 @@ function AppInner() {
                       itemsByShelf={exampleMap}
                       structure={structure}
                       onOpenBook={(b) => setOpenId(b.id)}
+                      openId={openId}
                       filter={filter}
                       floor={false}
                       readOnly
@@ -346,6 +351,8 @@ function AppInner() {
                       perCase={perCaseOf(profile?.room)}
                       onMove={(id, shelfId, index) => lib.moveItem(id, shelfId, index)}
                       justAddedId={lib.justAddedId}
+                      openId={openId}
+                      leavingId={leavingId}
                       filter={filter}
                       floor={false}
                     />
@@ -376,7 +383,17 @@ function AppInner() {
         onMarks={markBook}
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
         onProgress={(b, patch) => lib.updateBook(b.id, patch)}
-        onRemove={(b) => lib.removeBook(b.id)}
+        onRemove={async (b) => {
+          // Close the book, let it lift off the shelf, then remove it (its neighbours close the gap).
+          setOpenId(null);
+          setLeavingId(b.id);
+          try {
+            if (motionLevel() !== "off") await new Promise((r) => window.setTimeout(r, 420));
+            await lib.removeBook(b.id);
+          } finally {
+            setLeavingId(null);
+          }
+        }}
         onUpdate={(b, patch) => lib.updateBook(b.id, patch)}
         onShareQuote={(b, quote) => setSharingQuote({ book: b, quote })}
       />
