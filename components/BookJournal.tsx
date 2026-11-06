@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDate, todayISO } from "@/lib/date";
+import { collectionName } from "@/lib/collections";
 import { MEMORY_KINDS, kindInfo, kindOf, quotesOf } from "@/lib/quotes";
 import type { Book, BookDraft, MemoryKind, Quote } from "@/lib/types";
 import { PencilIcon, PlusIcon, ShareIcon, TrashIcon, XIcon } from "./Icons";
@@ -62,28 +63,42 @@ export function BookDates({ book, onSave }: { book: Book; onSave?: Save }) {
 }
 
 /** Genre plus your own tags, added and removed in place. */
-export function BookTags({ book, onSave }: { book: Book; onSave?: Save }) {
+export function BookTags({ book, onSave, allTags = [] }: { book: Book; onSave?: Save; allTags?: string[] }) {
   const tags = book.tags ?? [];
   const [draft, setDraft] = useState("");
-  useEffect(() => setDraft(""), [book.id]);
+  // The collection just added gets a small "joined" pop.
+  const [joined, setJoined] = useState<string | null>(null);
+  useEffect(() => {
+    setDraft("");
+    setJoined(null);
+  }, [book.id]);
   if (!onSave && !tags.length && !book.genre) return null;
+  const join = (raw: string) => {
+    const t = cleanTag(raw);
+    if (!t || tags.includes(t) || tags.length >= MAX_TAGS) return;
+    onSave?.({ tags: [...tags, t] });
+    setJoined(t);
+  };
   const add = (e?: FormEvent) => {
     e?.preventDefault();
-    const t = cleanTag(draft);
-    if (!t || tags.includes(t) || tags.length >= MAX_TAGS) return setDraft("");
-    onSave?.({ tags: [...tags, t] });
+    join(draft);
     setDraft("");
   };
+  const suggestions = allTags.filter((t) => !tags.includes(t)).slice(0, 8);
   return (
     <section className="mt-6">
-      <h3 className="label">Genre &amp; tags</h3>
-      <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
+      <h3 className="label">Genre &amp; collections</h3>
+      <ul className="flex flex-wrap gap-1.5" aria-label="Collections">
         {book.genre && <li className="rounded-full bg-ink/[0.07] px-3 py-1 text-sm">{book.genre}</li>}
         {tags.map((t) => (
-          <li key={t} className="flex items-center gap-1 rounded-full border border-line bg-paper px-3 py-1 text-sm">
-            #{t}
+          <li
+            key={t}
+            className={`flex items-center gap-1 rounded-full border border-line bg-paper px-3 py-1 text-sm ${joined === t ? "chip-pop" : ""}`}
+            onAnimationEnd={() => joined === t && setJoined(null)}
+          >
+            <span aria-hidden>📚</span> {collectionName(t)}
             {onSave && (
-              <button type="button" aria-label={`Remove tag ${t}`} className="-mr-1 rounded-full p-0.5 text-ink-soft hover:text-danger" onClick={() => onSave({ tags: tags.filter((x) => x !== t) })}>
+              <button type="button" aria-label={`Take out of the collection ${collectionName(t)}`} className="-mr-1 rounded-full p-0.5 text-ink-soft hover:text-danger" onClick={() => onSave({ tags: tags.filter((x) => x !== t) })}>
                 <XIcon width={13} height={13} />
               </button>
             )}
@@ -91,15 +106,26 @@ export function BookTags({ book, onSave }: { book: Book; onSave?: Save }) {
         ))}
       </ul>
       {onSave && tags.length < MAX_TAGS && (
-        <form onSubmit={add} className="mt-2 flex gap-2">
-          <label htmlFor={`tag-${book.id}`} className="sr-only">
-            Add a tag
-          </label>
-          <input id={`tag-${book.id}`} className="field h-9 flex-1 py-1 text-sm" placeholder="Add a tag, e.g. comfort read" maxLength={TAG_MAX} value={draft} onChange={(e) => setDraft(e.target.value)} />
-          <button type="submit" className="btn-ghost h-9 px-3" disabled={!cleanTag(draft)}>
-            Add
-          </button>
-        </form>
+        <>
+          {suggestions.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Add to a collection">
+              {suggestions.map((t) => (
+                <button key={t} type="button" onClick={() => join(t)} className="rounded-full border border-dashed border-ink-soft/40 px-3 py-1 text-sm text-ink-soft transition hover:border-accent hover:text-ink">
+                  + {collectionName(t)}
+                </button>
+              ))}
+            </div>
+          )}
+          <form onSubmit={add} className="mt-2 flex gap-2">
+            <label htmlFor={`tag-${book.id}`} className="sr-only">
+              Start a new collection
+            </label>
+            <input id={`tag-${book.id}`} className="field h-9 flex-1 py-1 text-sm" placeholder="New collection, e.g. comfort reads" maxLength={TAG_MAX} value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <button type="submit" className="btn-ghost h-9 px-3" disabled={!cleanTag(draft)}>
+              Add
+            </button>
+          </form>
+        </>
       )}
     </section>
   );
@@ -241,6 +267,16 @@ export function BookQuotes({ book, color, onSave, onShare }: { book: Book; color
                   {onShare && (
                     <button type="button" className="flex items-center gap-1 rounded-full px-2 py-1 text-ink-soft hover:bg-ink/5 hover:text-ink" onClick={() => onShare(q)}>
                       <ShareIcon width={13} height={13} /> Share
+                    </button>
+                  )}
+                  {onSave && q.id !== "favourite-line" && (
+                    <button
+                      type="button"
+                      aria-pressed={Boolean(q.pinned)}
+                      className={`flex items-center gap-1 rounded-full px-2 py-1 hover:bg-ink/5 ${q.pinned ? "text-ink" : "text-ink-soft hover:text-ink"}`}
+                      onClick={() => onSave({ quotes: (book.quotes ?? []).map((x) => (x.id === q.id ? { ...x, pinned: !x.pinned } : x)) })}
+                    >
+                      <span aria-hidden>📌</span> {q.pinned ? "Pinned to profile" : "Pin to profile"}
                     </button>
                   )}
                   {onSave && (

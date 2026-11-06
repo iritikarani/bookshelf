@@ -28,6 +28,8 @@ interface BookDetailProps {
   onRate?: (book: Book, rating: number) => void;
   onProgress?: (book: Book, patch: { current_page: number | null; pages: number | null }) => void;
   onRemove?: (book: Book) => Promise<void>;
+  /** Every collection on the shelf, offered as one-tap "add to" choices. */
+  collections?: string[];
   /** Save journal details: dates, tags, notes, quotes. */
   onUpdate?: (book: Book, patch: BookPatch) => void;
   /** Share one saved quote as an image. */
@@ -39,7 +41,7 @@ interface BookDetailProps {
 
 /** Opening a book: a two-page spread. Left page is the book itself, right page is your journal. */
 export function BookDetail(props: BookDetailProps) {
-  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onProgress, onRemove, onUpdate, onShareQuote, ownerName, readOnly, example } = props;
+  const { book, shelves, index, shelfSize, onClose, onEdit, onMove, onNudge, onDisplay, onMarks, onRate, onProgress, onRemove, onUpdate, onShareQuote, ownerName, readOnly, example, collections } = props;
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const color = useCoverColor(book);
@@ -116,7 +118,7 @@ export function BookDetail(props: BookDetailProps) {
             </section>
           )}
 
-          <BookTags book={book} onSave={save} />
+          <BookTags book={book} onSave={save} allTags={collections} />
 
           {/* On phones the bookplate moves to the very end, after the journal */}
           <div className="mt-auto hidden pt-8 md:block">

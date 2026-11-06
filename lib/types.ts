@@ -115,6 +115,8 @@ export interface Quote {
   note?: string | null;
   /** What kind of memory this is (lib/quotes.ts). Missing on older entries, which are quotes. */
   kind?: MemoryKind | null;
+  /** Shown on your profile among the memories you treasure. */
+  pinned?: boolean;
   created_at: string;
 }
 

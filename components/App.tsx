@@ -13,6 +13,7 @@ import type { Book, GuestNote, ShelfItem } from "@/lib/types";
 import { useTab } from "@/lib/useTab";
 import { todayISO } from "@/lib/date";
 import { motionLevel, startMotion } from "@/lib/motion";
+import { collectionTags } from "@/lib/collections";
 import { MARKS, matchesFilter, type MarkFilter } from "./Marks";
 import { RoomScene } from "./RoomScene";
 import { AddBookDialog } from "./AddBookDialog";
@@ -396,6 +397,7 @@ function AppInner() {
         }}
         onUpdate={(b, patch) => lib.updateBook(b.id, patch)}
         onShareQuote={(b, quote) => setSharingQuote({ book: b, quote })}
+        collections={collectionTags(books)}
       />
 
       <AddBookDialog
