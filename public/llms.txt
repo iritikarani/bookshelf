@@ -6,10 +6,15 @@ Key facts:
 
 - Price: free to use. No app download needed; works on phone, tablet and computer browsers, and can be added to a phone's home screen.
 - Reading statuses: Want to read, Reading, Finished, Did not finish, plus favourites.
-- Reading tracking: current page, yearly reading goal, reading streak, and a yearly "wrapped" summary.
-- Journal: ratings with half stars, written reviews, tags, start and finish dates, and quotes with page numbers.
+- Reading tracking: current page, yearly reading goal, and a yearly "wrapped" summary. No points, badges or streaks.
+- Journal: ratings with half stars, written reviews, and start and finish dates.
+- Memory archive: quotes and passages with page numbers, plus the reader's own reflections, characters, scenes, lessons and memories, each attached to its book, filterable and searchable; favourites can be pinned to the profile.
+- Collections: the reader's own named groups of books (e.g. comfort reads, book club); a book can be in several.
+- My Universe: a home page with what you're reading, recent memories, a month-by-month reading path, and the genres and authors you return to (drawn only from your own books).
+- A living shelf: books slide out when opened and settle back with a little dust; animations can be Full, Gentle or Off, and optional soft book sounds.
 - Adding books: search by title, author or ISBN (data from Open Library and Google Books), add by hand with a photo of the cover, or import a whole Goodreads library from its CSV export (ratings, reviews, dates read and shelves come across).
 - Virtual room: shelves of spines, covers, leaning and stacked books; room styles such as cottagecore, dark academia and Japandi; decor objects; multiple rooms.
+- Discover: recommendations from the genres and authors the reader loves, mood collections and trending books, all real books from Open Library and Google Books.
 - Privacy: shelves are private by default. A public shelf link (selfshelf.in/s/@username) and a shareable shelf picture are optional, and owners choose whether reviews and quotes are visible.
 - Good fit for: readers looking for a visual alternative to Goodreads, The StoryGraph or LibraryThing; people who want a reading journal or a "bookshelf aesthetic".
 

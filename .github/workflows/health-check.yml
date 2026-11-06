@@ -1,0 +1,45 @@
+# Checks every six hours that selfshelf.in is up and working: the site loads, the old addresses
+# still forward to it, the book catalogue helper answers, and the database answers. If anything
+# fails, the run goes red and GitHub emails you (Settings → Notifications → Actions).
+name: Site health check
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the site
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          failed=0
+          fail() { echo "::error::$1"; failed=1; }
+          get() { curl -sS -o body.txt -w "%{http_code}" --max-time 30 --retry 2 --retry-delay 10 "$@" || echo 000; }
+
+          code=$(get https://www.selfshelf.in/)
+          if [ "$code" = "200" ] && grep -q "SelfShelf" body.txt; then echo "✓ Home page loads"; else fail "Home page answered $code"; fi
+
+          for u in https://selfshelf.in/ https://bookshelf-three-woad.vercel.app/; do
+            where=$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "$u" || true)
+            case "$where" in https://www.selfshelf.in/*) echo "✓ $u forwards to www.selfshelf.in";; *) fail "$u no longer forwards to www.selfshelf.in (got '$where')";; esac
+          done
+
+          code=$(get "https://www.selfshelf.in/api/catalog?kind=search&q=pride%20and%20prejudice&limit=1&fields=title")
+          if [ "$code" = "200" ]; then echo "✓ Book search helper answers"; elif [ "$code" = "429" ]; then echo "• Book search helper is busy (429), not counted as down"; else fail "Book search helper answered $code"; fi
+
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            code=$(get -X POST "${SUPABASE_URL%/}/rest/v1/rpc/username_available" -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d '{"name":"healthcheck"}')
+            if [ "$code" = "200" ]; then echo "✓ Database answers"; else fail "Database answered $code. If the project is paused, restore it in the Supabase dashboard."; fi
+          else
+            echo "• Database check skipped (no Supabase secrets)"
+          fi
+
+          exit $failed

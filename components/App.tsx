@@ -5,7 +5,6 @@ import { EXAMPLE_BOOKS, EXAMPLE_ITEMS, EXAMPLE_SHELF, isExample } from "@/lib/ex
 import { LibraryProvider, useLibrary } from "@/lib/library";
 import { store } from "@/lib/store";
 import { summary } from "@/lib/stats";
-import { finishedCount, newlyUnlocked } from "@/lib/rewards";
 import { perCaseOf, roomAttrs, roomStyle, structureOf } from "@/lib/room";
 import { useRoomClock, useSeason } from "@/lib/useClock";
 import { aestheticOf } from "@/lib/themes";
@@ -61,6 +60,15 @@ function AppInner() {
   useRoomClock(profile?.room);
   const season = useSeason(profile?.room);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Rename a collection (or delete it, to null) on every book that's in it. Books stay where they are.
+  const retag = (from: string, to: string | null) => {
+    for (const b of lib.books) {
+      const tags = b.tags ?? [];
+      if (!tags.includes(from)) continue;
+      const next = tags.flatMap((t) => (t === from ? (to ? [to] : []) : [t])).filter((t, i, all) => all.indexOf(t) === i);
+      void lib.updateBook(b.id, { tags: next });
+    }
+  };
   // A book being removed lifts off the shelf for a moment before it goes.
   const [leavingId, setLeavingId] = useState<string | null>(null);
   useEffect(() => startMotion(), []);
@@ -78,28 +86,6 @@ function AppInner() {
     const t = window.setTimeout(() => setNotice(null), 6000);
     return () => window.clearTimeout(t);
   }, [notice]);
-  // Reading rewards: celebrate once when finishing books unlocks something new for the room.
-  const finished = finishedCount(lib.books);
-  useEffect(() => {
-    if (loading || !user || !lib.profile) return;
-    const key = `exlibris:rewardsSeen:${user.id}`;
-    let seen: number | null = null;
-    try {
-      const raw = localStorage.getItem(key);
-      seen = raw === null ? null : Number(raw);
-    } catch {}
-    // First visit after this feature: remember where the reader is, without a burst of old news.
-    if (seen !== null && finished > seen) {
-      const fresh = newlyUnlocked(seen, finished);
-      const top = fresh[fresh.length - 1];
-      if (top) setNotice(`${top.emoji} You unlocked ${top.type === "room" ? "a new room: " : ""}${top.name}! Find it in ••• → Decorate room.`);
-    }
-    if (seen === null || finished > seen) {
-      try {
-        localStorage.setItem(key, String(finished));
-      } catch {}
-    }
-  }, [finished, loading, user, lib.profile]);
   const [shelvesOpen, setShelvesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -262,7 +248,7 @@ function AppInner() {
         {loading ? (
           <ShelfSkeleton />
         ) : tab === "home" ? (
-          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onImport={() => setImportOpen(true)} onTab={setTab} />
+          <HomePage books={books} name={profile?.display_name ?? ownerName} goal={profile?.reading_goal} onSetGoal={() => setEditProfileOpen(true)} rooms={lib.rooms.length} example={showExamples} onOpen={(b) => setOpenId(b.id)} onAdd={startAdd} onImport={() => setImportOpen(true)} onTab={setTab} onRetag={showExamples ? undefined : retag} />
         ) : tab === "discover" ? (
           <DiscoverPage
             books={books}
@@ -291,6 +277,7 @@ function AppInner() {
               onShare={books.length ? () => setShareOpen(true) : undefined}
               onWrapped={showExamples ? undefined : () => setWrappedOpen(true)}
               onGuestbook={openGuestbook}
+              onRetag={showExamples ? undefined : retag}
             />
           </>
         ) : (

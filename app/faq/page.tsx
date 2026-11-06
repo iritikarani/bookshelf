@@ -61,6 +61,36 @@ const FAQS: { q: string; text: string; answer: React.ReactNode }[] = [
     ),
   },
   {
+    q: "What can I save from a book?",
+    text: "As well as a rating and your thoughts, you can keep quotes and passages with page numbers, and your own reflections, characters, scenes, lessons and memories. Each one stays with its book, and the Journal's memory archive lets you filter and search them all. You can pin favourites to your profile.",
+    answer: (
+      <>
+        As well as a rating and your thoughts, you can keep quotes and passages with page numbers, and your own reflections, characters, scenes, lessons and memories. Each one stays with its
+        book, and the Journal’s memory archive lets you filter and search them all. You can pin favourites to your profile.
+      </>
+    ),
+  },
+  {
+    q: "Can I group books into collections?",
+    text: "Yes. Open a book and add it to a collection, such as comfort reads, book club or books that made you cry. A book can be in several collections, and you can rename or delete a collection at any time; deleting one never removes the books.",
+    answer: (
+      <>
+        Yes. Open a book and add it to a collection, such as comfort reads, book club or books that made you cry. A book can be in several collections, and you can rename or delete a
+        collection at any time; deleting one never removes the books.
+      </>
+    ),
+  },
+  {
+    q: "Can I turn the animations off?",
+    text: "Yes. In Settings, Animations can be Full, Gentle or Off, and SelfShelf follows your phone's reduce motion setting until you choose. Soft book sounds are off unless you switch them on.",
+    answer: (
+      <>
+        Yes. In Settings, <em>Animations</em> can be Full, Gentle or Off, and SelfShelf follows your phone’s reduce motion setting until you choose. Soft book sounds are off unless you switch
+        them on.
+      </>
+    ),
+  },
+  {
     q: "Can I use SelfShelf without an account?",
     text: "Yes, you can try it as a guest. A guest shelf is saved only in that browser, so create an account (free) to keep it safe and to share it.",
     answer: <>Yes, you can try it as a guest. A guest shelf is saved only in that browser, so create an account (free) to keep it safe and to share it.</>,

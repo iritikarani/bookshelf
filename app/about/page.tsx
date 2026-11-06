@@ -49,13 +49,18 @@ export default function Page() {
       <h2>What you can do with it</h2>
       <ul className="list">
         <li>Build a virtual bookshelf: spines, covers, leaning and stacked books, on shelves you name, in as many rooms as you like.</li>
+        <li>A shelf that feels alive: a book slides forward when you open it and settles back with a little dust when you close it; animations can be turned down or off.</li>
         <li>Decorate the room: room styles such as cottagecore, dark academia and Japandi, wallpaper, lamp, the view from the window, plants and other objects.</li>
         <li>Track your reading: Want to read, Reading, Finished and Did not finish, your current page, and a yearly reading goal.</li>
-        <li>Keep a reading journal: ratings (with half stars), what stayed with you, tags, dates, and saved quotes with page numbers.</li>
+        <li>Keep a reading journal: ratings (with half stars), what stayed with you, and dates.</li>
+        <li>Keep a memory archive: quotes and passages with page numbers, and your own reflections, characters, scenes, lessons and memories, each tucked into its book and searchable.</li>
+        <li>Group books into your own collections, such as comfort reads or book club.</li>
+        <li>See your reading life on one page, “My Universe”: what you’re reading, the memories you’ve kept, your reading path month by month, and the genres and authors you return to.</li>
         <li>Look back with a yearly “wrapped” summary of your reading.</li>
         <li>
           Add books by searching title, author or ISBN, add them by hand, or <Link className="inline" href="/import-goodreads/">import a Goodreads library</Link>.
         </li>
+        <li>Discover what to read next: suggestions from the genres and authors you love, mood collections and what’s trending, all real books from Open Library and Google Books.</li>
         <li>Share a public shelf link and a picture of your shelf, if you want to.</li>
       </ul>
 

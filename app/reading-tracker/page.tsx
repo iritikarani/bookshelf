@@ -34,8 +34,8 @@ export default function Page() {
 
       <h2>4. Write a few lines when you finish</h2>
       <p>
-        Your future self will thank you. For each book you can give a rating (half stars too), write what stayed with you, add tags, note when you started and finished, and save quotes with
-        their page number. Your journal and quote wall collect them all in one place.
+        Your future self will thank you. For each book you can give a rating (half stars too), write what stayed with you, add it to your own collections, note when you started and finished,
+        and keep quotes with their page number alongside your own reflections, characters, scenes and lessons. Your journal and memory archive collect them all in one place.
       </p>
 
       <h2>5. Look back on your year</h2>

@@ -126,9 +126,10 @@ export function BookDetail(props: BookDetailProps) {
           </div>
         </section>
 
-        {/* ── Right page: the journal ── */}
+        {/* ── Right page: the journal (turns in like a page as the book opens) ── */}
         <section
-          className="relative flex flex-col border-t border-line bg-paper px-6 pb-8 pt-8 md:border-l md:border-t-0 md:px-9 md:shadow-[inset_28px_0_30px_-26px_rgba(0,0,0,0.22)]"
+          key={`journal-${book.id}`}
+          className="page-turn relative flex flex-col border-t border-line bg-paper px-6 pb-8 pt-8 md:border-l md:border-t-0 md:px-9 md:shadow-[inset_28px_0_30px_-26px_rgba(0,0,0,0.22)]"
           style={{ backgroundImage: "repeating-linear-gradient(180deg, transparent 0 31px, rgb(var(--line) / 0.55) 31px 32px)", backgroundPositionY: "18px" }}
         >
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-ink-soft">My journal</p>

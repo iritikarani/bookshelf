@@ -6,7 +6,7 @@ import { coverImageOf } from "@/lib/covers";
 import { MONTH_NAMES, monthOf, yearOf } from "@/lib/date";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
 import { shareFiles, shareMessage } from "@/lib/shareMessage";
-import { averageRating, bestMonthRun, authorCounts, hasLine, topCounts } from "@/lib/stats";
+import { averageRating, authorCounts, hasLine, topCounts } from "@/lib/stats";
 import { linesOf } from "@/lib/quotes";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { BookCover } from "./BookCover";
@@ -55,7 +55,6 @@ function yearStats(books: Book[], year: number) {
     mostAuthor: authorsAll ? { name: authorsAll[0], count: authorsAll[1] } : null,
     topRated: [...done].filter((b) => b.rating > 0).sort((a, b) => b.rating - a.rating || (b.date_finished ?? "").localeCompare(a.date_finished ?? "")).slice(0, 3),
     monthsActive: perMonth.filter(Boolean).length,
-    bestRun: bestMonthRun(done, year),
     memorable,
     done,
     pages: done.reduce((s, b) => s + (b.pages ?? 0), 0),
@@ -315,7 +314,7 @@ function TasteCard({ s }: { s: Stats }) {
           {s.monthsActive} of 12 months
         </p>
         <p className="mt-4 text-[44px] italic">
-          {s.bestRun > 1 ? `with a ${s.bestRun}-month reading streak` : "with a finished book"}
+          with a finished book
         </p>
       </div>
     </>
