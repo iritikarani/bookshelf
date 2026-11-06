@@ -4,7 +4,7 @@ import { getFontEmbedCSS, toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
 import { shareFiles, shareMessage } from "@/lib/shareMessage";
 import { roomAttrs, roomStyle, type RoomSettings } from "@/lib/room";
-import { quotesOf, type SavedQuote } from "@/lib/quotes";
+import { kindInfo, kindOf, quotesOf, type SavedQuote } from "@/lib/quotes";
 import type { Book, ShelfStyle } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { DownloadIcon, ShareIcon } from "./Icons";
@@ -67,15 +67,29 @@ function QuoteFace({ item, scale = 1 }: { item: QuoteItem; scale?: number }) {
   const { book, quote } = item;
   const color = useCoverColor(book);
   const px = (n: number) => `${n * scale}px`;
+  const info = kindInfo(kindOf(quote));
   return (
     <>
       <span aria-hidden className="absolute inset-y-0 left-0" style={{ width: px(6), backgroundColor: color }} />
-      <span aria-hidden className="font-serif leading-none text-ink-soft/30" style={{ fontSize: px(36) }}>
-        “
-      </span>
-      <p className="font-serif leading-snug" style={{ fontSize: px(20), marginTop: px(-12) }}>
-        {quote.text}
-      </p>
+      {info.id !== "quote" && (
+        <p className="font-mono uppercase text-ink-soft" style={{ fontSize: px(10.5), letterSpacing: "0.18em", marginBottom: px(8) }}>
+          <span aria-hidden>{info.icon}</span> {info.label}
+        </p>
+      )}
+      {info.quoted ? (
+        <>
+          <span aria-hidden className="font-serif leading-none text-ink-soft/30" style={{ fontSize: px(36) }}>
+            “
+          </span>
+          <p className="font-serif leading-snug" style={{ fontSize: px(20), marginTop: px(-12) }}>
+            {quote.text}
+          </p>
+        </>
+      ) : (
+        <p className="whitespace-pre-line font-book leading-snug" style={{ fontSize: px(18) }}>
+          {quote.text}
+        </p>
+      )}
       {quote.note && (
         <p className="italic text-ink-soft" style={{ fontSize: px(13), marginTop: px(10) }}>
           {quote.note}
@@ -108,7 +122,7 @@ function QuoteCard({ item, onOpen, onShare }: { item: QuoteItem; onOpen: (b: Boo
         type="button"
         onClick={() => onOpen(book)}
         className="group relative block w-full overflow-hidden rounded-xl bg-paper p-5 pl-6 text-left shadow-sm ring-1 ring-line/70 transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 motion-reduce:transform-none"
-        aria-label={`“${quote.text}”, from ${book.title}${quote.page ? `, page ${quote.page}` : ""}${book.rating ? `, rated ${formatRating(book.rating)} of 5` : ""}. Open book.`}
+        aria-label={`${kindInfo(kindOf(quote)).quoted ? `“${quote.text}”` : `${kindInfo(kindOf(quote)).label}: ${quote.text}`}, from ${book.title}${quote.page ? `, page ${quote.page}` : ""}${book.rating ? `, rated ${formatRating(book.rating)} of 5` : ""}. Open book.`}
       >
         <QuoteFace item={item} />
       </button>

@@ -2,16 +2,33 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { formatDate } from "@/lib/date";
-import type { Book } from "@/lib/types";
+import { MEMORY_KINDS, kindInfo, kindOf } from "@/lib/quotes";
+import type { Book, MemoryKind } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
 import { EmptyState, PageTitle } from "./AppNav";
 import { BookCover } from "./BookCover";
-import type { BookPatch } from "./BookJournal";
+import { KindPicker, type BookPatch } from "./BookJournal";
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "./Icons";
 import { QuoteWall, quoteItems, type QuoteLook } from "./QuoteWall";
 import { StarDisplay } from "./StarRating";
 
 type View = "thoughts" | "quotes";
+
+const VIEW_KEY = "exlibris:journalView";
+/** Open the journal on a given view next time it's shown (e.g. "Memory archive ›" on My Universe). */
+export function openJournalAt(view: View) {
+  try {
+    sessionStorage.setItem(VIEW_KEY, view);
+  } catch {}
+}
+function takeJournalView(): View {
+  try {
+    const v = sessionStorage.getItem(VIEW_KEY);
+    sessionStorage.removeItem(VIEW_KEY);
+    if (v === "quotes" || v === "thoughts") return v;
+  } catch {}
+  return "thoughts";
+}
 type Order = "newest" | "oldest";
 
 const hasThought = (b: Book) => Boolean(b.what_i_liked?.trim());
@@ -33,12 +50,13 @@ export function JournalPage({
   /** Missing on example books: the journal is read-only then. */
   onUpdate?: (b: Book, patch: BookPatch) => void;
 }) {
-  const [view, setView] = useState<View>("thoughts");
+  const [view, setView] = useState<View>(takeJournalView);
   const [q, setQ] = useState("");
   const [bookId, setBookId] = useState("");
   const [minRating, setMinRating] = useState(0);
   const [order, setOrder] = useState<Order>("newest");
   const [adding, setAdding] = useState(false);
+  const [kind, setKind] = useState<MemoryKind | "all">("all");
 
   const query = q.trim().toLowerCase();
   const keep = (b: Book) => (!bookId || b.id === bookId) && (!minRating || b.rating >= minRating);
@@ -49,30 +67,35 @@ export function JournalPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [books, query, bookId, minRating, order]);
   const quotes = useMemo(() => {
-    const list = quoteItems(books.filter(keep)).filter(({ book, quote }) => !query || [quote.text, quote.note, book.title, book.author].some((t) => t?.toLowerCase().includes(query)));
+    const list = quoteItems(books.filter(keep))
+      .filter(({ quote }) => kind === "all" || kindOf(quote) === kind)
+      .filter(({ book, quote }) => !query || [quote.text, quote.note, book.title, book.author, kindInfo(kindOf(quote)).label].some((t) => t?.toLowerCase().includes(query)));
     return order === "oldest" ? list.reverse() : list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [books, query, bookId, minRating, order]);
+  }, [books, query, bookId, minRating, order, kind]);
   const totalThoughts = books.filter(hasThought).length;
-  const totalQuotes = quoteItems(books).length;
-  const filtering = Boolean(query || bookId || minRating);
+  const allMemories = quoteItems(books);
+  const totalQuotes = allMemories.length;
+  const kindsUsed = MEMORY_KINDS.filter((k) => allMemories.some(({ quote }) => kindOf(quote) === k.id));
+  const filtering = Boolean(query || bookId || minRating || (view === "quotes" && kind !== "all"));
   const journalBooks = useMemo(() => [...books].sort((a, b) => a.title.localeCompare(b.title)), [books]);
 
   const clear = () => {
     setQ("");
     setBookId("");
     setMinRating(0);
+    setKind("all");
   };
 
   return (
     <div>
-      <PageTitle title="Journal" sub="What stayed with you, book by book." />
+      <PageTitle title="Journal" sub="What stayed with you, book by book: your thoughts, and an archive of the lines, people and moments you kept." />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label="Journal" className="inline-flex gap-1 rounded-full bg-paper/70 p-1 ring-1 ring-line/70">
           {(
             [
               ["thoughts", "My thoughts", totalThoughts],
-              ["quotes", "Quote wall", totalQuotes],
+              ["quotes", "Memory archive", totalQuotes],
             ] as const
           ).map(([id, label, n]) => (
             <button
@@ -89,7 +112,7 @@ export function JournalPage({
         </div>
         {view === "quotes" && onUpdate && books.length > 0 && !adding && (
           <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
-            <PlusIcon width={16} height={16} /> Save a quote
+            <PlusIcon width={16} height={16} /> Save a memory
           </button>
         )}
       </div>
@@ -101,7 +124,7 @@ export function JournalPage({
               Search the journal
             </label>
             <SearchIcon width={18} height={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" />
-            <input id="journal-q" type="search" maxLength={100} className="field h-11 rounded-full pl-10" placeholder={view === "quotes" ? "Search quotes" : "Search my thoughts"} value={q} onChange={(e) => setQ(e.target.value)} />
+            <input id="journal-q" type="search" maxLength={100} className="field h-11 rounded-full pl-10" placeholder={view === "quotes" ? "Search memories" : "Search my thoughts"} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <select aria-label="Filter by book" className="field h-11 w-auto max-w-[12rem] rounded-full bg-paper/80" value={bookId} onChange={(e) => setBookId(e.target.value)}>
             <option value="">All books</option>
@@ -126,6 +149,23 @@ export function JournalPage({
         </div>
       )}
 
+      {view === "quotes" && kindsUsed.length > 1 && (
+        <div role="radiogroup" aria-label="Show memories of a kind" className="no-scrollbar -mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1">
+          {[{ id: "all" as const, label: "Everything", icon: "✦" }, ...kindsUsed.map((k) => ({ id: k.id, label: k.plural, icon: k.icon }))].map((k) => (
+            <button
+              key={k.id}
+              type="button"
+              role="radio"
+              aria-checked={kind === k.id}
+              onClick={() => setKind(k.id)}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${kind === k.id ? "border-ink bg-ink text-wall" : "border-line bg-paper/70 text-ink-soft hover:text-ink"}`}
+            >
+              <span aria-hidden>{k.icon}</span> {k.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {adding && onUpdate && <NewQuote books={journalBooks} defaultBook={bookId} onCancel={() => setAdding(false)} onSave={(b, patch) => (onUpdate(b, patch), setAdding(false))} />}
 
       {view === "quotes" ? (
@@ -138,8 +178,8 @@ export function JournalPage({
             filtering ? (
               <NoMatch onClear={clear} />
             ) : (
-              <EmptyState icon="❝" title="No lines saved yet.">
-                When a sentence stops you, save it here with its page number. Each one can become a card to share.
+              <EmptyState icon="❝" title="Your archive is waiting.">
+                Keep what a book leaves you with: a line that stopped you, a character you loved, a scene, a lesson, or where you were when you read it. Each one stays tucked into its book.
               </EmptyState>
             )
           }
@@ -186,16 +226,18 @@ function NewQuote({ books, defaultBook, onSave, onCancel }: { books: Book[]; def
   const [text, setText] = useState("");
   const [page, setPage] = useState("");
   const [note, setNote] = useState("");
+  const [kind, setKind] = useState<MemoryKind>("quote");
   const book = books.find((b) => b.id === bookId);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!book || !text.trim()) return;
     const p = page ? Math.max(1, Math.min(99999, parseInt(page, 10) || 0)) || null : null;
-    onSave(book, { quotes: [...(book.quotes ?? []), { id: newId(), text: text.trim().slice(0, 1000), page: p, note: note.trim().slice(0, 500) || null, created_at: new Date().toISOString() }] });
+    onSave(book, { quotes: [...(book.quotes ?? []), { id: newId(), text: text.trim().slice(0, 1000), page: p, note: note.trim().slice(0, 500) || null, ...(kind === "quote" ? {} : { kind }), created_at: new Date().toISOString() }] });
   };
   return (
     <form onSubmit={submit} className="mb-6 animate-fade-in space-y-3 rounded-2xl bg-paper p-4 ring-1 ring-line/70 md:p-5">
-      <p className="font-serif text-xl">Save a quote</p>
+      <p className="font-serif text-xl">Save a memory</p>
+      <KindPicker value={kind} onChange={setKind} />
       <label className="block text-sm">
         <span className="label">From</span>
         <select className="field" value={bookId} onChange={(e) => setBookId(e.target.value)}>
@@ -208,8 +250,8 @@ function NewQuote({ books, defaultBook, onSave, onCancel }: { books: Book[]; def
         </select>
       </label>
       <label className="block text-sm">
-        <span className="label">The line</span>
-        <textarea autoFocus rows={3} maxLength={1000} className="field resize-y font-serif text-lg" placeholder="As it’s written in the book" value={text} onChange={(e) => setText(e.target.value)} />
+        <span className="label">{kindInfo(kind).quoted ? "The words" : "In your words"}</span>
+        <textarea autoFocus rows={3} maxLength={1000} className="field resize-y font-serif text-lg" placeholder={kindInfo(kind).placeholder} value={text} onChange={(e) => setText(e.target.value)} />
       </label>
       <div className="grid grid-cols-[96px_1fr] gap-2">
         <input aria-label="Page number" inputMode="numeric" className="field font-mono" placeholder="Page" value={page} onChange={(e) => setPage(e.target.value.replace(/\D/g, "").slice(0, 5))} />
@@ -217,7 +259,7 @@ function NewQuote({ books, defaultBook, onSave, onCancel }: { books: Book[]; def
       </div>
       <div className="flex gap-2">
         <button type="submit" className="btn-primary" disabled={!book || !text.trim()}>
-          Save quote
+          Save {kindInfo(kind).label.toLowerCase()}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel}>
           Cancel
