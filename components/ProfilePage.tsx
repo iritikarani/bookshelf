@@ -8,6 +8,8 @@ import { Avatar } from "./Avatar";
 import { CoverRow } from "./HomePage";
 import { GearIcon, MailIcon, PencilIcon, ShareIcon } from "./Icons";
 import { ReadingYear } from "./ReadingYear";
+import { CollectionsShelf, TreasuredMemories } from "./Collections";
+import { ReadingIdentity } from "./Universe";
 
 /** The counts every shelf shows: read, reading, want to read, favourites. */
 export function shelfCounts(books: Book[]): [string, number][] {
@@ -148,6 +150,20 @@ export function ProfilePage({
           </button>
         </div>
       </section>
+
+      <ReadingIdentity books={books} onOpen={onOpen} />
+
+      <TreasuredMemories books={books} onOpen={onOpen} />
+
+      <CollectionsShelf books={books} onOpen={onOpen} />
+
+      <p className="-mt-4 text-xs text-ink-soft">
+        {profile?.is_public
+          ? profile?.share_journal === false
+            ? "Your shelf is public, but your thoughts, quotes and memories stay private (Edit profile)."
+            : "Your shelf is public: visitors can see your thoughts, quotes and memories. You can keep them private in Edit profile."
+          : "Your shelf is private: only you can see this page."}
+      </p>
 
       {recent.length > 0 && (
         <section aria-labelledby="pf-recent">

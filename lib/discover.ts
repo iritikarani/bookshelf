@@ -132,6 +132,18 @@ export function subjectBooks(subject: string, label: string, signal: AbortSignal
   });
 }
 
+/** Books by one author, best-loved first (for "More from authors you love"). */
+export function authorBooks(author: string, signal: AbortSignal): Promise<SearchResult[]> {
+  const name = author.trim();
+  return cached(`author:v1:${name.toLowerCase()}`, async () => {
+    const r = await olSearch(`author:"${name}"`, ["readinglog", "rating", null], signal);
+    if (r?.length) return r;
+    const google = await searchGoogle(`inauthor:"${name}"`, signal).catch(() => [] as SearchResult[]);
+    if (!google.length && r === null) throw new Error("unavailable");
+    return google.filter((x) => x.thumbnail);
+  });
+}
+
 /** Find one known book (title + author) in Open Library: one small request per book. */
 export function lookupBook(title: string, author: string, signal: AbortSignal): Promise<SearchResult | null> {
   return cached(`book:${title}|${author}`, async () => {

@@ -181,8 +181,8 @@ export function EditProfile({ open, onClose, onSaved }: { open: boolean; onClose
           <Toggle
             checked={shareJournal}
             onChange={setShareJournal}
-            title="Show my reviews and quotes"
-            text="Visitors to your public shelf can read what you liked about a book, your favourite lines and your quote wall. Turn off to keep them to yourself; your ratings still show."
+            title="Show my reviews, quotes and memories"
+            text="Visitors to your public shelf can read what you liked about a book and your memory archive (quotes, characters, scenes and the rest). Turn off to keep them to yourself; your ratings still show."
           />
         </fieldset>
 

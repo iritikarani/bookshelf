@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { defaultCoverColor } from "@/lib/covers";
-import { GENRE_SUBJECTS, MOODS, lookupBook, subjectBooks, subjectForGenre, trendingBooks, type Mood } from "@/lib/discover";
+import { GENRE_SUBJECTS, MOODS, authorBooks, lookupBook, subjectBooks, subjectForGenre, trendingBooks, type Mood } from "@/lib/discover";
 import { fetchWorkDescription, searchBooks, type SearchResult } from "@/lib/search";
 import { store } from "@/lib/store";
-import { topCounts } from "@/lib/stats";
+import { authorCounts, firstAuthor, topCounts } from "@/lib/stats";
 import type { Book, PublicShelfCard } from "@/lib/types";
 import { PageTitle } from "./AppNav";
 import { Avatar } from "./Avatar";
@@ -66,15 +66,27 @@ export function DiscoverPage({ books, onAdd }: { books: Book[]; onAdd: (r: Searc
   const owned = useMemo(() => new Set(books.map((b) => ownKey(b.title, b.author))), [books]);
   const has = (r: SearchResult) => owned.has(ownKey(r.title, r.author));
 
-  // "Recommended for you": the subjects behind your most-shelved genres.
+  // "Recommended for you": the subjects behind the genres you love most. Favourites and books you
+  // rated 4+ count three times, so what you loved leads over what you merely shelved.
   const recommended = useMemo(() => {
     const out: [string, string][] = [];
-    for (const [g] of topCounts(books.map((b) => b.genre), 6)) {
+    const weighted = books.flatMap((b) => Array(b.favourite || b.rating >= 4 ? 3 : 1).fill(b.genre) as (string | null)[]);
+    for (const [g] of topCounts(weighted, 6)) {
       const s = subjectForGenre(g);
       if (s && !out.some(([, sub]) => sub === s[1])) out.push(s);
     }
     return out.slice(0, 2);
   }, [books]);
+
+  // "More from authors you love": authors of your favourites and 4★+ books first, then anyone with 2+ books on your shelf.
+  const lovedAuthors = useMemo(() => {
+    const loved = authorCounts(books.filter((b) => b.favourite || b.rating >= 4)).map(([a]) => a);
+    const frequent = authorCounts(books).filter(([, n]) => n >= 2).map(([a]) => a);
+    const out: string[] = [];
+    for (const a of [...loved, ...frequent]) if (a && !out.some((x) => x.toLowerCase() === a.toLowerCase())) out.push(a);
+    return out.slice(0, 2);
+  }, [books]);
+  const ownedCount = books.length;
 
   const open = (r: SearchResult) => setPreview(r);
   const searching = query.trim().length >= 2;
@@ -112,7 +124,19 @@ export function DiscoverPage({ books, onAdd }: { books: Book[]; onAdd: (r: Searc
       ) : (
         <div className="mt-10 space-y-12">
           {recommended.map(([label, subject]) => (
-            <Strip key={subject} title={`Recommended for you · ${label}`} sub="Because your shelf loves it" load={(s) => subjectBooks(subject, label, s)} deps={[subject]} has={has} onOpen={open} />
+            <Strip key={subject} title={`Recommended for you · ${label}`} sub="Because the books you love lean this way" load={(s) => subjectBooks(subject, label, s)} deps={[subject]} has={has} onOpen={open} />
+          ))}
+
+          {lovedAuthors.map((author) => (
+            <Strip
+              key={author}
+              title={`More from ${author}`}
+              sub="An author you love: books of theirs that aren’t on your shelf yet"
+              load={async (s) => (await authorBooks(author, s)).filter((r) => !has(r) && firstAuthor({ author: r.author }).toLowerCase().includes(author.split(" ").pop()!.toLowerCase()))}
+              deps={[author, ownedCount]}
+              has={has}
+              onOpen={open}
+            />
           ))}
 
           <section aria-labelledby="moods">

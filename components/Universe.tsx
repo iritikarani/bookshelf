@@ -40,7 +40,7 @@ export function MemoryNotes({ books, onOpen, onArchive }: { books: Book[]; onOpe
   );
 }
 
-function MemoryNote({ item, tilt, onOpen }: { item: QuoteItem; tilt: number; onOpen: () => void }) {
+export function MemoryNote({ item, tilt, onOpen }: { item: QuoteItem; tilt: number; onOpen: () => void }) {
   const { book, quote } = item;
   const info = kindInfo(kindOf(quote));
   const color = useCoverColor(book);

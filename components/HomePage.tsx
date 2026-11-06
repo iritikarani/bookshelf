@@ -15,6 +15,7 @@ import { ProgressBar, progressPercent } from "./ReadingProgress";
 import { StarDisplay } from "./StarRating";
 import { MemoryNotes, ReadingIdentity, ReadingTimeline } from "./Universe";
 import { openJournalAt } from "./JournalPage";
+import { CollectionsShelf } from "./Collections";
 
 function greeting(now = new Date()) {
   const h = now.getHours();
@@ -119,6 +120,8 @@ export function HomePage({
           </Section>
 
           <MemoryNotes books={books} onOpen={onOpen} onArchive={() => (openJournalAt("quotes"), onTab("journal"))} />
+
+          <CollectionsShelf books={books} onOpen={onOpen} />
 
           {finished.length ? (
             <ReadingTimeline books={books} onOpen={onOpen} />
