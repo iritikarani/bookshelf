@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useBookSounds } from "@/lib/bookSounds";
 import { useColorMode, type ColorMode } from "@/lib/colorMode";
+import { MOTION_LEVELS, useMotion } from "@/lib/motion";
 import { useLibrary } from "@/lib/library";
 import { useRouter } from "next/navigation";
 import { publicUrlOf } from "@/lib/publicLink";
@@ -13,6 +15,8 @@ import { UsernameDialog } from "./UsernameDialog";
 export function Settings({ open, onClose, onEditProfile }: { open: boolean; onClose: () => void; onEditProfile?: () => void }) {
   const { profile, user, setPublic } = useLibrary();
   const { mode, setMode } = useColorMode();
+  const [motion, setMotion] = useMotion();
+  const [bookSounds, setBookSounds] = useBookSounds();
   const [copied, setCopied] = useState(false);
   const [usernameOpen, setUsernameOpen] = useState(false);
   const router = useRouter();
@@ -39,6 +43,40 @@ export function Settings({ open, onClose, onEditProfile }: { open: boolean; onCl
               </button>
             ))}
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend className="label">Animations</legend>
+          <p className="mb-2 text-sm text-ink-soft">How much the library moves: books sliding out and settling back, a little dust, light drifting through the window.</p>
+          <div className="inline-flex rounded-full border border-line p-1" role="radiogroup" aria-label="Animations">
+            {MOTION_LEVELS.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={motion === m.id}
+                onClick={() => setMotion(m.id)}
+                className={`rounded-full px-4 py-1.5 text-sm ${motion === m.id ? "bg-accent text-accent-ink" : "text-ink-soft hover:text-ink"}`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-ink-soft" aria-live="polite">
+            {MOTION_LEVELS.find((m) => m.id === motion)?.hint}
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend className="label">Book sounds</legend>
+          <label className="flex cursor-pointer items-start justify-between gap-4">
+            <span>
+              <span className="block font-medium">Soft sounds when handling books</span>
+              <span className="block text-sm text-ink-soft">A quiet wooden tock when a book goes onto the shelf, and a rustle of pages when you open one. Room sounds like rain are separate, under the brush icon.</span>
+            </span>
+            <input type="checkbox" role="switch" className="peer sr-only" checked={bookSounds} onChange={(e) => setBookSounds(e.target.checked)} />
+            <span aria-hidden className="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-ink/20 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-accent peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2" />
+          </label>
         </fieldset>
 
         <fieldset>

@@ -1,0 +1,208 @@
+/*
+ * The living library: small physical touches on the shelf (books lifting, sliding out, settling
+ * back, a breath of dust), bookmark ribbons that move with your reading, a sparkle for favourites,
+ * notes tucked into the journal, and dust drifting in the sunbeam.
+ *
+ * Everything here animates transform and opacity only. <html data-motion> (lib/motion.ts) picks the
+ * level: "full" has it all, "gentle" keeps the book movements (softer) and drops the ambient layer,
+ * "off" turns it all off (see globals.css). Ambient effects also pause while the tab is hidden.
+ */
+
+/* ───── hover: the book lifts and its shadow softens and spreads ───── */
+.book-handle .shelf-item-shadow {
+  transition: filter 220ms ease-out;
+}
+@media (hover: hover) {
+  .book-handle:hover .shelf-item-shadow {
+    filter: drop-shadow(7px 8px 7px rgba(0, 0, 0, 0.3)) drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.22));
+  }
+}
+.book-handle:focus-visible .shelf-item-shadow {
+  filter: drop-shadow(7px 8px 7px rgba(0, 0, 0, 0.3)) drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.22));
+}
+
+/* ───── a book's own movement (a wrapper inside the button, apart from the hover lift) ───── */
+.book-motion {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: 50% 100%;
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Taken out: it slides forward off the shelf and stays there while it's open. */
+.book-motion[data-state="out"] {
+  transform: translateY(-12px) scale(1.06);
+}
+html[data-motion="gentle"] .book-motion[data-state="out"] {
+  transform: translateY(-6px) scale(1.03);
+}
+.book-motion[data-state="out"] .shelf-item-shadow {
+  filter: drop-shadow(8px 14px 9px rgba(0, 0, 0, 0.32)) drop-shadow(1px 4px 3px rgba(0, 0, 0, 0.2));
+}
+
+/* Put back: it slides home and settles with the smallest bounce. */
+.book-motion[data-state="return"] {
+  animation: book-return 560ms cubic-bezier(0.25, 0.9, 0.3, 1) both;
+}
+@keyframes book-return {
+  0% { transform: translateY(-12px) scale(1.06); }
+  55% { transform: translateY(1.5px) scale(0.995); }
+  78% { transform: translateY(-1px) scale(1); }
+  100% { transform: none; }
+}
+
+/* Newly added: it slides in, tipped a touch, and settles upright. */
+.book-motion[data-state="arrive"] {
+  animation: book-arrive 760ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+@keyframes book-arrive {
+  0% { transform: translate(18px, -34px) rotate(5deg); opacity: 0; }
+  45% { opacity: 1; }
+  68% { transform: translate(0, 2px) rotate(-1.4deg); }
+  84% { transform: translate(0, -1px) rotate(0.5deg); }
+  100% { transform: none; opacity: 1; }
+}
+html[data-motion="gentle"] .book-motion[data-state="arrive"] {
+  animation-name: book-arrive-gentle;
+  animation-duration: 520ms;
+}
+@keyframes book-arrive-gentle {
+  0% { transform: translateY(-14px) rotate(2deg); opacity: 0; }
+  70% { transform: translateY(1px) rotate(-0.5deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* Removed: it lifts forward, off the shelf, and fades; its neighbours then close the gap. */
+.book-motion[data-state="leave"] {
+  animation: book-leave 440ms cubic-bezier(0.4, 0, 0.6, 1) both;
+}
+@keyframes book-leave {
+  0% { transform: none; opacity: 1; }
+  35% { transform: translateY(-14px) scale(1.06); opacity: 1; }
+  100% { transform: translateY(-26px) scale(1.12); opacity: 0; }
+}
+
+/* ───── a breath of dust ───── */
+.dust-puff {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  z-index: 30;
+  width: 0;
+  height: 0;
+}
+.dust-puff[data-at="base"] { bottom: 2px; }
+.dust-puff[data-at="behind"] { top: 35%; }
+.dust-mote {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(236, 226, 205, 0.95), rgba(214, 200, 175, 0.55) 55%, transparent 72%);
+  opacity: 0;
+  animation: dust-drift var(--t, 900ms) cubic-bezier(0.2, 0.7, 0.3, 1) var(--d, 0ms) both;
+}
+.dark .dust-mote {
+  background: radial-gradient(circle, rgba(220, 212, 195, 0.75), rgba(190, 180, 160, 0.35) 55%, transparent 72%);
+}
+@keyframes dust-drift {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  18% { opacity: 0.85; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.25); opacity: 0; }
+}
+
+/* ───── bookmark ribbons ───── */
+/* The reading ribbon sways when you update your page… */
+.ribbon-sway {
+  animation: ribbon-sway 900ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+@keyframes ribbon-sway {
+  0% { transform: rotate(var(--r, 1.2deg)) scaleY(1); }
+  25% { transform: rotate(calc(var(--r, 1.2deg) + 6deg)) scaleY(1.08); }
+  55% { transform: rotate(calc(var(--r, 1.2deg) - 3deg)) scaleY(0.98); }
+  80% { transform: rotate(calc(var(--r, 1.2deg) + 1deg)) scaleY(1); }
+  100% { transform: rotate(var(--r, 1.2deg)) scaleY(1); }
+}
+/* …and when you finish the book it slips back in between the pages. */
+.ribbon-tuck {
+  animation: ribbon-tuck 900ms cubic-bezier(0.5, 0, 0.7, 0.4) both;
+}
+@keyframes ribbon-tuck {
+  0% { transform: rotate(var(--r, 1.2deg)) scaleY(1); opacity: 1; }
+  30% { transform: rotate(calc(var(--r, 1.2deg) + 4deg)) scaleY(1.06); opacity: 1; }
+  100% { transform: rotate(0deg) scaleY(0); opacity: 0.6; }
+}
+
+/* ───── a tiny sparkle for a new favourite ───── */
+.sparkle-burst {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+.sparkle-burst > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+  animation: sparkle 620ms ease-out var(--d, 0ms) both;
+}
+@keyframes sparkle {
+  0% { transform: translate(-50%, -50%) scale(0.2) rotate(0deg); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(45deg); opacity: 0; }
+}
+
+/* ───── a saved quote is tucked into the journal like a slip of paper ───── */
+.note-tuck {
+  animation: note-tuck 620ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  transform-origin: 30% 0%;
+}
+@keyframes note-tuck {
+  0% { transform: translateY(-18px) rotate(-3deg) scale(1.02); opacity: 0; box-shadow: 0 16px 24px -12px rgba(0, 0, 0, 0.35); }
+  60% { transform: translateY(2px) rotate(0.6deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+html[data-motion="gentle"] .note-tuck { animation-duration: 420ms; }
+
+/* ───── dust drifting through the sunbeam (Full only, daytime only, paused when hidden) ───── */
+.sun-motes {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  display: none;
+}
+html[data-motion="full"] .sun-motes { display: block; }
+.dark .sun-motes,
+[data-time="night"] .sun-motes { display: none !important; }
+.sun-mote {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: rgb(var(--sun, 255 236 190) / 0.85);
+  box-shadow: 0 0 4px rgb(var(--sun, 255 236 190) / 0.6);
+  opacity: 0;
+  animation: mote-float var(--t) ease-in-out var(--d) infinite;
+  will-change: transform, opacity;
+}
+html[data-tab-hidden="true"] .sun-mote { animation-play-state: paused; }
+@keyframes mote-float {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 0.75; }
+  50% { transform: translate(var(--dx), calc(var(--dy) * 0.5)); opacity: 0.55; }
+  85% { opacity: 0.7; }
+  100% { transform: translate(calc(var(--dx) * 0.4), var(--dy)); opacity: 0; }
+}

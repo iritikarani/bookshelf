@@ -16,14 +16,17 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { playBookSound } from "@/lib/bookSounds";
 import { hashString, heightFactor } from "@/lib/covers";
+import { motionLevel } from "@/lib/motion";
 import type { Structure } from "@/lib/themes";
 import type { Book, Decor, Shelf, ShelfItem } from "@/lib/types";
 import { BookCover } from "./BookCover";
 import { BookSpine, LEAN_DEG, PILE_MAX, leanSize, spineSize, stackSize } from "./BookSpine";
 import { DecorArt, decorSize, decorSpec } from "./Decor";
+import { DustPuff, useBurst } from "./Living";
 import { MARKS, MarkChips, Ribbons, matchesFilter, type MarkFilter } from "./Marks";
 import { ProgressBar, progressPercent } from "./ReadingProgress";
 import { StarDisplay, formatRating } from "./StarRating";
@@ -41,6 +44,10 @@ interface ShelfWallProps {
   onOpenDecor?: (decor: Decor) => void;
   onMove?: (itemId: string, shelfId: string, index: number) => void;
   justAddedId?: string | null;
+  /** The book that's open (taken off the shelf): it stands forward until it's put back. */
+  openId?: string | null;
+  /** The book being removed: it lifts off the shelf before it goes. */
+  leavingId?: string | null;
   readOnly?: boolean;
   /** Draw the floor under a standing bookcase (off for the share image). */
   floor?: boolean;
@@ -132,7 +139,7 @@ function toSegments(items: ShelfItem[]): Segment[] {
   return out;
 }
 
-export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, readOnly, floor = true, shelfNote, filter = "all", stacked, perCase = SHELVES_PER_BOOKCASE }: ShelfWallProps) {
+export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpenDecor, onMove, justAddedId, openId = null, leavingId = null, readOnly, floor = true, shelfNote, filter = "all", stacked, perCase = SHELVES_PER_BOOKCASE }: ShelfWallProps) {
   const [active, setActive] = useState<ShelfItem | null>(null);
   const [insertion, setInsertion] = useState<Insertion | null>(null);
   // Mouse: drag after a small move. Touch: press and hold for a moment, so a quick swipe still
@@ -194,6 +201,8 @@ export function ShelfWall({ shelves, itemsByShelf, structure, onOpenBook, onOpen
           onOpenDecor={onOpenDecor}
           readOnly={readOnly}
           justAddedId={justAddedId}
+          openId={openId}
+          leavingId={leavingId}
           insertion={insertion?.shelfId === shelf.id ? insertion.index : null}
           draggingId={active?.id ?? null}
           note={shelfNote?.(shelf)}
@@ -327,6 +336,8 @@ function ShelfRow({
   onOpenDecor,
   readOnly,
   justAddedId,
+  openId,
+  leavingId,
   insertion,
   draggingId,
   note,
@@ -339,6 +350,8 @@ function ShelfRow({
   onOpenDecor?: (d: Decor) => void;
   readOnly?: boolean;
   justAddedId?: string | null;
+  openId: string | null;
+  leavingId: string | null;
   insertion: number | null;
   draggingId: string | null;
   note?: ReactNode;
@@ -349,6 +362,8 @@ function ShelfRow({
   const headingId = `shelf-${shelf.id}-name`;
   // A real shelf doesn't say "top shelf". Only names the reader chose are shown on the wood.
   const showName = !isPlainShelfName(shelf.name);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useGlide(rowRef);
 
   return (
     <>
@@ -363,7 +378,10 @@ function ShelfRow({
         </h2>
         {note && <div className="px-3 pt-2 md:px-4">{note}</div>}
         <div
-          ref={setNodeRef}
+          ref={(n) => {
+            setNodeRef(n);
+            rowRef.current = n;
+          }}
           data-shelf-row={shelf.id}
           className={`shelf-row shelf-scroll relative flex ${items.length ? "min-h-[calc(var(--cover-h)+20px)]" : "min-h-[calc(var(--cover-h)*0.6)]"} items-end gap-[3px] overflow-x-auto px-3 pb-0 ${showName ? "pt-4" : "pt-7"} md:px-4 ${isOver ? "bg-accent/10" : ""}`}
           role="list"
@@ -387,6 +405,8 @@ function ShelfRow({
                 onOpenDecor={onOpenDecor}
                 readOnly={readOnly}
                 justAdded={item.id === justAddedId}
+                out={item.id === openId}
+                leaving={item.id === leavingId}
                 dimmed={item.id === draggingId}
                 faded={filter !== "all" && (item.type === "decor" || !matchesFilter(item.book, filter))}
                 // Leave breathing room around face-out covers and objects, like a styled shelf.
@@ -429,6 +449,8 @@ function Slot({
   onOpenDecor,
   readOnly,
   justAdded,
+  out,
+  leaving,
   dimmed,
   faded,
   spaced,
@@ -443,6 +465,8 @@ function Slot({
   onOpenDecor?: (d: Decor) => void;
   readOnly?: boolean;
   justAdded: boolean;
+  out: boolean;
+  leaving: boolean;
   dimmed: boolean;
   faded: boolean;
   spaced: boolean;
@@ -458,6 +482,7 @@ function Slot({
   useEffect(() => {
     if (justAdded) ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   }, [justAdded]);
+  const { state, dust } = useBookMotion({ justAdded, out, leaving });
 
   const isBook = item.type === "book";
   const decorOnly = !isBook && (readOnly || !onOpenDecor);
@@ -473,7 +498,7 @@ function Slot({
       }}
       role="listitem"
       data-item-id={item.id}
-      className={`relative shrink-0 transition-[opacity,filter] duration-300 ${spaced ? "mx-2 md:mx-3" : ""} ${justAdded ? "animate-drop-in" : ""} ${faded ? "opacity-25 saturate-50" : ""}`}
+      className={`relative shrink-0 transition-[opacity,filter,translate] duration-300 ${spaced ? "mx-2 md:mx-3" : ""} ${faded ? "opacity-25 saturate-50" : ""}`}
       style={{ ...itemSize(item), ...(nudge ? { transform: `translateX(${nudge}px)` } : {}) }}
     >
       {marker && <Marker side={marker} />}
@@ -488,6 +513,7 @@ function Slot({
           {...(readOnly ? {} : drag.listeners)}
           onClick={() => {
             setPeek(null);
+            if (isBook) playBookSound("open");
             if (isBook) onOpenBook(item.book);
             else onOpenDecor?.(item.decor);
           }}
@@ -499,8 +525,9 @@ function Slot({
           }}
           aria-label={label}
           title={isBook ? item.book.title : decorSpec(item.decor.kind).name}
-          className={`group block h-full w-full select-none rounded-[3px] text-left outline-offset-4 [-webkit-touch-callout:none] ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
+          className={`book-handle group block h-full w-full select-none rounded-[3px] text-left outline-offset-4 [-webkit-touch-callout:none] ${dimmed ? "opacity-30" : ""} ${readOnly ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}
         >
+          <span className="book-motion" data-state={state}>
           <span
             className={`relative block h-full w-full origin-bottom transition-transform duration-200 ease-out motion-reduce:transform-none ${
               isBook && item.book.display === "cover" ? "group-hover:-translate-y-2 group-hover:-rotate-2" : "group-hover:-translate-y-1.5"
@@ -521,11 +548,99 @@ function Slot({
               )}
             </Posed>
           </span>
+          </span>
         </button>
       )}
-      {peek && isBook && !dimmed && <Peek book={item.book} rect={peek} />}
+      {dust && <DustPuff key={dust.id} at={dust.at} />}
+      {peek && isBook && !dimmed && !out && <Peek book={item.book} rect={peek} />}
     </div>
   );
+}
+
+type BookState = "rest" | "out" | "return" | "arrive" | "leave";
+
+/**
+ * A book's own movement on the shelf, and the dust it raises: drawn out when opened (dust rising
+ * behind it), slid home with a little settle when closed (dust along the board and a soft wooden
+ * tock), slid in when newly added, lifted off when removed.
+ */
+function useBookMotion({ justAdded, out, leaving }: { justAdded: boolean; out: boolean; leaving: boolean }) {
+  const [returning, setReturning] = useState(false);
+  const [dustId, fireDust] = useBurst(1300);
+  const [dustAt, setDustAt] = useState<"base" | "behind">("base");
+  const wasOut = useRef(out);
+
+  useEffect(() => {
+    const before = wasOut.current;
+    wasOut.current = out;
+    if (out && !before) {
+      setDustAt("behind");
+      fireDust();
+      return;
+    }
+    if (!out && before && !leaving) {
+      setReturning(true);
+      // The dust and the tock come as it lands, not as it starts moving.
+      const land = window.setTimeout(() => {
+        setDustAt("base");
+        fireDust();
+        playBookSound("place");
+      }, motionLevel() === "off" ? 0 : 280);
+      const done = window.setTimeout(() => setReturning(false), 600);
+      return () => {
+        window.clearTimeout(land);
+        window.clearTimeout(done);
+      };
+    }
+  }, [out, leaving, fireDust]);
+
+  useEffect(() => {
+    if (!justAdded) return;
+    const land = window.setTimeout(() => {
+      setDustAt("base");
+      fireDust();
+      playBookSound("place");
+    }, motionLevel() === "off" ? 0 : 480);
+    return () => window.clearTimeout(land);
+  }, [justAdded, fireDust]);
+
+  useEffect(() => {
+    if (!leaving) return;
+    setDustAt("behind");
+    fireDust();
+  }, [leaving, fireDust]);
+
+  const state: BookState = leaving ? "leave" : out ? "out" : returning ? "return" : justAdded ? "arrive" : "rest";
+  return { state, dust: dustId ? { id: dustId, at: dustAt } : null };
+}
+
+/**
+ * When books move along a row (one removed, one added, one dragged to a new place), the others
+ * glide to their new places instead of jumping. Uses the `translate` property, so it never fights
+ * the transforms books already use for leaning, piles and hover.
+ */
+function useGlide(rowRef: { current: HTMLDivElement | null }) {
+  const last = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const now = new Map<string, number>();
+    const els = row.querySelectorAll<HTMLElement>("[data-item-id]");
+    els.forEach((el) => now.set(el.dataset.itemId!, el.getBoundingClientRect().left + row.scrollLeft));
+    if (motionLevel() !== "off" && last.current.size) {
+      els.forEach((el) => {
+        const before = last.current.get(el.dataset.itemId!);
+        const dx = before === undefined ? 0 : before - now.get(el.dataset.itemId!)!;
+        if (Math.abs(dx) < 1) return;
+        el.style.transition = "none";
+        el.style.translate = `${dx}px 0`;
+        el.getBoundingClientRect(); // commit the starting point
+        el.style.transition = "";
+        el.style.translate = "";
+      });
+    }
+    last.current = now;
+  });
 }
 
 /** Hover preview: a little card above the book with the essentials. Desktop pointers only. */

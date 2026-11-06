@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./room.css";
+import "./living.css";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -36,7 +37,7 @@ export const viewport: Viewport = {
 };
 
 // Sets the dark class before first paint so there's no flash of the wrong theme.
-const themeScript = `(function(){try{var m=localStorage.getItem('exlibris:mode')||'system';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+const themeScript = `(function(){try{var m=localStorage.getItem('exlibris:mode')||'system';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var v=localStorage.getItem('exlibris:motion');document.documentElement.dataset.motion=v==='full'||v==='gentle'||v==='off'?v:(matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'full');}catch(e){}})();`;
 
 // Marks returning readers (a saved sign-in or a guest shelf) before first paint, so they see the
 // splash rather than a flash of the landing page that newcomers and search engines get.

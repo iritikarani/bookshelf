@@ -88,10 +88,19 @@
   scrollbar-color: rgb(var(--ink) / 0.25) transparent;
 }
 
+/* Motion off (Settings → Animations, or a phone set to reduce motion and no choice made here). */
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion="full"]):not([data-motion="gentle"]) *,
+  html:not([data-motion="full"]):not([data-motion="gentle"]) *::before,
+  html:not([data-motion="full"]):not([data-motion="gentle"]) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
