@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { cleanTag } from "./BookJournal";
 import { collectionsOf, type Collection } from "@/lib/collections";
 import { quoteItems } from "./QuoteWall";
 import type { Book } from "@/lib/types";
@@ -12,9 +13,24 @@ import { MemoryNote } from "./Universe";
  * Your collections as little fanned stacks of covers. Tap one to see every book in it. A book
  * joins a collection from its own page (Genre & collections).
  */
-export function CollectionsShelf({ books, onOpen, title = "Your collections", hint = true }: { books: Book[]; onOpen: (b: Book) => void; title?: string; hint?: boolean }) {
+export function CollectionsShelf({
+  books,
+  onOpen,
+  onRetag,
+  title = "Your collections",
+  hint = true,
+}: {
+  books: Book[];
+  onOpen: (b: Book) => void;
+  /** Rename a collection (to a new name) or delete it (to null) across all its books. */
+  onRetag?: (from: string, to: string | null) => void;
+  title?: string;
+  hint?: boolean;
+}) {
   const collections = collectionsOf(books);
-  const [open, setOpen] = useState<Collection | null>(null);
+  const [openTag, setOpenTag] = useState<string | null>(null);
+  const open = collections.find((c) => c.tag === openTag) ?? null;
+  const setOpen = (c: Collection | null) => setOpenTag(c?.tag ?? null);
   if (!collections.length && !hint) return null;
   return (
     <section aria-labelledby="collections-title">
@@ -37,9 +53,12 @@ export function CollectionsShelf({ books, onOpen, title = "Your collections", hi
       <Sheet open={Boolean(open)} onClose={() => setOpen(null)} title={open?.name ?? "Collection"} wide>
         {open && (
           <>
-            <p className="mb-4 text-sm text-ink-soft">
-              {open.books.length} {open.books.length === 1 ? "book" : "books"}
-            </p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-ink-soft">
+                {open.books.length} {open.books.length === 1 ? "book" : "books"}
+              </p>
+              {onRetag && <CollectionActions key={open.tag} collection={open} taken={collections.map((c) => c.tag)} onRetag={(to) => (onRetag(open.tag, to), setOpenTag(to))} />}
+            </div>
             <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
               {open.books.map((b) => (
                 <li key={b.id}>
@@ -122,5 +141,57 @@ export function TreasuredMemories({ books, onOpen }: { books: Book[]; onOpen: (b
         </p>
       )}
     </section>
+  );
+}
+
+/** Rename or delete a collection. Deleting only removes the grouping: the books stay on your shelf. */
+function CollectionActions({ collection, taken, onRetag }: { collection: Collection; taken: string[]; onRetag: (to: string | null) => void }) {
+  const [mode, setMode] = useState<"idle" | "rename" | "delete">("idle");
+  const [name, setName] = useState(collection.name);
+  const next = cleanTag(name);
+  const clash = next !== collection.tag && taken.includes(next);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!next || next === collection.tag) return setMode("idle");
+    onRetag(next);
+    setMode("idle");
+  };
+  if (mode === "rename")
+    return (
+      <form onSubmit={submit} className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <label htmlFor="collection-name" className="sr-only">
+          New name for {collection.name}
+        </label>
+        <input id="collection-name" autoFocus maxLength={30} className="field h-9 min-w-0 flex-1 py-1 text-sm sm:w-56" value={name} onChange={(e) => setName(e.target.value)} />
+        <button type="submit" className="btn-primary h-9 px-3" disabled={!next}>
+          {clash ? "Merge" : "Save"}
+        </button>
+        <button type="button" className="btn-ghost h-9 px-3" onClick={() => (setName(collection.name), setMode("idle"))}>
+          Cancel
+        </button>
+        {clash && <p className="w-full text-xs text-ink-soft">There’s already a collection with that name; its books and these will be one collection.</p>}
+      </form>
+    );
+  if (mode === "delete")
+    return (
+      <div role="alertdialog" aria-label={`Delete ${collection.name}?`} className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-danger/40 p-3 text-sm sm:w-auto">
+        <span>Delete this collection? The books stay on your shelf.</span>
+        <button type="button" className="btn-danger h-9 px-3" onClick={() => onRetag(null)}>
+          Delete collection
+        </button>
+        <button type="button" className="btn-ghost h-9 px-3" autoFocus onClick={() => setMode("idle")}>
+          Keep it
+        </button>
+      </div>
+    );
+  return (
+    <div className="flex gap-2">
+      <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setMode("rename")}>
+        Rename
+      </button>
+      <button type="button" className="btn-ghost h-9 px-3 text-sm text-danger" onClick={() => setMode("delete")}>
+        Delete
+      </button>
+    </div>
   );
 }

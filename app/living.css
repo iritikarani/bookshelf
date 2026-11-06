@@ -216,3 +216,25 @@ html[data-tab-hidden="true"] .sun-mote { animation-play-state: paused; }
   60% { transform: scale(1.08); opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
+
+/* ───── opening a book: the journal page turns in from the spine ───── */
+.page-turn {
+  animation: page-rise 380ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+}
+@media (min-width: 768px) {
+  .page-turn {
+    transform-origin: 0% 50%;
+    animation: page-turn 620ms cubic-bezier(0.25, 0.8, 0.25, 1) 80ms both;
+    backface-visibility: hidden;
+  }
+}
+@keyframes page-turn {
+  0% { transform: perspective(1600px) rotateY(-28deg); opacity: 0.35; box-shadow: inset 40px 0 50px -30px rgba(0, 0, 0, 0.35); }
+  70% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes page-rise {
+  0% { transform: translateY(10px); opacity: 0.4; }
+  100% { transform: none; opacity: 1; }
+}
+html[data-motion="gentle"] .page-turn { animation-duration: 360ms; }

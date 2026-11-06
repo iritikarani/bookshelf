@@ -1,0 +1,73 @@
+# A weekly, encrypted copy of SelfShelf's database (every account's shelves, books, journals,
+# rooms and guest book), kept for 30 days as a downloadable file on the Actions tab.
+#
+# The repository is public, so the copy is locked with a passphrase before it's stored: without
+# BACKUP_PASSPHRASE nobody can read it. Uploaded cover photos live in Supabase Storage as files
+# and aren't part of this copy. How to restore: docs/BACKUPS.md.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL     the "Session pooler" connection string from Supabase → Connect,
+#                       with your database password filled in
+#   BACKUP_PASSPHRASE   a long passphrase you keep somewhere safe (a password manager)
+name: Weekly backup
+
+on:
+  schedule:
+    - cron: "41 2 * * 0" # Sundays, 02:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check the secrets are set
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::Add SUPABASE_DB_URL and BACKUP_PASSPHRASE under Settings → Secrets and variables → Actions (see docs/BACKUPS.md)."
+            exit 1
+          fi
+          if [ "${#BACKUP_PASSPHRASE}" -lt 12 ]; then
+            echo "::error::BACKUP_PASSPHRASE is too short. Use at least 12 characters."
+            exit 1
+          fi
+
+      - name: Copy the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # pg_dump 17 reads Supabase's Postgres 15 and 17 alike.
+          docker run --rm --network host -e DB_URL="$SUPABASE_DB_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DB_URL" --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers' > selfshelf.sql
+          size=$(wc -c < selfshelf.sql)
+          echo "Database copy: $size bytes"
+          if [ "$size" -lt 1000 ] || ! grep -q 'CREATE TABLE "public"."books"' selfshelf.sql; then
+            echo "::error::The copy looks incomplete, so it wasn't kept. Check SUPABASE_DB_URL, and that the Supabase project isn't paused."
+            exit 1
+          fi
+
+      - name: Lock it with the passphrase
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          stamp=$(date -u +%Y-%m-%d)
+          gzip -9 selfshelf.sql
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "selfshelf-$stamp.sql.gz.gpg" selfshelf.sql.gz
+          shred -u selfshelf.sql.gz
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          ls -l selfshelf-*.gpg
+
+      - name: Keep it for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfshelf-backup-${{ env.STAMP }}
+          path: selfshelf-*.sql.gz.gpg
+          retention-days: 30
+          if-no-files-found: error

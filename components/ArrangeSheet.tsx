@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLibrary } from "@/lib/library";
-import { REWARDS, finishedCount, isUnlocked, nextReward, rewardFor } from "@/lib/rewards";
+import { finishedCount, isUnlocked, rewardFor } from "@/lib/rewards";
 import {
   CURTAINS,
   FAIRY_LIGHTS,
@@ -260,8 +260,7 @@ export function ArrangeSheet({ open, onClose }: { open: boolean; onClose: () => 
 
       {tab === "objects" && (
         <div className="pt-2" role="tabpanel" aria-label="Objects">
-          <RewardsCard finished={finished} />
-          <fieldset className="mt-6">
+          <fieldset className="mt-2">
             <legend className="label">Add an object</legend>
             <div className="mb-3 flex items-center gap-2">
               <label htmlFor="decor-shelf" className="text-sm text-ink-soft">Place on</label>
@@ -571,42 +570,3 @@ function LockBadge({ at, finished }: { at: number; finished: number }) {
   );
 }
 
-/** "Reading rewards": what you've earned and how close the next one is. */
-function RewardsCard({ finished }: { finished: number }) {
-  const next = nextReward(finished);
-  const prevAt = [...REWARDS].reverse().find((r) => r.at <= finished)?.at ?? 0;
-  const pct = next ? Math.round(((finished - prevAt) / (next.at - prevAt)) * 100) : 100;
-  const earned = REWARDS.filter((r) => r.at <= finished);
-  return (
-    <section className="mt-5 rounded-2xl bg-accent/10 p-4 ring-1 ring-accent/25" aria-labelledby="rewards-title">
-      <h3 id="rewards-title" className="font-serif text-lg leading-tight">Reading rewards</h3>
-      <p className="mt-0.5 text-sm text-ink-soft">Finish books and new things appear for your room.</p>
-      {next ? (
-        <>
-          <p className="mt-3 text-sm">
-            <span aria-hidden>{next.emoji}</span> <strong>{next.name}</strong> unlocks at {next.at} finished books.{" "}
-            <span className="text-ink-soft">
-              {next.at - finished} to go
-            </span>
-          </p>
-          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-ink/10" role="progressbar" aria-valuemin={prevAt} aria-valuemax={next.at} aria-valuenow={finished} aria-label="Progress to the next reward">
-            <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${Math.max(4, pct)}%` }} />
-          </div>
-        </>
-      ) : (
-        <p className="mt-3 text-sm">✨ You’ve unlocked everything. What a reader.</p>
-      )}
-      <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="All rewards">
-        {REWARDS.map((r) => {
-          const got = r.at <= finished;
-          return (
-            <li key={r.id} className={`rounded-full px-2.5 py-1 text-xs ${got ? "bg-accent text-accent-ink" : "bg-ink/5 text-ink-soft"}`}>
-              {got ? r.emoji : "🔒"} {r.name} · {r.at}
-            </li>
-          );
-        })}
-      </ul>
-      {earned.length > 0 && <p className="sr-only">You have earned {earned.map((r) => r.name).join(", ")}.</p>}
-    </section>
-  );
-}

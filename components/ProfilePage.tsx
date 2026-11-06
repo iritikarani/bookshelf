@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { yearOf } from "@/lib/date";
-import { authorCounts, monthStreak, topCounts } from "@/lib/stats";
+import { authorCounts, topCounts } from "@/lib/stats";
 import type { Book, Profile, Shelf } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { CoverRow } from "./HomePage";
@@ -89,6 +89,7 @@ export function ProfilePage({
   onShare,
   onWrapped,
   onGuestbook,
+  onRetag,
 }: {
   profile: Profile | null;
   books: Book[];
@@ -100,10 +101,10 @@ export function ProfilePage({
   onShare?: () => void;
   onWrapped?: () => void;
   onGuestbook: () => void;
+  onRetag?: (from: string, to: string | null) => void;
 }) {
   const genres = topCounts(books.map((b) => b.genre), 500);
   const authors = authorCounts(books);
-  const streak = monthStreak(books);
   const recent = books
     .filter((b) => b.status === "read")
     .sort((a, b) => (b.date_finished ?? b.created_at).localeCompare(a.date_finished ?? a.created_at))
@@ -119,12 +120,8 @@ export function ProfilePage({
           </p>
         </ReaderHeader>
         <CountsRow books={books} />
-        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        <div className="mt-6">
           <GoalProgress goal={profile?.reading_goal} books={books} onSet={onEdit} />
-          <p className="text-sm text-ink-soft md:text-right">
-            <span className="font-mono text-lg font-medium text-ink">{streak}</span> {streak === 1 ? "month" : "months"} in a row
-            <span className="block text-xs">with a finished book</span>
-          </p>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
           {onEdit && (
@@ -155,7 +152,7 @@ export function ProfilePage({
 
       <TreasuredMemories books={books} onOpen={onOpen} />
 
-      <CollectionsShelf books={books} onOpen={onOpen} />
+      <CollectionsShelf books={books} onOpen={onOpen} onRetag={onRetag} />
 
       <p className="-mt-4 text-xs text-ink-soft">
         {profile?.is_public

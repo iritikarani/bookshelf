@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { yearOf } from "@/lib/date";
-import { averageRating, monthStreak } from "@/lib/stats";
+import { averageRating } from "@/lib/stats";
 import { linesOf } from "@/lib/quotes";
 import type { Book } from "@/lib/types";
 import { useCoverColor } from "@/lib/useCoverColor";
@@ -39,6 +39,7 @@ export function HomePage({
   onAdd,
   onImport,
   onTab,
+  onRetag,
 }: {
   books: Book[];
   name?: string | null;
@@ -50,6 +51,7 @@ export function HomePage({
   onAdd: () => void;
   onImport?: () => void;
   onTab: (t: AppTab) => void;
+  onRetag?: (from: string, to: string | null) => void;
 }) {
   const now = new Date();
   const reading = books.filter((b) => b.status === "reading").sort((a, b) => b.updated_at.localeCompare(a.updated_at));
@@ -61,7 +63,6 @@ export function HomePage({
   const pages = thisYear.reduce((s, b) => s + (b.pages ?? 0), 0);
   const avg = averageRating(thisYear);
   const recent = [...books].sort(newest).slice(0, 12);
-  const streak = monthStreak(books);
   // The favourite to show: the most recently finished favourite, else any favourite.
   const favourite = books.filter((b) => b.favourite).sort((a, b) => (b.date_finished ?? b.updated_at).localeCompare(a.date_finished ?? a.updated_at))[0];
 
@@ -121,7 +122,7 @@ export function HomePage({
 
           <MemoryNotes books={books} onOpen={onOpen} onArchive={() => (openJournalAt("quotes"), onTab("journal"))} />
 
-          <CollectionsShelf books={books} onOpen={onOpen} />
+          <CollectionsShelf books={books} onOpen={onOpen} onRetag={onRetag} />
 
           {finished.length ? (
             <ReadingTimeline books={books} onOpen={onOpen} />
@@ -147,7 +148,7 @@ export function HomePage({
               <dl className="mt-5 grid grid-cols-3 gap-3">
                 <Stat label="Pages" value={pages.toLocaleString()} />
                 <Stat label="Avg rating" value={avg === null ? "–" : `${avg.toFixed(1)}★`} />
-                <Stat label="Streak" value={`${streak} mo`} />
+                <Stat label="Finished" value={thisYear.length} />
               </dl>
             </section>
             <ReadingIdentity books={books} onOpen={onOpen} fallback={<FavouriteCard book={favourite} onOpen={onOpen} />} />
