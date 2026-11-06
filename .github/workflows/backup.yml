@@ -37,14 +37,40 @@ jobs:
             echo "::error::BACKUP_PASSPHRASE is too short. Use at least 12 characters."
             exit 1
           fi
+          # The password sits between "postgres.<project>:" and the last "@". Symbols such as # / ? @
+          # in it break the address, so catch that here, without ever printing the password.
+          case "$SUPABASE_DB_URL" in postgresql://*|postgres://*) ;; *) echo "::error::SUPABASE_DB_URL should start with postgresql:// (copy the Session pooler string from Supabase → Connect)."; exit 1;; esac
+          rest="${SUPABASE_DB_URL#*://}"
+          userpass="${rest%@*}"
+          pass="${userpass#*:}"
+          if [ "$pass" = "$userpass" ] || [ -z "$pass" ]; then
+            echo "::error::SUPABASE_DB_URL has no password in it. Put your database password in place of [YOUR-PASSWORD]."
+            exit 1
+          fi
+          echo "::add-mask::$pass"
+          case "$pass" in *"["*|*"]"*) echo "::error::SUPABASE_DB_URL still has [ ] brackets in it. Replace [YOUR-PASSWORD], brackets and all, with your password."; exit 1;; esac
+          case "$pass" in *"#"*|*"/"*|*"?"*|*"@"*|*" "*) echo "::error::Your database password has a symbol (# / ? @ or a space) that breaks the address. Reset it in Supabase to one with only letters and numbers, then update SUPABASE_DB_URL."; exit 1;; esac
 
       - name: Copy the database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           # pg_dump 17 reads Supabase's Postgres 15 and 17 alike.
-          docker run --rm --network host -e DB_URL="$SUPABASE_DB_URL" postgres:17-alpine \
-            sh -c 'pg_dump "$DB_URL" --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers' > selfshelf.sql
+          # pg_dump's own messages can contain parts of the address, so they're never printed (this
+          # repository's logs are public); only a plain explanation is.
+          if ! docker run --rm --network host -e DB_URL="$SUPABASE_DB_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DB_URL" --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers' > selfshelf.sql 2> pg_dump.err; then
+            if grep -qi "password authentication failed" pg_dump.err; then why="The database password in SUPABASE_DB_URL is wrong. Check it, or reset it in Supabase and update the secret."
+            elif grep -qi "translate host name\|could not resolve\|Name does not resolve" pg_dump.err; then why="The address in SUPABASE_DB_URL couldn't be read. Copy the Session pooler string again from Supabase → Connect."
+            elif grep -qi "timeout\|timed out\|Connection refused\|Network is unreachable" pg_dump.err; then why="Supabase didn't answer. Check the project isn't paused, and that you used the Session pooler string (not Direct connection)."
+            elif grep -qi "server version" pg_dump.err; then why="The database is a newer version than this backup tool. The workflow needs updating."
+            else why="The database copy failed (details hidden to keep your password out of the public log)."
+            fi
+            shred -u pg_dump.err selfshelf.sql 2>/dev/null || true
+            echo "::error::$why"
+            exit 1
+          fi
+          shred -u pg_dump.err 2>/dev/null || true
           size=$(wc -c < selfshelf.sql)
           echo "Database copy: $size bytes"
           if [ "$size" -lt 1000 ] || ! grep -q 'CREATE TABLE "public"."books"' selfshelf.sql; then
