@@ -370,7 +370,15 @@ function AppInner() {
         onDisplay={(b, display) => lib.updateBook(b.id, { display })}
         onMarks={markBook}
         onRate={(b, rating) => lib.updateBook(b.id, { rating })}
-        onProgress={(b, patch) => lib.updateBook(b.id, patch)}
+        onProgress={(b, patch) =>
+  // Reaching the last page of a book you're reading finishes it, which opens the rating view.
+  lib.updateBook(
+    b.id,
+    b.status === "reading" && patch.pages && patch.current_page != null && patch.current_page >= patch.pages
+      ? { ...patch, status: "read", date_finished: b.date_finished ?? todayISO() }
+      : patch,
+  )
+}
         onRemove={async (b) => {
           // Close the book, let it lift off the shelf, then remove it (its neighbours close the gap).
           setOpenId(null);
